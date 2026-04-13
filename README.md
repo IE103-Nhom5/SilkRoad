@@ -3,7 +3,7 @@
 ---
 ##Tổng quan
 
-SilkRoad UIT ( con đường tơ lụa uit ) là sản phẩm thực hiện trong khuôn khổ môn học IE103 - Quản lý Thông tin, thuộc Khoa Khoa học và Kỹ thuật Thông tin – Trường Đại học Công nghệ Thông tin (UIT), VNU-HCM.
+SilkRoad UIT ( Con đường Tơ lụa UIT ) là sản phẩm thực hiện trong khuôn khổ môn học IE103 - Quản lý Thông tin, thuộc Khoa Khoa học và Kỹ thuật Thông tin – Trường Đại học Công nghệ Thông tin (UIT), VNU-HCM.
 
 ---
 ## Tech Stack
