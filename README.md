@@ -1,7 +1,7 @@
 # SilkRoad-UIT
 >**Hệ thống quản lý hàng hoá cho chuỗi cửa hàng bán lẻ thời trang**
 ---
-##Tổng quan
+## Tổng quan
 
 SilkRoad UIT ( Con đường Tơ lụa UIT ) là sản phẩm thực hiện trong khuôn khổ môn học IE103 - Quản lý Thông tin, thuộc Khoa Khoa học và Kỹ thuật Thông tin – Trường Đại học Công nghệ Thông tin (UIT), VNU-HCM.
 
