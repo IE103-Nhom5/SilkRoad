@@ -30,7 +30,6 @@ orders
 order_items
 order_status_history
 marketplace_channels
-marketplace_product_mappings
 marketplace_sync_logs
 customer_preorders
 
