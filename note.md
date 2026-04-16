@@ -14,6 +14,7 @@
 * Chi tiết phiếu chuyển
 * Phiếu kiểm
 * Chi tiết phiếu kiểm
+* log
 
 # Nhân sự 
 * Chinh nhánh
