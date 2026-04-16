@@ -1,6 +1,5 @@
 # Khach hang & CRM
 customers
-customer_addresses
 customer_groups
 customer_group_members
 
@@ -23,7 +22,6 @@ price_lists
 sales_channels
 marketplace_channels
 channel_integrations
-marketplace_sync_logs
 
 # Don hang
 orders
