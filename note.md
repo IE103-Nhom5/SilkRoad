@@ -34,9 +34,6 @@ order_status_history
 warehouses
 inventory
 inventory_reservations
-inventory_movements
-stock_transfer_orders
-stock_transfer_items
 
 # Nhap hang
 suppliers
