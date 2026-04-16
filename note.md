@@ -11,8 +11,6 @@ brands
 product_attributes
 attribute_values
 variant_attribute_values
-product_images
-product_tags
 
 # Pricing
 prices
@@ -42,13 +40,6 @@ purchase_order_items
 shipping_providers
 shipments
 shipment_items
-returns
-return_items
-return_status_history
-
-# Thanh toan
-payment_methods
-payments
 
 # Nhan su
 employees
