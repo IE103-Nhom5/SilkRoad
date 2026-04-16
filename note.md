@@ -59,7 +59,7 @@ promotion_rules (
 promotion_product_map
 discount_codes
 order_discounts
->cash_flow_categories
+cash_flow_categories
 cash_transactions
 event_logs
 
