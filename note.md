@@ -46,6 +46,7 @@ shipping_providers
 shipments
 returns 
 returns_items
+returns_status_history
 
 # Thanh toan & Khuyen mai
 payment_methods
