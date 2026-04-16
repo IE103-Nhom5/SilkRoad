@@ -20,6 +20,7 @@
 * Chinh nhánh
 * Nhân viên
 * Vai trò
+* Ca làm việc 
 
 # Bán hàng 
 * Kênh bán hàng
