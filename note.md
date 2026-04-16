@@ -50,11 +50,6 @@ return_status_history
 payment_methods
 payments
 
-# Khuyen mai
-promotions
-promotion_rules
-discount_codes
-
 # Nhan su
 employees
 roles
