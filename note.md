@@ -36,7 +36,7 @@ suppliers
 purchase_orders
 purchase_order_items
 
-# Van chuyen & Tra hang
+# Van chuyen 
 shipping_providers
 shipments
 shipment_items
