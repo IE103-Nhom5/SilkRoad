@@ -51,11 +51,16 @@ returns_items
 payment_methods
 payments
 promotions
+promotion_rules (
+    promotion_conditions
+    promotion_usages
+    )
 promotion_product_map
 discount_codes
 order_discounts
 >cash_flow_categories
 cash_transactions
+event_logs
 
 # Nhan su
 roles
