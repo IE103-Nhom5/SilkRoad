@@ -59,8 +59,6 @@ promotion_rules (
 promotion_product_map
 discount_codes
 order_discounts
-cash_flow_categories
-cash_transactions
 event_logs
 
 # Nhan su
@@ -73,4 +71,6 @@ shift_employees
 price_history
 stock_transfer_orders
 stock_transfer_items 
+cash_flow_categories
+cash_transactions
 activity_logs
