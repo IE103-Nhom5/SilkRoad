@@ -18,7 +18,6 @@ product_tags
 # Pricing
 prices
 price_lists
-price_history
 
 # Kenh ban
 sales_channels
@@ -30,15 +29,12 @@ marketplace_sync_logs
 orders
 order_items
 order_status_history
-order_discounts
 
 # Kho & ton kho
 warehouses
 inventory
 inventory_reservations
 inventory_movements
-stocktake_sessions
-stocktake_items
 stock_transfer_orders
 stock_transfer_items
 
@@ -46,8 +42,6 @@ stock_transfer_items
 suppliers
 purchase_orders
 purchase_order_items
-goods_receipts
-goods_receipt_items
 
 # Van chuyen & Tra hang
 shipping_providers
@@ -55,20 +49,15 @@ shipments
 shipment_items
 returns
 return_items
-refunds
+return_status_history
 
 # Thanh toan
 payment_methods
 payments
-cash_transactions
-cash_flow_categories
 
 # Khuyen mai
 promotions
 promotion_rules
-promotion_conditions
-promotion_actions
-promotion_usages
 discount_codes
 
 # Nhan su
@@ -78,7 +67,5 @@ work_shifts
 shift_employees
 
 # He thong
-event_logs
-activity_logs
 notification_logs
-audit_logs
+cash_logs
