@@ -73,3 +73,4 @@ shift_employees
 price_history
 stock_transfer_orders
 stock_transfer_items 
+activity_logs
