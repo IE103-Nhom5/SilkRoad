@@ -1,4 +1,4 @@
-# SilkRoad-UIT
+# SilkRoad
 >**Hệ thống quản lý hàng hóa đa kênh cho chuỗi cửa hàng thời trang bán lẻ**
 ---
 ## Tổng quan
