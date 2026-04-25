@@ -4,6 +4,90 @@
 
 ---
 
+## PHỤ LỤC A — Tổng hợp 28 bảng
+
+| # | Bảng | Section |
+|---|---|---|
+| 1 | [PRODUCT_CATEGORY](#11-product_category-nhomhang) | Product |
+| 2 | [PRODUCT](#12-product-sanpham) | Product |
+| 3 | [ATTRIBUTE](#13-attribute-thuoctinh) | Product |
+| 4 | [PRODUCT_VARIANT](#14-product_variant-bienthesanpham) | Product |
+| 5 | [PRODUCT_IMAGE](#15-product_image-anh_sanpham) | Product |
+| 6 | [BRANCH](#21-branch-chinhanh) | Branch & Supplier |
+| 7 | [SUPPLIER](#22-supplier-nhacungcap) | Branch & Supplier |
+| 8 | [SUPPLIER_PRODUCT](#23-supplier_product-nhacungcap_sanpham) | Branch & Supplier |
+| 9 | [STOCK](#31-stock-tonkho) | Inventory |
+| 10 | [STOCK_HISTORY](#32-stock_history-lichsutonkho) | Inventory |
+| 11 | [INVENTORY_ALLOCATION](#33-inventory_allocation-phanbotongkho) | Inventory |
+| 12 | [PURCHASE_ORDER](#34-purchase_order-phieunhap) | Inventory |
+| 13 | [PURCHASE_ORDER_DETAIL](#35-purchase_order_detail-ct_phieunhap) | Inventory |
+| 14 | [TRANSFER_ORDER](#36-transfer_order-phieuchuyen) | Inventory |
+| 15 | [TRANSFER_ORDER_DETAIL](#37-transfer_order_detail-ct_phieuchuyen) | Inventory |
+| 16 | [STOCK_ADJUSTMENT](#38-stock_adjustment-phieukiemkho) | Inventory |
+| 17 | [STOCK_ADJUSTMENT_DETAIL](#39-stock_adjustment_detail-ct_phieukiemkho) | Inventory |
+| 18 | [SALES_CHANNEL](#41-sales_channel-kenhbanhang) | Channel |
+| 19 | [CHANNEL_PRICE](#42-channel_price-gia_kenh) | Channel |
+| 20 | [CHANNEL_SYNC_LOG](#43-channel_sync_log-lichsu_dongbo) | Channel |
+| 21 | [CUSTOMER](#51-customer-khachhang) | Sales |
+| 22 | [ORDER](#52-order-donhang) | Sales |
+| 23 | [ORDER_DETAIL](#53-order_detail-ct_donhang) | Sales |
+| 24 | [PAYMENT](#54-payment-thanhtoan) | Sales |
+| 25 | [RETURN_ORDER](#55-return_order-phieu_tra_hang) | Sales |
+| 26 | [RETURN_DETAIL](#56-return_detail-ct_phieu_tra) | Sales |
+| 27 | [ROLE](#61-role-vaitro) | Auth |
+| 28 | [USER](#62-user-nguoidung) | Auth |
+
+---
+
+## PHỤ LỤC B — Luồng tồn kho
+
+```
+                    SUPPLIER
+                       │ PURCHASE_ORDER
+                       ▼
+              STOCK (BranchID + VariantID)
+             /         │           \
+    nhập kho      kiểm kê       chuyển kho
+ PURCHASE_ORDER  STOCK_ADJUSTMENT  TRANSFER_ORDER
+                       │
+               STOCK_HISTORY (audit log)
+                       │
+              INVENTORY_ALLOCATION (chống oversell)
+             /    |    |    \
+           POS  Web  Shopee  TikTok
+            └────┴──────┴───────┘
+                    ORDER → ORDER_DETAIL
+```
+
+---
+
+## PHỤ LỤC C — Trách nhiệm theo kênh
+
+| Chức năng | POS | Website | Marketplace |
+|---|:---:|:---:|:---:|
+| Quản lý đơn hàng | Hệ thống | Hệ thống | Platform |
+| Thanh toán | `PAYMENT` | `PAYMENT` | Platform |
+| Vận chuyển | N/A | GHN/GHTK | Platform |
+| Trả hàng | `RETURN_ORDER` | `RETURN_ORDER` | Chỉ ghi kết quả |
+| Khuyến mãi | `DiscountAmount` tay | `DiscountAmount` tay | Platform |
+| **Trừ tồn kho** | Trigger | Trigger | Webhook → CHANNEL_SYNC_LOG |
+| **Phân tích DT** | `ORDER` | `ORDER` | `ORDER` (từ webhook) |
+
+---
+
+## PHỤ LỤC D — Quy ước JSONB
+
+| Trường | Bảng | Lý do JSONB |
+|---|---|---|
+| `DynamicAttributes` | `PRODUCT` | Cấu trúc khác nhau theo category |
+| `Tags` | `PRODUCT` | Array — GIN index để filter |
+| `ChannelConfig` | `SALES_CHANNEL` | Credentials khác nhau theo platform |
+| `ChannelMetadata` | `ORDER` | Raw data marketplace, chỉ đọc |
+| `GatewayRef` | `PAYMENT` | Raw response gateway để debug |
+| `Payload` | `CHANNEL_SYNC_LOG` | Raw webhook để replay |
+
+---
+
 ## SECTION 1 — PRODUCT (5 bảng)
 
 ### 1.1 PRODUCT_CATEGORY (`NHOMHANG`)
@@ -528,89 +612,6 @@
 | **CreatedAt** | `TIMESTAMP` | |
 | **UpdatedAt** | `TIMESTAMP` | |
 
-
-
----
-
-## PHỤ LỤC A — Tổng hợp 28 bảng
-
-| # | Bảng | Section |
-|---|---|---|
-| 1 | PRODUCT_CATEGORY | Product |
-| 2 | PRODUCT | Product |
-| 3 | ATTRIBUTE | Product |
-| 4 | PRODUCT_VARIANT | Product |
-| 5 | PRODUCT_IMAGE | Product |
-| 6 | BRANCH | Branch & Supplier |
-| 7 | SUPPLIER | Branch & Supplier |
-| 8 | SUPPLIER_PRODUCT | Branch & Supplier |
-| 9 | STOCK | Inventory |
-| 10 | STOCK_HISTORY | Inventory |
-| 11 | INVENTORY_ALLOCATION | Inventory |
-| 12 | PURCHASE_ORDER | Inventory |
-| 13 | PURCHASE_ORDER_DETAIL | Inventory |
-| 14 | TRANSFER_ORDER | Inventory |
-| 15 | TRANSFER_ORDER_DETAIL | Inventory |
-| 16 | STOCK_ADJUSTMENT | Inventory |
-| 17 | STOCK_ADJUSTMENT_DETAIL | Inventory |
-| 18 | SALES_CHANNEL | Channel |
-| 19 | CHANNEL_PRICE | Channel |
-| 20 | CHANNEL_SYNC_LOG | Channel |
-| 21 | CUSTOMER | Sales |
-| 22 | ORDER | Sales |
-| 23 | ORDER_DETAIL | Sales |
-| 24 | PAYMENT | Sales |
-| 25 | RETURN_ORDER | Sales |
-| 26 | RETURN_DETAIL | Sales |
-| 27 | ROLE | Auth |
-| 28 | USER | Auth |
-
+> Nếu sau này cần 1 user quản nhiều chi nhánh → nâng cấp lại thành bảng riêng.
 
 ---
-
-## PHỤ LỤC B — Luồng tồn kho
-
-```
-                    SUPPLIER
-                       │ PURCHASE_ORDER
-                       ▼
-              STOCK (BranchID + VariantID)
-             /         │           \
-    nhập kho      kiểm kê       chuyển kho
- PURCHASE_ORDER  STOCK_ADJUSTMENT  TRANSFER_ORDER
-                       │
-               STOCK_HISTORY (audit log)
-                       │
-              INVENTORY_ALLOCATION (chống oversell)
-             /    |    |    \
-           POS  Web  Shopee  TikTok
-            └────┴──────┴───────┘
-                    ORDER → ORDER_DETAIL
-```
-
----
-
-## PHỤ LỤC C — Trách nhiệm theo kênh
-
-| Chức năng | POS | Website | Marketplace |
-|---|:---:|:---:|:---:|
-| Quản lý đơn hàng | Hệ thống | Hệ thống | Platform |
-| Thanh toán | `PAYMENT` | `PAYMENT` | Platform |
-| Vận chuyển | N/A | GHN/GHTK | Platform |
-| Trả hàng | `RETURN_ORDER` | `RETURN_ORDER` | Chỉ ghi kết quả |
-| Khuyến mãi | `DiscountAmount` tay | `DiscountAmount` tay | Platform |
-| **Trừ tồn kho** | Trigger | Trigger | Webhook → CHANNEL_SYNC_LOG |
-| **Phân tích DT** | `ORDER` | `ORDER` | `ORDER` (từ webhook) |
-
----
-
-## PHỤ LỤC D — Quy ước JSONB
-
-| Trường | Bảng | Lý do JSONB |
-|---|---|---|
-| `DynamicAttributes` | `PRODUCT` | Cấu trúc khác nhau theo category |
-| `Tags` | `PRODUCT` | Array — GIN index để filter |
-| `ChannelConfig` | `SALES_CHANNEL` | Credentials khác nhau theo platform |
-| `ChannelMetadata` | `ORDER` | Raw data marketplace, chỉ đọc |
-| `GatewayRef` | `PAYMENT` | Raw response gateway để debug |
-| `Payload` | `CHANNEL_SYNC_LOG` | Raw webhook để replay |
