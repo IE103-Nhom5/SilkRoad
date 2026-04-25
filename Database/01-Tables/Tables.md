@@ -1,4 +1,5 @@
 > **PostgreSQL** · Relational + Document Hybrid · Last updated: 25-04-2026
+
 ---
 
 ## 1. PRODUCT
@@ -558,7 +559,6 @@ RETURN_ORDER ──< RETURN_DETAIL
 CUSTOMER ──< LOYALTY_TRANSACTION
 
 USER ──< USER_BRANCH_ASSIGNMENT >── BRANCH
-USER ──< REFRESH_TOKEN
 ROLE ──< ROLE_PERMISSION >── PERMISSION
 ```
 
