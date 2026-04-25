@@ -565,23 +565,10 @@
 | 27 | ROLE | Auth |
 | 28 | USER | Auth |
 
----
-
-## PHỤ LỤC B — Những gì đã bỏ và cách bù đắp
-
-| Bảng bỏ | Thay thế |
-|---|---|
-| `SIZE_GUIDE` | Không có bảng size — bỏ hẳn |
-| `VARIANT_IMAGE` | Gộp vào `PRODUCT_IMAGE` với cột `VariantID nullable` |
-| `CUSTOMER_ADDRESS` | Địa chỉ lưu thẳng vào `ORDER` (ShippingName, ShippingPhone, ShippingAddress, ShippingProvince) |
-| `PROMOTION` | `DiscountAmount` nhập tay trong `ORDER`. Marketplace tự quản lý khuyến mãi |
-| `NOTIFICATION` | Xử lý ở application layer — gửi push/email không cần lưu DB |
-| `CHANNEL_PRODUCT` | `ExternalProductID` gộp vào `CHANNEL_PRICE`. Listing status quản lý ở app layer |
-| `USER_BRANCH_ASSIGNMENT` | Cột `BranchID` trong `USER`. `NULL` = admin toàn chuỗi |
 
 ---
 
-## PHỤ LỤC C — Luồng tồn kho
+## PHỤ LỤC B — Luồng tồn kho
 
 ```
                     SUPPLIER
@@ -603,7 +590,7 @@
 
 ---
 
-## PHỤ LỤC D — Trách nhiệm theo kênh
+## PHỤ LỤC C — Trách nhiệm theo kênh
 
 | Chức năng | POS | Website | Marketplace |
 |---|:---:|:---:|:---:|
@@ -617,7 +604,7 @@
 
 ---
 
-## PHỤ LỤC E — Quy ước JSONB
+## PHỤ LỤC D — Quy ước JSONB
 
 | Trường | Bảng | Lý do JSONB |
 |---|---|---|
