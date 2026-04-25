@@ -1,4 +1,4 @@
-## 1. PRODUCT
+## PRODUCT
 ### 1. PRODUCT_CATEGORY (NHOMHANG)
 *The top-level classification for products (e.g., Clothing, Electronics).*
 * **CategoryID** (`UUID`, **PK**)
@@ -46,7 +46,7 @@
 > **Technical Rule:** **Unique**(`ProductID`, `SizeAttributeID`, `ColorAttributeID`). **Check** `SellingPrice` $\ge$ `CostPrice`.
 
 ---
-## 2. Logistics & Inventory 
+## Logistics & Inventory 
 
 ### 1. BRANCH (`CHINHANH`)
 *Differentiates between retail stores and distribution centers.*
