@@ -20,7 +20,6 @@
 | **CreatedAt** | `TIMESTAMP` | DEFAULT `NOW()` |
 | **UpdatedAt** | `TIMESTAMP` | |
 
-> ~~SizeGuideID~~ — đã bỏ cùng bảng SIZE_GUIDE.
 > **Index:** `(ParentCategoryID)`.
 
 ---
@@ -347,7 +346,6 @@
 | **UpdatedAt** | `TIMESTAMP` | |
 
 > **Logic giá:** Ưu tiên `CHANNEL_PRICE.SellingPrice` → fallback `PRODUCT_VARIANT.SellingPrice`.
-> ~~CHANNEL_PRODUCT~~ — đã gộp `ExternalProductID` vào đây. Listing status quản lý ở application layer.
 
 ---
 
