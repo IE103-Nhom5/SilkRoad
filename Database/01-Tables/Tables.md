@@ -27,7 +27,7 @@
 * **Value** (`VARCHAR(100)`)
 * **Description** (`VARCHAR(255)`, Optional)
 * **Status** (`ENUM`: `active`, `inactive`)
-* > **Technical Rule:** **Unique**(`AttributeType`, `Value`) constraint to prevent duplicates.
+> **Technical Rule:** **Unique**(`AttributeType`, `Value`) constraint to prevent duplicates.
 
 ### 4. PRODUCT_VARIANT (BIENTHESANPHAM)
 *The specific SKU level. This is the unit used for inventory tracking.*
@@ -43,7 +43,7 @@
 * **UseDefaultPrice** (`BOOLEAN`, Default `FALSE`): If `TRUE`, overrides `SellingPrice` with the parent product's `DefaultSellingPrice`.
 * **Status** (`ENUM`)
 * **CreatedAt** (`TIMESTAMP`)
-* > **Technical Rule:** **Unique**(`ProductID`, `SizeAttributeID`, `ColorAttributeID`). **Check** `SellingPrice` $\ge$ `CostPrice`.
+> **Technical Rule:** **Unique**(`ProductID`, `SizeAttributeID`, `ColorAttributeID`). **Check** `SellingPrice` $\ge$ `CostPrice`.
 
 ---
 ## 2. Logistics & Inventory 
@@ -77,7 +77,7 @@
 * **MinStockLevel** (`INT`, **CHECK** $\ge 0$)
 * **MaxStockLevel** (`INT`)
 * **LastUpdated** (`TIMESTAMP`, DEFAULT `NOW()`)
-* > **Logic:** `CHECK (MinStockLevel < MaxStockLevel)` if both are set.
+> **Logic:** `CHECK (MinStockLevel < MaxStockLevel)` if both are set.
 
 ### 4. STOCK_HISTORY (`LICHSUTONKHO`)
 *Immutable audit log. Never updated or deleted.*
@@ -123,7 +123,7 @@
 * **ReceiveDate** (`TIMESTAMP`, Optional)
 * **Status** (`ENUM`): `pending`, `shipping`, `received`, `cancelled`.
 * **Note** (`TEXT`)
-* > **Constraint:** `CHECK (FromBranchID <> ToBranchID)`
+> **Constraint:** `CHECK (FromBranchID <> ToBranchID)`
 
 ### 8. STOCK_ADJUSTMENT (`PHIEUKIEMKHO` )
 *Physical inventory count process.*
@@ -144,12 +144,6 @@
 
 ---  
 
-This update completes the core security and identity infrastructure of your system. By moving to a many-to-many relationship between **Users** and **Branches**, you've built a foundation that supports complex organizational structures (like regional managers or floating staff) that most basic systems miss.
-
-Here is the English translation and technical documentation for your **Authorization & User Management** module.
-
----
-
 ## Authorization (RBAC)
 
 ### **ROLE** (`VAITRO`)
@@ -157,7 +151,7 @@ Here is the English translation and technical documentation for your **Authoriza
 * **RoleID** (`UUID`, **PK**)
 * **RoleName** (`VARCHAR(50)`, **Unique**): `admin`, `branch_manager`, `warehouse_staff`, `sales_staff`.
 * **Description** (`TEXT`, Optional)
-* > **Rule:** Only users with `admin` role can create or modify roles.
+> **Rule:** Only users with `admin` role can create or modify roles.
 
 ### **PERMISSION** (`QUYEN`)
 *Granular access control using the `resource.action` naming convention for easy code integration.*
@@ -170,7 +164,7 @@ Here is the English translation and technical documentation for your **Authoriza
 *Junction table allowing roles to be dynamically updated with new permissions without code changes.*
 * **RoleID** (`UUID`, **PK**, **FK**)
 * **PermissionID** (`UUID`, **PK**, **FK**)
-* > **Technical Note:** Composite Primary Key on `(RoleID, PermissionID)`.
+> **Technical Note:** Composite Primary Key on `(RoleID, PermissionID)`.
 
 ### **USER** (`NGUOIDUNG`)
 *Central user account table. Highly secured with Bcrypt hashing and status locking.*
@@ -184,20 +178,16 @@ Here is the English translation and technical documentation for your **Authoriza
 * **Status** (`ENUM`): `active`, `inactive`, `locked` (for failed login attempts).
 * **CreatedAt** (`TIMESTAMP`, DEFAULT `NOW()`)
 * **UpdatedAt** (`TIMESTAMP`)
-* > **Security Constraint:** `CHECK (LENGTH(Password) >= 59)` ensures no plain-text passwords are accidentally saved.
+> **Security Constraint:** `CHECK (LENGTH(Password) >= 59)` ensures no plain-text passwords are accidentally saved.
 
 ### **USER_BRANCH_ASSIGNMENT** (`NGUOIDUNG_CHINHANH`)
 *Maps users to one or more branches they are authorized to manage or work at.*
 * **UserID** (`UUID`, **PK**, **FK**)
 * **BranchID** (`UUID`, **PK**, **FK**)
 * **IsPrimary** (`BOOLEAN`, DEFAULT `FALSE`)
-* > **Technical Rule 1:** Composite Primary Key on `(UserID, BranchID)`.
-* > **Technical Rule 2:** A business logic/trigger check must ensure every user has exactly **one** `IsPrimary = TRUE`.
-* > **Admin Rule:** System Admins should be assigned to all branches automatically to ensure global visibility.
-
-This is the "engine room" of your business logic. By integrating **Loyalty Points**, **Dynamic Promotions**, and a **Returns & Exchange** module, you are moving far beyond a simple CRUD app. 
-
-The use of **JSONB** for `ChannelMetadata` is particularly clever—it ensures your system can digest Shopee's `order_sn` or TikTok's `live_stream_id` without breaking the core schema.
+> **Technical Rule 1:** Composite Primary Key on `(UserID, BranchID)`.
+> **Technical Rule 2:** A business logic/trigger check must ensure every user has exactly **one** `IsPrimary = TRUE`.
+> **Admin Rule:** System Admins should be assigned to all branches automatically to ensure global visibility.
 
 ---
 
@@ -235,7 +225,7 @@ The use of **JSONB** for `ChannelMetadata` is particularly clever—it ensures y
 * **UsageLimit** (`INT`, Optional)
 * **UsedCount** (`INT`, DEFAULT `0`)
 * **Status** (`ENUM`)
-* > **Rule:** `CHECK (EndDate > StartDate)`. For `percentage`, `Value` must be between $0$ and $100$.
+> **Rule:** `CHECK (EndDate > StartDate)`. For `percentage`, `Value` must be between $0$ and $100$.
 
 ### **ORDER** (`DONHANG`)
 *The central document for all sales. Tracks platform metadata and discounts.*
@@ -288,7 +278,7 @@ The use of **JSONB** for `ChannelMetadata` is particularly clever—it ensures y
 * **VariantID** (`UUID`, **PK**, **FK**)
 * **ReturnQuantity** (`INT`, **CHECK** $> 0$)
 * **RefundAmount** (`DECIMAL(12,2)`, Optional)
-* > **Rule:** `ReturnQuantity` must be $\le$ the quantity in the original `INVOICE_DETAIL`.
+> **Rule:** `ReturnQuantity` must be $\le$ the quantity in the original `INVOICE_DETAIL`.
 
 ### **NOTIFICATION** (`THONGBAO`)
 *System alerts triggered by database events (e.g., Low Stock, New Order).*
@@ -301,4 +291,4 @@ The use of **JSONB** for `ChannelMetadata` is particularly clever—it ensures y
 * **ReferenceType** (`VARCHAR(30)`, Optional)
 * **IsRead** (`BOOLEAN`, DEFAULT `FALSE`)
 * **CreatedAt** (`TIMESTAMP`, DEFAULT `NOW()`)
-* > **Index:** `(UserID, IsRead, CreatedAt DESC)` for lightning-fast inbox loading.
+> **Index:** `(UserID, IsRead, CreatedAt DESC)` for lightning-fast inbox loading.
