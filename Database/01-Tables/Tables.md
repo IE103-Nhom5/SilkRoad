@@ -1,5 +1,6 @@
 # Hệ Thống Quản Lý Hàng Hóa Đa Kênh — Chuỗi Thời Trang Bán Lẻ
 > **Stack:** PostgreSQL · Relational + Document Hybrid
+
 Hệ thống sử dụng kiến trúc Hybrid Data Modeling trên PostgreSQL, kết hợp giữa Relational Model cho nghiệp vụ lõi và JSONB Document Model cho dữ liệu biến động cao nhằm tối ưu tính toàn vẹn dữ liệu, hiệu năng truy vấn và khả năng mở rộng đa kênh.
 
 ---
