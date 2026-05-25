@@ -664,46 +664,134 @@ export default function App() {
 }
 
 function Login({ login, setLogin, signIn, signUp, toast }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(false);
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        width: "100vw",
-        backgroundImage: `url(${loginBg})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "Georgia, 'Times New Roman', serif",
-      }}
-    >
-      <div
-        style={{
-          width: 470,
-          minHeight: 520,
-          padding: "42px 46px",
-          background: "linear-gradient(180deg, rgba(255,244,213,0.94), rgba(244,222,177,0.92))",
-          border: "2px solid #a97832",
-          borderRadius: 18,
-          boxShadow: "0 25px 70px rgba(0,0,0,0.38)",
-          textAlign: "center",
-          position: "relative",
-        }}
-      >
-        <div style={{ fontSize: 46, fontWeight: 900, letterSpacing: 8, color: "#063f2f", marginBottom: 4 }}>SILKROAD</div>
-        <div style={{ fontSize: 13, letterSpacing: 2, color: "#7a5125", marginBottom: 36 }}>KẾT NỐI CON ĐƯỜNG TƠ LỤA</div>
-        <h1 style={{ color: "#063f2f", fontSize: 34, marginBottom: 30 }}>ĐĂNG NHẬP</h1>
+    <div className="sr-login-page" style={{ backgroundImage: `url(${loginBg})` }}>
+      <div className="sr-login-overlay" />
 
-        <input placeholder="Nhập email" value={login.email} onChange={(e) => setLogin({ ...login, email: e.target.value })} />
-        <input type="password" placeholder="Nhập mật khẩu" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} />
-
-        <button onClick={signIn}>ĐĂNG NHẬP</button>
-        <button onClick={signUp}>CHƯA CÓ TÀI KHOẢN? ĐĂNG KÝ AUTH</button>
-
-        {toast && <p style={{ color: "#9b1c1c", fontWeight: 700 }}>{toast}</p>}
+      <div className="sr-login-logo">
+        <div className="sr-camel">🐪</div>
+        <div>
+          <h1>SILKROAD</h1>
+          <p>KẾT NỐI CON ĐƯỜNG TƠ LỤA</p>
+        </div>
       </div>
+
+      <section className="sr-scroll-card">
+        <div className="sr-login-box">
+          <h2>ĐĂNG NHẬP</h2>
+
+          <div className="sr-title-line">
+            <span />
+            <i>◇</i>
+            <span />
+          </div>
+
+          <label>EMAIL / SỐ ĐIỆN THOẠI</label>
+          <div className="sr-input-wrap">
+            <span className="sr-input-icon">👤</span>
+            <input
+              placeholder="Nhập email hoặc số điện thoại"
+              value={login.email}
+              onChange={(e) => setLogin({ ...login, email: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") signIn();
+              }}
+            />
+          </div>
+
+          <label>MẬT KHẨU</label>
+          <div className="sr-input-wrap">
+            <span className="sr-input-icon">🔒</span>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Nhập mật khẩu"
+              value={login.password}
+              onChange={(e) => setLogin({ ...login, password: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") signIn();
+              }}
+            />
+
+            <button
+              type="button"
+              className="sr-eye-btn"
+              onClick={() => setShowPassword(!showPassword)}
+              title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+            >
+              👁
+            </button>
+          </div>
+
+          <div className="sr-login-row">
+            <label className="sr-check">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+              />
+              <span>Ghi nhớ đăng nhập</span>
+            </label>
+
+            <button
+              type="button"
+              className="sr-link-btn"
+              onClick={() => alert("Demo: dùng Supabase Authentication để reset password.")}
+            >
+              Quên mật khẩu?
+            </button>
+          </div>
+
+          <button className="sr-login-btn" onClick={signIn}>
+            ĐĂNG NHẬP
+          </button>
+
+          <p className="sr-register-text">
+            Chưa có tài khoản?{" "}
+            <button type="button" onClick={signUp}>
+              Đăng ký ngay
+            </button>
+          </p>
+
+          {toast && <div className="sr-login-toast">{toast}</div>}
+        </div>
+      </section>
+
+      <section className="sr-benefits">
+        <div className="sr-benefit">
+          <div className="sr-benefit-icon">🛡</div>
+          <div>
+            <h3>AN TOÀN BẢO MẬT</h3>
+            <p>Bảo vệ thông tin của bạn với công nghệ tiên tiến</p>
+          </div>
+        </div>
+
+        <div className="sr-benefit">
+          <div className="sr-benefit-icon">📦</div>
+          <div>
+            <h3>MUA BÁN DỄ DÀNG</h3>
+            <p>Nền tảng uy tín cho mọi giao dịch trên SilkRoad</p>
+          </div>
+        </div>
+
+        <div className="sr-benefit">
+          <div className="sr-benefit-icon">✅</div>
+          <div>
+            <h3>CHẤT LƯỢNG ĐẢM BẢO</h3>
+            <p>Sản phẩm chọn lọc từ những nhà cung cấp đáng tin cậy</p>
+          </div>
+        </div>
+
+        <div className="sr-benefit">
+          <div className="sr-benefit-icon">🕒</div>
+          <div>
+            <h3>HỖ TRỢ 24/7</h3>
+            <p>Đội ngũ hỗ trợ luôn sẵn sàng giúp đỡ bạn mọi lúc</p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
