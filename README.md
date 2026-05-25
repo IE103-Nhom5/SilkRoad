@@ -1,18 +1,18 @@
-# SilkRoad
->**Hệ thống quản lý hàng hóa đa kênh cho chuỗi cửa hàng thời trang bán lẻ**
----
-## Tổng quan
+# SilkRoad Frontend Demo - React + Supabase + Vercel
 
-SilkRoad UIT ( Con đường Tơ lụa UIT ) là sản phẩm thực hiện trong khuôn khổ môn học IE103 - Quản lý Thông tin, thuộc Khoa Khoa học và Kỹ thuật Thông tin – Trường Đại học Công nghệ Thông tin (UIT), VNU-HCM.
+## Chạy local
+```bash
+npm install
+cp .env.example .env
+npm run dev
+```
 
-## Tech Stack
+## Biến môi trường Vercel
+- VITE_SUPABASE_URL
+- VITE_SUPABASE_ANON_KEY
 
-**Database:** PostgreSQL 
+## Supabase
+Chạy các file SQL trong repo database trước, sau đó seed dữ liệu mẫu. Frontend dùng đúng các bảng như product, product_variant, stock, stock_history, purchase_order, orders, users, role.
 
-## Thông tin Liên hệ
-
-**Email:** [tranducmanh.qct@gmail.com](mailto:tranducmanh.qct@gmail.com)
-
----
-
-*© 2026 SilkRoad-UIT Project. Developed with passion at UIT.*
+## Demo tài khoản
+Nếu đang dùng Supabase Auth, tạo tài khoản trong Authentication > Users. Sau đó trong bảng users của database, tạo username/email trùng tài khoản để map role.
