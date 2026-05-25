@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from './lib/supabase';
 import {
   BarChart3, Boxes, ClipboardList, LogOut, Menu, Moon, PackagePlus, Plus,
