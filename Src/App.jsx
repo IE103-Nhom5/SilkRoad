@@ -19,11 +19,15 @@ import {
   Upload,
 } from "lucide-react";
 import bg from "./assets/silkroad-bg.png";
-import loginBg from "/assets/login-bg.png";
-const LOGIN_FRAME_SRC = "/login-frame.png";
-const LOGIN_BENEFITS_SRC = "/login-benefits.png";
+import loginBg from "./assets/login-bg.png";
+import loginFrameImg from "./assets/login-frame.png";
+import loginBenefitsImg from "./assets/login-benefits.png";
+import logoImg from "./assets/silkroad-logo.png";
 
-const LOGO_SRC = "/silkroad-logo.png";
+const LOGO_SRC = logoImg;
+const LOGIN_FRAME_SRC = loginFrameImg;
+const LOGIN_BENEFITS_SRC = loginBenefitsImg;
+
 
 const ROLE_FEATURES = {
   admin: [
