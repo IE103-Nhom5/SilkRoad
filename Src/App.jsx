@@ -21,6 +21,8 @@ import {
 import bg from "./assets/silkroad-bg.png";
 import loginBg from "./assets/login-bg.png";
 
+const LOGO_SRC = "/silkroad-logo.svg";
+
 const ROLE_FEATURES = {
   admin: [
     "dashboard",
@@ -572,7 +574,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${sidebar ? "sidebar-open" : "sidebar-closed"}`}>
       {toast && <div className="toast">{toast}</div>}
       {modal && (
         <Modal title={modal.title} onClose={() => setModal(null)}>
@@ -590,8 +592,10 @@ export default function App() {
             backgroundRepeat: "no-repeat",
           }}
         >
-          <h2>SilkRoad</h2>
-          <small>{roleName()}</small>
+          <div className="sidebar-brand">
+            <img src={LOGO_SRC} alt="SilkRoad" className="sidebar-logo-img" />
+            <small>{roleName()}</small>
+          </div>
           {MENU.filter(([key]) => can(key)).map(([key, label, Icon]) => (
             <button key={key} className={page === key ? "active" : ""} onClick={() => setPage(key)}>
               <Icon size={18} />
@@ -668,15 +672,16 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
   const [remember, setRemember] = useState(false);
 
   return (
-    <div className="sr-login-page" style={{ backgroundImage: `url(${loginBg})` }}>
+    <div
+      className="sr-login-page"
+      style={{
+        backgroundImage: `url(${loginBg})`,
+      }}
+    >
       <div className="sr-login-overlay" />
 
       <div className="sr-login-logo">
-        <div className="sr-camel">🐪</div>
-        <div>
-          <h1>SILKROAD</h1>
-          <p>KẾT NỐI CON ĐƯỜNG TƠ LỤA</p>
-        </div>
+        <img src={LOGO_SRC} alt="SilkRoad" className="sr-login-logo-img" />
       </div>
 
       <section className="sr-scroll-card">
@@ -691,7 +696,7 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
 
           <label>EMAIL / SỐ ĐIỆN THOẠI</label>
           <div className="sr-input-wrap">
-            <span className="sr-input-icon">👤</span>
+            <span>👤</span>
             <input
               placeholder="Nhập email hoặc số điện thoại"
               value={login.email}
@@ -704,7 +709,7 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
 
           <label>MẬT KHẨU</label>
           <div className="sr-input-wrap">
-            <span className="sr-input-icon">🔒</span>
+            <span>🔒</span>
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Nhập mật khẩu"
@@ -714,12 +719,10 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
                 if (e.key === "Enter") signIn();
               }}
             />
-
             <button
               type="button"
               className="sr-eye-btn"
               onClick={() => setShowPassword(!showPassword)}
-              title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
             >
               👁
             </button>
@@ -738,7 +741,7 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
             <button
               type="button"
               className="sr-link-btn"
-              onClick={() => alert("Demo: dùng Supabase Authentication để reset password.")}
+              onClick={() => alert("Demo: dùng Supabase Auth để reset password.")}
             >
               Quên mật khẩu?
             </button>
