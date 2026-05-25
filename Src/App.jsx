@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import bg from "./assets/silkroad-bg.png";
 import loginBg from "./assets/login-bg.png";
+const LOGO_SRC = "/silkroad-logo.png";
+const LOGIN_FRAME_SRC = "/login-frame.png";
+const LOGIN_BENEFITS_SRC = "/login-benefits.png";
 
 const LOGO_SRC = "./silkroad-logo.png";
 
@@ -673,34 +676,38 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
 
   return (
     <div
-      className="sr-login-page"
-      style={{
-        backgroundImage: `url(${loginBg})`,
-      }}
+      className="sr-login-page-img"
+      style={{ backgroundImage: `url(${loginBg})` }}
     >
-      <div className="sr-login-overlay" />
+      <div className="sr-login-bg-overlay" />
 
-      <div className="sr-login-logo">
-        <img src={LOGO_SRC} alt="SilkRoad" className="sr-login-logo-img" />
-      </div>
+      <img src={LOGO_SRC} alt="SilkRoad" className="sr-login-logo-img" />
 
-      <section className="sr-scroll-card">
-        <div className="sr-login-box">
-          <h2>ĐĂNG NHẬP</h2>
+      <section className="sr-login-frame-wrap">
+        <img
+          src={LOGIN_FRAME_SRC}
+          alt="Khung đăng nhập"
+          className="sr-login-frame-img"
+        />
 
-          <div className="sr-title-line">
+        <div className="sr-login-form-layer">
+          <h1>ĐĂNG NHẬP</h1>
+
+          <div className="sr-login-line">
             <span />
             <i>◇</i>
             <span />
           </div>
 
           <label>EMAIL / SỐ ĐIỆN THOẠI</label>
-          <div className="sr-input-wrap">
+          <div className="sr-login-input">
             <span>👤</span>
             <input
               placeholder="Nhập email hoặc số điện thoại"
               value={login.email}
-              onChange={(e) => setLogin({ ...login, email: e.target.value })}
+              onChange={(e) =>
+                setLogin({ ...login, email: e.target.value })
+              }
               onKeyDown={(e) => {
                 if (e.key === "Enter") signIn();
               }}
@@ -708,20 +715,22 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
           </div>
 
           <label>MẬT KHẨU</label>
-          <div className="sr-input-wrap">
+          <div className="sr-login-input">
             <span>🔒</span>
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Nhập mật khẩu"
               value={login.password}
-              onChange={(e) => setLogin({ ...login, password: e.target.value })}
+              onChange={(e) =>
+                setLogin({ ...login, password: e.target.value })
+              }
               onKeyDown={(e) => {
                 if (e.key === "Enter") signIn();
               }}
             />
             <button
               type="button"
-              className="sr-eye-btn"
+              className="sr-login-eye"
               onClick={() => setShowPassword(!showPassword)}
             >
               👁
@@ -729,7 +738,7 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
           </div>
 
           <div className="sr-login-row">
-            <label className="sr-check">
+            <label className="sr-login-check">
               <input
                 type="checkbox"
                 checked={remember}
@@ -740,18 +749,20 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
 
             <button
               type="button"
-              className="sr-link-btn"
-              onClick={() => alert("Demo: dùng Supabase Auth để reset password.")}
+              className="sr-login-link"
+              onClick={() =>
+                alert("Demo: dùng Supabase Auth để reset password.")
+              }
             >
               Quên mật khẩu?
             </button>
           </div>
 
-          <button className="sr-login-btn" onClick={signIn}>
+          <button className="sr-login-submit" onClick={signIn}>
             ĐĂNG NHẬP
           </button>
 
-          <p className="sr-register-text">
+          <p className="sr-login-register">
             Chưa có tài khoản?{" "}
             <button type="button" onClick={signUp}>
               Đăng ký ngay
@@ -762,39 +773,11 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
         </div>
       </section>
 
-      <section className="sr-benefits">
-        <div className="sr-benefit">
-          <div className="sr-benefit-icon">🛡</div>
-          <div>
-            <h3>AN TOÀN BẢO MẬT</h3>
-            <p>Bảo vệ thông tin của bạn với công nghệ tiên tiến</p>
-          </div>
-        </div>
-
-        <div className="sr-benefit">
-          <div className="sr-benefit-icon">📦</div>
-          <div>
-            <h3>MUA BÁN DỄ DÀNG</h3>
-            <p>Nền tảng uy tín cho mọi giao dịch trên SilkRoad</p>
-          </div>
-        </div>
-
-        <div className="sr-benefit">
-          <div className="sr-benefit-icon">✅</div>
-          <div>
-            <h3>CHẤT LƯỢNG ĐẢM BẢO</h3>
-            <p>Sản phẩm chọn lọc từ những nhà cung cấp đáng tin cậy</p>
-          </div>
-        </div>
-
-        <div className="sr-benefit">
-          <div className="sr-benefit-icon">🕒</div>
-          <div>
-            <h3>HỖ TRỢ 24/7</h3>
-            <p>Đội ngũ hỗ trợ luôn sẵn sàng giúp đỡ bạn mọi lúc</p>
-          </div>
-        </div>
-      </section>
+      <img
+        src={LOGIN_BENEFITS_SRC}
+        alt="Lợi ích SilkRoad"
+        className="sr-login-benefits-img"
+      />
     </div>
   );
 }
