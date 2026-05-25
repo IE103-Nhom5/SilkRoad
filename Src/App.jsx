@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import bg from "./assets/silkroad-bg.png";
 import loginBg from "./assets/login-bg.png";
-const LOGO_SRC = "/silkroad-logo.png";
 const LOGIN_FRAME_SRC = "/login-frame.png";
 const LOGIN_BENEFITS_SRC = "/login-benefits.png";
 
