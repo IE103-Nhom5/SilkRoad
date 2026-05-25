@@ -16,3 +16,5 @@ Chạy các file SQL trong repo database trước, sau đó seed dữ liệu m�
 
 ## Demo tài khoản
 Nếu đang dùng Supabase Auth, tạo tài khoản trong Authentication > Users. Sau đó trong bảng users của database, tạo username/email trùng tài khoản để map role.
+
+
