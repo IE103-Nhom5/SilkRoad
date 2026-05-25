@@ -684,9 +684,13 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
     >
       <div className="sr-login-bg-overlay" />
 
-      <img src={LOGO_SRC} alt="SilkRoad" className="sr-login-logo-img" />
+      <img
+        src={LOGO_SRC}
+        alt="SilkRoad"
+        className="sr-login-logo-img"
+      />
 
-      <section className="sr-login-frame-wrap">
+      <div className="sr-login-frame-wrap">
         <img
           src={LOGIN_FRAME_SRC}
           alt="Khung đăng nhập"
@@ -697,15 +701,16 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
           <h1>ĐĂNG NHẬP</h1>
 
           <div className="sr-login-line">
-            <span />
-            <i>◇</i>
-            <span />
+            <span></span>
+            <b>◇</b>
+            <span></span>
           </div>
 
           <label>EMAIL / SỐ ĐIỆN THOẠI</label>
           <div className="sr-login-input">
             <span>👤</span>
             <input
+              type="email"
               placeholder="Nhập email hoặc số điện thoại"
               value={login.email}
               onChange={(e) =>
@@ -731,10 +736,12 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
                 if (e.key === "Enter") signIn();
               }}
             />
+
             <button
               type="button"
               className="sr-login-eye"
               onClick={() => setShowPassword(!showPassword)}
+              aria-label="Ẩn hiện mật khẩu"
             >
               👁
             </button>
@@ -761,7 +768,11 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
             </button>
           </div>
 
-          <button className="sr-login-submit" onClick={signIn}>
+          <button
+            type="button"
+            className="sr-login-submit"
+            onClick={signIn}
+          >
             ĐĂNG NHẬP
           </button>
 
@@ -774,13 +785,15 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
 
           {toast && <div className="sr-login-toast">{toast}</div>}
         </div>
-      </section>
+      </div>
 
-      <img
-        src={LOGIN_BENEFITS_SRC}
-        alt="Lợi ích SilkRoad"
-        className="sr-login-benefits-img"
-      />
+      <div className="sr-login-benefits-wrap">
+        <img
+          src={LOGIN_BENEFITS_SRC}
+          alt="Lợi ích SilkRoad"
+          className="sr-login-benefits-img"
+        />
+      </div>
     </div>
   );
 }
