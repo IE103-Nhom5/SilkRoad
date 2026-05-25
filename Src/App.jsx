@@ -682,116 +682,117 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
       className="sr-login-page-img"
       style={{ backgroundImage: `url(${loginBg})` }}
     >
-      <div className="sr-login-center">
+      <div className="sr-login-bg-overlay" />
+
+      <img
+        src={LOGO_SRC}
+        alt="SilkRoad"
+        className="sr-login-logo-img"
+      />
+
+      <div className="sr-login-frame-wrap">
         <img
-          src={LOGO_SRC}
-          alt="SilkRoad"
-          className="sr-login-logo-img"
+          src={LOGIN_FRAME_SRC}
+          alt="Khung đăng nhập"
+          className="sr-login-frame-img"
         />
 
-        <div className="sr-login-frame-wrap">
-          <img
-            src={LOGIN_FRAME_SRC}
-            alt="Khung đăng nhập"
-            className="sr-login-frame-img"
-          />
+        <div className="sr-login-form-layer">
+          <h1>ĐĂNG NHẬP</h1>
 
-          <div className="sr-login-form-layer">
-            <h1>ĐĂNG NHẬP</h1>
+          <div className="sr-login-line">
+            <span></span>
+            <b>◇</b>
+            <span></span>
+          </div>
 
-            <div className="sr-login-line">
-              <span></span>
-              <b>◇</b>
-              <span></span>
-            </div>
+          <label>EMAIL / SỐ ĐIỆN THOẠI</label>
+          <div className="sr-login-input">
+            <span>👤</span>
+            <input
+              type="email"
+              placeholder="Nhập email hoặc số điện thoại"
+              value={login.email}
+              onChange={(e) =>
+                setLogin({ ...login, email: e.target.value })
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") signIn();
+              }}
+            />
+          </div>
 
-            <label>EMAIL / SỐ ĐIỆN THOẠI</label>
-            <div className="sr-login-input">
-              <span>👤</span>
-              <input
-                type="text"
-                placeholder="Nhập email hoặc số điện thoại"
-                value={login.email}
-                onChange={(e) =>
-                  setLogin({ ...login, email: e.target.value })
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") signIn();
-                }}
-              />
-            </div>
-
-            <label>MẬT KHẨU</label>
-            <div className="sr-login-input">
-              <span>🔒</span>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Nhập mật khẩu"
-                value={login.password}
-                onChange={(e) =>
-                  setLogin({ ...login, password: e.target.value })
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") signIn();
-                }}
-              />
-
-              <button
-                type="button"
-                className="sr-login-eye"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                👁
-              </button>
-            </div>
-
-            <div className="sr-login-row">
-              <label className="sr-login-check">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                />
-                <span>Ghi nhớ đăng nhập</span>
-              </label>
-
-              <button
-                type="button"
-                className="sr-login-link"
-                onClick={() =>
-                  alert("Demo: dùng Supabase Auth để reset password.")
-                }
-              >
-                Quên mật khẩu?
-              </button>
-            </div>
+          <label>MẬT KHẨU</label>
+          <div className="sr-login-input">
+            <span>🔒</span>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Nhập mật khẩu"
+              value={login.password}
+              onChange={(e) =>
+                setLogin({ ...login, password: e.target.value })
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") signIn();
+              }}
+            />
 
             <button
               type="button"
-              className="sr-login-submit"
-              onClick={signIn}
+              className="sr-login-eye"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label="Ẩn hiện mật khẩu"
             >
-              ĐĂNG NHẬP
+              👁
             </button>
-
-            <p className="sr-login-register">
-              Chưa có tài khoản?{" "}
-              <button type="button" onClick={signUp}>
-                Đăng ký ngay
-              </button>
-            </p>
-
-            {toast && <div className="sr-login-toast">{toast}</div>}
           </div>
-        </div>
 
-        <div className="sr-login-benefits-wrap">
-          <img
-            src={LOGIN_BENEFITS_SRC}
-            alt="Lợi ích SilkRoad"
-            className="sr-login-benefits-img"
-          />
+          <div className="sr-login-row">
+            <label className="sr-login-check">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+              />
+              <span>Ghi nhớ đăng nhập</span>
+            </label>
+
+            <button
+              type="button"
+              className="sr-login-link"
+              onClick={() =>
+                alert("Demo: dùng Supabase Auth để reset password.")
+              }
+            >
+              Quên mật khẩu?
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="sr-login-submit"
+            onClick={signIn}
+          >
+            ĐĂNG NHẬP
+          </button>
+
+          <p className="sr-login-register">
+            Chưa có tài khoản?{" "}
+            <button type="button" onClick={signUp}>
+              Đăng ký ngay
+            </button>
+          </p>
+
+          {toast && <div className="sr-login-toast">{toast}</div>}
         </div>
+      </div>
+
+      <div className="sr-login-benefits-wrap">
+        <img
+          src={LOGIN_BENEFITS_SRC}
+          alt="Lợi ích SilkRoad"
+          className="sr-login-benefits-img"
+        />
       </div>
     </div>
   );
