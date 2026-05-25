@@ -1523,3 +1523,279 @@ table {
     height: 115px;
   }
 }
+
+/* =========================
+   FIX LOGIN FINAL LAYOUT
+========================= */
+
+.sr-login-page-img {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 36px;
+  padding-bottom: 150px;
+}
+
+.sr-login-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 220, 145, 0.08);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.sr-login-logo-img {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  height: auto;
+  object-fit: contain;
+  z-index: 5;
+}
+
+/* Khung giấy */
+.sr-login-frame-wrap {
+  position: relative;
+  z-index: 3;
+  width: 560px;
+  max-width: 92vw;
+  aspect-ratio: 742 / 761;
+  margin-top: 54px;
+  filter: drop-shadow(0 20px 50px rgba(79, 42, 10, 0.28));
+}
+
+.sr-login-frame-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Lớp form nằm trên ảnh giấy */
+.sr-login-form-layer {
+  position: absolute;
+  left: 14%;
+  top: 15.5%;
+  width: 72%;
+  height: 72%;
+  display: flex;
+  flex-direction: column;
+  color: #073d31;
+  z-index: 4;
+}
+
+.sr-login-form-layer h1 {
+  font-family: Cinzel, serif;
+  text-align: center;
+  font-size: 44px;
+  letter-spacing: 4px;
+  margin: 0 0 8px;
+  color: #073d31;
+}
+
+.sr-login-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: #b8863b;
+  margin-bottom: 28px;
+}
+
+.sr-login-line span {
+  width: 70px;
+  height: 1px;
+  background: #b8863b;
+}
+
+.sr-login-form-layer label {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-bottom: 7px;
+  color: #073d31;
+}
+
+/* Input */
+.sr-login-input {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border: 2px solid #9b7238;
+  border-radius: 8px;
+  background: rgba(255, 241, 203, 0.86);
+  padding: 0 14px;
+  margin-bottom: 20px;
+}
+
+.sr-login-input input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #604927;
+  font-size: 15px;
+}
+
+.sr-login-input input::placeholder {
+  color: #897353;
+}
+
+.sr-login-eye {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Remember + forgot */
+.sr-login-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: -2px;
+  margin-bottom: 24px;
+}
+
+.sr-login-check {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+
+.sr-login-check input {
+  width: 17px;
+  height: 17px;
+}
+
+.sr-login-link {
+  border: none;
+  background: transparent;
+  color: #073d31;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Button */
+.sr-login-submit {
+  height: 56px;
+  width: 100%;
+  border-radius: 9px;
+  border: 2px solid #d5b15d;
+  background: #063d32;
+  color: #f5deb0;
+  font-family: Cinzel, serif;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  cursor: pointer;
+  box-shadow:
+    0 10px 22px rgba(0, 35, 25, 0.34),
+    inset 0 0 0 2px rgba(255, 224, 153, 0.16);
+}
+
+.sr-login-submit:hover {
+  background: #0a5043;
+}
+
+.sr-login-register {
+  margin-top: 18px;
+  text-align: center;
+  color: #6b4d22;
+  font-size: 15px;
+}
+
+.sr-login-register button {
+  border: none;
+  background: transparent;
+  color: #073d31;
+  text-decoration: underline;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* Toast */
+.sr-login-toast {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: rgba(118, 24, 24, 0.88);
+  color: #fff6dc;
+  font-weight: 800;
+  text-align: center;
+  font-size: 13px;
+}
+
+/* Thanh xanh dưới */
+.sr-login-benefits-img {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  width: 100%;
+  height: 140px;
+  object-fit: fill;
+  object-position: center center;
+  border-top: 4px solid #d6b56d;
+}
+
+/* Fix nếu màn hình thấp */
+@media (max-height: 820px) {
+  .sr-login-page-img {
+    padding-top: 20px;
+    padding-bottom: 118px;
+  }
+
+  .sr-login-logo-img {
+    width: 220px;
+    top: 10px;
+  }
+
+  .sr-login-frame-wrap {
+    width: 500px;
+    margin-top: 42px;
+  }
+
+  .sr-login-form-layer h1 {
+    font-size: 38px;
+  }
+
+  .sr-login-input {
+    height: 43px;
+    margin-bottom: 14px;
+  }
+
+  .sr-login-row {
+    margin-bottom: 16px;
+  }
+
+  .sr-login-submit {
+    height: 50px;
+  }
+
+  .sr-login-benefits-img {
+    height: 112px;
+  }
+}
