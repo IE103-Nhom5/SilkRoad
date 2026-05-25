@@ -487,23 +487,20 @@ export default function App() {
     const orderid = uuid();
     const total = cart.reduce((sum, item) => sum + item.quantity * item.unitprice, 0);
 
-    const { error: orderError } = await supabase.from("orders").insert([
-      {
-        orderid,
-        branchid,
-        customerid: orderMeta.customerid || null,
-        channelid: orderMeta.channelid || null,
-        createdby: profile?.userid || null,
-        orderdate: new Date().toISOString(),
-        orderstatus: orderMeta.status,
-        paymentstatus: orderMeta.paymentstatus,
-        totalamount: total,
-        discountamount: 0,
-        shippingfee: 0,
-        finalamount: total,
-        note: "Demo hóa đơn từ frontend",
-      },
-    ]);
+    const { error: orderError } = await supabase.from('orders').insert([{
+  orderid,
+  branchid,
+  customerid: orderMeta.customerid || null,
+  channelid: orderMeta.channelid || null,
+  createdby: profile?.userid || null,
+  orderdate: new Date().toISOString(),
+  orderstatus: orderMeta.status,
+  paymentstatus: orderMeta.paymentstatus,
+  totalamount: total,
+  discountamount: 0,
+  shippingfee: 0,
+  note: 'Demo hóa đơn từ frontend'
+}]);
     if (orderError) throw orderError;
 
     for (const item of cart) {
