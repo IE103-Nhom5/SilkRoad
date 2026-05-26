@@ -4603,6 +4603,51 @@ body.dark .dashboard-chart .bar::after {
   background: rgba(255, 236, 186, 0.1);
 }
 
+/* ===== Definitive logo/menu placement ===== */
+.sidebar-brand .sidebar-logo-img {
+  display: none !important;
+}
+
+.sidebar-brand {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-brand small {
+  margin: 0 !important;
+}
+
+@media (min-width: 901px) {
+  .app-shell.sidebar-open .topbar {
+    grid-template-columns: 56px 110px auto minmax(0, 1fr) !important;
+    column-gap: 18px !important;
+    padding-left: 28px !important;
+  }
+
+  .app-shell.sidebar-open .topbar-logo {
+    display: block !important;
+    justify-self: start;
+  }
+
+  .app-shell.sidebar-open .topbar > b {
+    padding-left: 0 !important;
+  }
+
+  .app-shell.sidebar-closed .topbar {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    padding-left: 82px !important;
+  }
+
+  .app-shell.sidebar-closed .topbar-logo {
+    display: none !important;
+  }
+
+  .app-shell.sidebar-closed .topbar > b {
+    padding-left: 12px !important;
+  }
+}
+
 /* ===== Header controls and sidebar navigation fix ===== */
 .sidebar {
   display: flex;
