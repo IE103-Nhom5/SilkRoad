@@ -224,48 +224,58 @@ export default function App() {
   }
 
   async function loadOptions() {
-  const [products, variants, branches, roles] = await Promise.all([
-    supabase
-      .from("product")
-      .select("productid, productname, brand, defaultsellingprice")
-      .order("productname"),
+    const [products, variants, branches, roles] = await Promise.all([
+      supabase
+        .from("product")
+        .select("productid, productname, brand, defaultsellingprice")
+        .order("productname"),
 
-    supabase
-      .from("product_variant")
-      .select(`
-        variantid,
-        productid,
-        sku,
-        barcode,
-        size,
-        color,
-        sellingprice,
-        product:productid (
-          productname,
-          brand,
-          defaultsellingprice
-        )
-      `)
-      .order("sku"),
+      supabase
+        .from("product_variant")
+        .select("variantid, productid, sku, barcode, size, color, sellingprice")
+        .order("sku"),
 
-    supabase
-      .from("branch")
-      .select("branchid, branchname")
-      .order("branchname"),
+      supabase
+        .from("branch")
+        .select("branchid, branchname")
+        .order("branchname"),
 
-    supabase
-      .from("role")
-      .select("roleid, rolename")
-      .order("rolename"),
-  ]);
+      supabase
+        .from("role")
+        .select("roleid, rolename")
+        .order("rolename"),
+    ]);
 
-  setOptions({
-    products: products.data || [],
-    variants: variants.data || [],
-    branches: branches.data || [],
-    roles: roles.data || [],
-  });
-}
+    if (products.error) throw products.error;
+    if (variants.error) throw variants.error;
+    if (branches.error) throw branches.error;
+    if (roles.error) throw roles.error;
+
+    const productList = products.data || [];
+    const variantList = (variants.data || []).map((variant) => {
+      const product = productList.find(
+        (item) => item.productid === variant.productid
+      );
+
+      return {
+        ...variant,
+        product: product
+          ? {
+              productname: product.productname,
+              brand: product.brand,
+              defaultsellingprice: product.defaultsellingprice,
+            }
+          : null,
+      };
+    });
+
+    setOptions({
+      products: productList,
+      variants: variantList,
+      branches: branches.data || [],
+      roles: roles.data || [],
+    });
+  }
   async function loadProfile(email) {
     const { data, error } = await supabase.from("users").select("*, role(*)").eq("email", email).maybeSingle();
     if (error || !data) {
@@ -363,11 +373,93 @@ export default function App() {
     await selectTable("product_image");
   }
 
+  async function loadStockFriendly() {
+    if (!guard("stock")) return;
+
+    const { data, error } = await supabase
+      .from("stock")
+      .select("*")
+      .order("lastupdated", { ascending: false });
+
+    if (error) throw error;
+
+    const friendlyRows = (data || []).map((stockItem) => {
+      const branch = options.branches.find(
+        (item) => item.branchid === stockItem.branchid
+      );
+
+      const variant = options.variants.find(
+        (item) => item.variantid === stockItem.variantid
+      );
+
+      const quantity = Number(stockItem.quantity || 0);
+      const reserved = Number(stockItem.reservedquantity || 0);
+
+      return {
+        "Chi nhánh": branch?.branchname || stockItem.branchid || "",
+        "Sản phẩm": variant?.product?.productname || "",
+        "Thương hiệu": variant?.product?.brand || "",
+        "SKU": variant?.sku || "",
+        "Barcode": variant?.barcode || "",
+        "Size": variant?.size || "",
+        "Màu": variant?.color || "",
+        "Tồn kho": quantity,
+        "Đã giữ": reserved,
+        "Tồn khả dụng": quantity - reserved,
+        "Mức tối thiểu": stockItem.minstocklevel || 0,
+        "Cập nhật": stockItem.lastupdated
+          ? new Date(stockItem.lastupdated).toLocaleString("vi-VN")
+          : "",
+      };
+    });
+
+    setRows(friendlyRows);
+  }
+
+
   async function loadLowStock() {
     if (!guard("stock")) return;
-    const { data, error } = await supabase.from("stock").select("*");
+
+    const { data, error } = await supabase
+      .from("stock")
+      .select("*")
+      .order("quantity", { ascending: true });
+
     if (error) throw error;
-    setRows((data || []).filter((r) => Number(r.quantity || 0) <= Number(r.minstocklevel || r.min_stock_level || 5)));
+
+    const lowRows = (data || [])
+      .filter((stockItem) => {
+        const quantity = Number(stockItem.quantity || 0);
+        const min = Number(stockItem.minstocklevel || stockItem.min_stock_level || 5);
+        return quantity <= min;
+      })
+      .map((stockItem) => {
+        const branch = options.branches.find(
+          (item) => item.branchid === stockItem.branchid
+        );
+
+        const variant = options.variants.find(
+          (item) => item.variantid === stockItem.variantid
+        );
+
+        return {
+          "Chi nhánh": branch?.branchname || stockItem.branchid || "",
+          "Sản phẩm": variant?.product?.productname || "",
+          "Thương hiệu": variant?.product?.brand || "",
+          "SKU": variant?.sku || "",
+          "Barcode": variant?.barcode || "",
+          "Size": variant?.size || "",
+          "Màu": variant?.color || "",
+          "Tồn kho": stockItem.quantity || 0,
+          "Mức tối thiểu": stockItem.minstocklevel || 0,
+          "Trạng thái": "Sắp hết hàng",
+          "Cập nhật": stockItem.lastupdated
+            ? new Date(stockItem.lastupdated).toLocaleString("vi-VN")
+            : "",
+        };
+      });
+
+    setRows(lowRows);
     show("Đã lọc cảnh báo sắp hết hàng");
   }
 
@@ -755,7 +847,14 @@ export default function App() {
                 rows={rows}
               />
             )}
-            {page === "stock" && <Stock run={run} selectTable={selectTable} loadLowStock={loadLowStock} rows={rows} />}
+            {page === "stock" && (
+              <Stock
+                run={run}
+                loadStockFriendly={loadStockFriendly}
+                loadLowStock={loadLowStock}
+                rows={rows}
+              />
+            )}
             {page === "transfer" && <Transfer options={options} run={run} transferForm={transferForm} setTransferForm={setTransferForm} transferStock={transferStock} />}
             {page === "adjustment" && <Adjustment options={options} run={run} adjustForm={adjustForm} setAdjustForm={setAdjustForm} adjustStock={adjustStock} />}
             {page === "orders" && (
@@ -1261,7 +1360,27 @@ function Products(p) {
   );
 }
 
-function Stock({ run, selectTable, loadLowStock, rows }) {
+function Stock({ run, loadStockFriendly, loadLowStock, rows }) {
+  return (
+    <>
+      <Card title="Kho hàng">
+        <p className="muted">
+          Xem tồn kho theo tên chi nhánh, sản phẩm, SKU, size và màu. Không hiển thị ID kỹ thuật.
+        </p>
+
+        <button onClick={() => run(loadStockFriendly)}>
+          Xem tồn kho hiện tại
+        </button>
+
+        <button onClick={() => run(loadLowStock)}>
+          <AlertTriangle /> Cảnh báo sắp hết hàng
+        </button>
+      </Card>
+
+      <DataTable rows={rows} />
+    </>
+  );
+}) {
   return (
     <>
       <Card title="Kho hàng">
