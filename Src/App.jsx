@@ -1380,32 +1380,6 @@ function Stock({ run, loadStockFriendly, loadLowStock, rows }) {
       <DataTable rows={rows} />
     </>
   );
-}) {
-  return (
-    <>
-      <Card title="Kho hàng">
-        <p className="muted">
-          Chọn chức năng cần xem. Dữ liệu tồn kho sẽ hiển thị ở bảng bên dưới.
-        </p>
-
-        <button onClick={() => run(() => selectTable("stock"))}>
-          Xem tồn kho hiện tại
-        </button>
-
-        <button onClick={() => run(() => selectTable("stock_history"))}>
-          Lịch sử nhập / xuất / kiểm kho
-        </button>
-
-        <button onClick={() => run(loadLowStock)}>
-          <AlertTriangle /> Cảnh báo sắp hết hàng
-        </button>
-      </Card>
-
-      <DataTable rows={rows} />
-    </>
-  );
-}
-
 function Transfer(p) {
   return (
     <Card title="Chuyển kho">
