@@ -84,11 +84,12 @@ function productLabel(product) {
 
 function variantLabel(variant) {
   if (!variant) return "Chưa chọn biến thể";
+  const variantName = first(variant, ["variantname", "variant_name", "name"], "");
+  const productName = first(variant?.product, ["productname", "product_name"], "");
   return [
+    variantName || productName,
     variant.size ? `Size ${variant.size}` : "",
     variant.color ? `Màu ${variant.color}` : "",
-    variant.barcode ? `Barcode ${variant.barcode}` : "",
-    variant.sku ? `Mã ${variant.sku}` : "",
     Number(variant.sellingprice || 0) > 0 ? money(variant.sellingprice) : "",
   ]
     .filter(Boolean)
@@ -109,6 +110,14 @@ function variantIdOf(item) {
 
 function branchLabel(branch) {
   return first(branch, ["branchname", "branch_name"], "Chi nhánh chưa đặt tên");
+}
+
+function channelIdOf(item) {
+  return str(first(item, ["channelid", "channel_id", "id"], ""));
+}
+
+function channelLabel(channel) {
+  return first(channel, ["channelname", "channel_name", "name", "channelcode", "channel_code"], "Kênh bán");
 }
 
 function stockViewRows(stockRows, options, onlyLowStock = false) {
@@ -424,6 +433,7 @@ export default function App() {
     variants: [],
     branches: [],
     roles: [],
+    channels: [],
   });
 
   // Form state
@@ -487,9 +497,9 @@ export default function App() {
     quantity: 1,
     unitprice: 0,
   });
-  const [orderMeta] = useState({
+  const [orderMeta, setOrderMeta] = useState({
     customerid: null,
-    channelid: null,
+    channelid: "",
     status: "confirmed",
     paymentstatus: "paid",
   });
@@ -568,16 +578,25 @@ export default function App() {
       return result;
     }
 
-    const [products, variants, branches, roles] = await Promise.all([
+    async function readFirstExisting(tables) {
+      for (const table of tables) {
+        const result = await supabase.from(table).select("*").limit(100);
+        if (!result.error) return result;
+      }
+      return { data: [], error: null };
+    }
+
+    const [products, variants, branches, roles, channels] = await Promise.all([
       read("product", "productid, productname, brand, gender, status, defaultsellingprice", "productid, productname", "productname"),
       read(
         "product_variant",
-        "variantid, productid, sku, barcode, size, color, costprice, sellingprice, status",
-        "variantid, productid, sku, barcode, sellingprice",
+        "variantid, productid, variantname, sku, barcode, size, color, costprice, sellingprice, status",
+        "variantid, productid, sku, barcode, size, color, sellingprice",
         "sku"
       ),
       read("branch", "branchid, branchname", null, "branchname"),
       read("role", "roleid, rolename", null, "rolename"),
+      readFirstExisting(["sales_channel", "order_channel", "channel", "saleschannel"]),
     ]);
 
     if (products.error) show("Lỗi tải sản phẩm: " + products.error.message);
@@ -589,15 +608,28 @@ export default function App() {
       ...variant,
       product: productRows.find((product) => productIdOf(product) === productIdOf(variant)) || null,
     }));
+    let channelRows = channels.data || [];
+
+    if (!channelRows.length) {
+      const existingOrders = await supabase.from("orders").select("channelid").limit(50);
+      channelRows = [...new Set((existingOrders.data || []).map((order) => str(order.channelid)).filter(Boolean))].map((channelid) => ({
+        channelid,
+        channelname: `Kênh ${channelid}`,
+      }));
+    }
 
     const loadedOptions = {
       products: productRows,
       variants: variantRows,
       branches: branches.data || [],
       roles: roles.data || [],
+      channels: channelRows,
     };
 
     setOptions(loadedOptions);
+    if (!orderMeta.channelid && channelRows.length) {
+      setOrderMeta((current) => (current.channelid ? current : { ...current, channelid: channelIdOf(channelRows[0]) }));
+    }
     return loadedOptions;
   }
 
@@ -1036,6 +1068,11 @@ export default function App() {
 
     const orderid = uuid();
     const total = cart.reduce((sum, item) => sum + item.quantity * item.unitprice, 0);
+    const channelid = orderMeta.channelid || channelIdOf(options.channels[0]);
+    if (!channelid) {
+      return show("Vui lòng chọn hoặc nhập kênh bán trước khi tạo hóa đơn");
+    }
+
     const stockChecks = await Promise.all(
       cart.map(async (item) => {
         const result = await supabase.from("stock").select("*").eq("branchid", item.branchid).eq("variantid", item.variantid).maybeSingle();
@@ -1056,7 +1093,7 @@ export default function App() {
         orderid,
         branchid,
         customerid: orderMeta.customerid || null,
-        channelid: orderMeta.channelid || null,
+        channelid,
         createdby: profile?.userid || null,
         orderdate: new Date().toISOString(),
         orderstatus: orderMeta.status,
@@ -1310,6 +1347,8 @@ export default function App() {
                 run={run}
                 cartItem={cartItem}
                 setCartItem={setCartItem}
+                orderMeta={orderMeta}
+                setOrderMeta={setOrderMeta}
                 addCart={addCart}
                 removeCartItem={removeCartItem}
                 cart={cart}
@@ -1968,6 +2007,24 @@ function Orders(p) {
                 </option>
               ))}
             </select>
+          </Field>
+          <Field label="Kênh bán">
+            {p.options.channels.length ? (
+              <select value={p.orderMeta.channelid} onChange={(e) => p.setOrderMeta({ ...p.orderMeta, channelid: e.target.value })}>
+                <option value="">Chọn kênh bán</option>
+                {p.options.channels.map((item) => (
+                  <option key={channelIdOf(item)} value={channelIdOf(item)}>
+                    {channelLabel(item)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={p.orderMeta.channelid}
+                placeholder="Nhập channelid bắt buộc của đơn hàng"
+                onChange={(e) => p.setOrderMeta({ ...p.orderMeta, channelid: e.target.value })}
+              />
+            )}
           </Field>
           <ProductVariantSelector
             products={p.options.products}
