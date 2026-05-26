@@ -700,8 +700,13 @@ export default function App() {
     if (!cart.length) return show("Giỏ hàng trống");
 
     const branchid = cart[0].branchid;
-    const orderid = uuid();
-    const total = cart.reduce((sum, item) => sum + item.quantity * item.unitprice, 0);
+const orderid = uuid();
+const total = cart.reduce(
+  (sum, item) => sum + Number(item.quantity || 0) * Number(item.unitprice || 0),
+  0
+);
+
+const channelid = orderMeta.channelid || (await getDefaultChannelId());
 
     const { error: orderError } = await supabase.from('orders').insert([{
   orderid,
@@ -759,6 +764,32 @@ export default function App() {
     show("Đã tạo hóa đơn và trừ kho");
     await selectTable("orders");
   }
+
+async function getDefaultChannelId() {
+  let { data, error } = await supabase
+    .from("sales_channel")
+    .select("channelid")
+    .eq("channelname", "POS")
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (data?.channelid) return data.channelid;
+
+  const fallback = await supabase
+    .from("sales_channel")
+    .select("channelid")
+    .limit(1)
+    .maybeSingle();
+
+  if (fallback.error) throw fallback.error;
+
+  if (!fallback.data?.channelid) {
+    throw new Error("Chưa có dữ liệu trong bảng sales_channel");
+  }
+
+  return fallback.data.channelid;
+}
 
   async function createOrUpdateUser() {
     if (!guard("users")) return;
