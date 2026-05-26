@@ -90,18 +90,38 @@ function productLabel(product) {
   return [name, brand].filter(Boolean).join(" - ");
 }
 
-function variantLabel(variant) {
+function variantBaseLabel(variant) {
   if (!variant) return "Chưa chọn biến thể";
   const variantName = first(variant, ["variantname", "variant_name", "name"], "");
   const productName = first(variant?.product, ["productname", "product_name"], "");
+  const material = first(variant, ["material", "fabric", "chatlieu", "chat_lieu"], "");
+  const style = first(variant, ["style", "fit", "form", "pattern"], "");
   return [
-    variantName || productName,
+    variantName || productName || "Biến thể",
     variant.size ? `Size ${variant.size}` : "",
     variant.color ? `Màu ${variant.color}` : "",
+    material ? `Chất liệu ${material}` : "",
+    style ? `Kiểu ${style}` : "",
     Number(variant.sellingprice || 0) > 0 ? money(variant.sellingprice) : "",
   ]
     .filter(Boolean)
     .join(" - ");
+}
+
+function variantChoiceLabel(variant, siblings = []) {
+  const base = variantBaseLabel(variant);
+  const comparableBase = base.toLowerCase();
+  const duplicateCount = siblings.filter((item) => variantBaseLabel(item).toLowerCase() === comparableBase).length;
+
+  if (duplicateCount <= 1) return base;
+
+  const index = siblings.findIndex((item) => sameId(variantIdOf(item), variantIdOf(variant)));
+  const suffix = index >= 0 ? String(index + 1).padStart(2, "0") : "khác";
+  return `${base} - Lựa chọn ${suffix}`;
+}
+
+function variantLabel(variant) {
+  return variantChoiceLabel(variant);
 }
 
 function productIdOf(item) {
@@ -1099,6 +1119,7 @@ export default function App() {
 
     const variant = options.variants.find((v) => sameId(variantIdOf(v), cartItem.variantid));
     const product = options.products.find((item) => sameId(productIdOf(item), cartItem.productid)) || variant?.product;
+    const productVariants = options.variants.filter((item) => sameId(productIdOf(item), productIdOf(product)));
     const branch = options.branches.find((item) => sameId(branchIdOf(item), cartItem.branchid));
     const existingIndex = cart.findIndex((item) => sameId(item.branchid, cartItem.branchid) && sameId(item.variantid, cartItem.variantid));
 
@@ -1119,7 +1140,7 @@ export default function App() {
         ...cartItem,
         branchname: branch ? branchLabel(branch) : "",
         productname: product ? productLabel(product) : "",
-        variantname: variantLabel(variant),
+        variantname: variantChoiceLabel(variant, productVariants),
         imageurl: imageUrlOf(variant) || imageUrlOf(product),
         imagealt: imageAltOf(variant) || imageAltOf(product),
         sku: variant?.sku || "",
@@ -1748,7 +1769,7 @@ function ProductVariantSelector({
           <option value="">{optionalVariant ? "Không chọn biến thể" : "Chọn biến thể"}</option>
           {filteredVariants.map((item) => (
             <option key={variantIdOf(item)} value={variantIdOf(item)}>
-              {variantLabel(item)}
+              {variantChoiceLabel(item, filteredVariants)}
             </option>
           ))}
         </select>
@@ -1811,7 +1832,7 @@ function ProductPickerGrid({ products, variants, stockRows, branchid, selectedPr
             <button
               type="button"
               key={productId}
-              className={`product-tile ${selectedProductId === productId ? "active" : ""}`}
+              className={`product-tile ${sameId(selectedProductId, productId) ? "active" : ""}`}
               onClick={() => onSelectProduct(product)}
             >
               <ProductImage src={imageUrlOf(product)} alt={imageAltOf(product) || productLabel(product)} className="product-thumb" />
@@ -1825,6 +1846,51 @@ function ProductPickerGrid({ products, variants, stockRows, branchid, selectedPr
           );
         })}
         {!filteredProducts.length && <div className="product-grid-empty">Không thấy sản phẩm phù hợp</div>}
+      </div>
+    </div>
+  );
+}
+
+function VariantChoicePanel({ product, variants, selectedVariantId, branchid, stockRows, onSelectVariant }) {
+  if (!product) {
+    return <div className="variant-empty">Chọn sản phẩm trước để xem biến thể</div>;
+  }
+
+  const productVariants = variants.filter((item) => sameId(productIdOf(item), productIdOf(product)));
+  if (!productVariants.length) {
+    return <div className="variant-empty">Sản phẩm này chưa có biến thể bán</div>;
+  }
+
+  return (
+    <div className="variant-panel">
+      <div className="variant-panel-title">
+        <b>Biến thể bán</b>
+        <span>{productVariants.length} lựa chọn</span>
+      </div>
+      <div className="variant-list">
+        {productVariants.map((variant) => {
+          const stockValue = availableStock(stockRows, branchid, variantIdOf(variant));
+          const isActive = sameId(selectedVariantId, variantIdOf(variant));
+          const price = Number(variant.sellingprice || first(variant?.product, ["defaultsellingprice", "default_selling_price"], 0));
+
+          return (
+            <button
+              type="button"
+              key={variantIdOf(variant)}
+              className={`variant-option ${isActive ? "active" : ""}`}
+              onClick={() => onSelectVariant(variant)}
+            >
+              <ProductImage src={imageUrlOf(variant)} alt={imageAltOf(variant) || variantChoiceLabel(variant, productVariants)} className="variant-option-thumb" />
+              <span className="variant-option-body">
+                <b>{variantChoiceLabel(variant, productVariants)}</b>
+                <small>
+                  {price > 0 ? money(price) : "Chưa có giá"}
+                  {branchid ? ` · ${stockValue ?? 0} có thể bán` : " · Chưa chọn chi nhánh"}
+                </small>
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -1854,7 +1920,7 @@ function ProductPreview({ product, variant, variants, stockRows, branchid }) {
               <span>{price > 0 ? money(price) : "Chưa có giá"}</span>
               <span>{branchid ? `${stockValue ?? 0} có thể bán` : "Chưa chọn chi nhánh"}</span>
             </div>
-            {variant && <p className="product-preview-variant">{variantLabel(variant)}</p>}
+            {variant && <p className="product-preview-variant">{variantChoiceLabel(variant, productVariants)}</p>}
           </>
         )}
       </div>
@@ -1965,7 +2031,7 @@ function Products(p) {
               <option value="">Ảnh chung sản phẩm</option>
               {imageVariants.map((item) => (
                 <option key={variantIdOf(item)} value={variantIdOf(item)}>
-                  {variantLabel(item)}
+                  {variantChoiceLabel(item, imageVariants)}
                 </option>
               ))}
             </select>
@@ -2180,8 +2246,8 @@ function Adjustment(p) {
 function Orders(p) {
   const [productSearch, setProductSearch] = useState("");
   const cartTotal = p.cart.reduce((sum, item) => sum + Number(item.total || item.quantity * item.unitprice || 0), 0);
-    const selectedProduct = p.options.products.find((item) => sameId(productIdOf(item), p.cartItem.productid)) || null;
-    const selectedVariant = p.options.variants.find((item) => sameId(variantIdOf(item), p.cartItem.variantid)) || null;
+  const selectedProduct = p.options.products.find((item) => sameId(productIdOf(item), p.cartItem.productid)) || null;
+  const selectedVariant = p.options.variants.find((item) => sameId(variantIdOf(item), p.cartItem.variantid)) || null;
 
   function selectProduct(product) {
     p.setCartItem({
@@ -2192,12 +2258,21 @@ function Orders(p) {
     });
   }
 
+  function selectVariant(variant) {
+    p.setCartItem({
+      ...p.cartItem,
+      productid: variant ? productIdOf(variant) : p.cartItem.productid,
+      variantid: variantIdOf(variant),
+      unitprice: variant?.sellingprice || first(variant?.product, ["defaultsellingprice", "default_selling_price"], p.cartItem.unitprice || 0),
+    });
+  }
+
   return (
     <>
-      <Card title="Bán hàng - chọn sản phẩm">
+      <Card title="Bán hàng nhanh">
         <div className="pos-workspace">
           <div className="pos-main">
-            <div className="sales-form-grid">
+            <div className="pos-context-grid">
               <Field label="Chi nhánh bán">
                 <select value={p.cartItem.branchid} onChange={(e) => p.setCartItem({ ...p.cartItem, branchid: e.target.value })}>
                   <option value="">Chọn chi nhánh</option>
@@ -2226,29 +2301,6 @@ function Orders(p) {
                   />
                 )}
               </Field>
-              <ProductVariantSelector
-                products={p.options.products}
-                variants={p.options.variants}
-                productId={p.cartItem.productid}
-                variantId={p.cartItem.variantid}
-                productLabelText="Sản phẩm gốc"
-                variantLabelText="Biến thể bán"
-                onProductChange={selectProduct}
-                onVariantChange={(variant) =>
-                  p.setCartItem({
-                    ...p.cartItem,
-                    productid: variant ? productIdOf(variant) : p.cartItem.productid,
-                    variantid: variantIdOf(variant),
-                    unitprice: variant?.sellingprice || first(variant?.product, ["defaultsellingprice", "default_selling_price"], p.cartItem.unitprice || 0),
-                  })
-                }
-              />
-              <Field label="Số lượng">
-                <input type="number" min="1" value={p.cartItem.quantity} onChange={(e) => p.setCartItem({ ...p.cartItem, quantity: e.target.value })} />
-              </Field>
-              <Field label="Đơn giá">
-                <input type="number" min="0" value={p.cartItem.unitprice} onChange={(e) => p.setCartItem({ ...p.cartItem, unitprice: e.target.value })} />
-              </Field>
             </div>
 
             <ProductPickerGrid
@@ -2263,27 +2315,45 @@ function Orders(p) {
             />
           </div>
 
-          <ProductPreview
-            product={selectedProduct}
-            variant={selectedVariant}
-            variants={p.options.variants}
-            stockRows={p.options.stock}
-            branchid={p.cartItem.branchid}
-          />
+          <aside className="pos-checkout">
+            <ProductPreview
+              product={selectedProduct}
+              variant={selectedVariant}
+              variants={p.options.variants}
+              stockRows={p.options.stock}
+              branchid={p.cartItem.branchid}
+            />
+            <VariantChoicePanel
+              product={selectedProduct}
+              variants={p.options.variants}
+              selectedVariantId={p.cartItem.variantid}
+              branchid={p.cartItem.branchid}
+              stockRows={p.options.stock}
+              onSelectVariant={selectVariant}
+            />
+            <div className="pos-sale-fields">
+              <Field label="Số lượng">
+                <input type="number" min="1" value={p.cartItem.quantity} onChange={(e) => p.setCartItem({ ...p.cartItem, quantity: e.target.value })} />
+              </Field>
+              <Field label="Đơn giá">
+                <input type="number" min="0" value={p.cartItem.unitprice} onChange={(e) => p.setCartItem({ ...p.cartItem, unitprice: e.target.value })} />
+              </Field>
+            </div>
+            <ActionRow>
+              <button onClick={p.addCart}>
+                <Plus /> Thêm giỏ
+              </button>
+              <button onClick={() => p.run(p.createInvoice)}>Tạo hóa đơn</button>
+              <button onClick={() => p.setCart([])}>Xóa giỏ</button>
+            </ActionRow>
+            <CartTable rows={p.cart} onRemove={p.removeCartItem} />
+            {p.cart.length > 0 && (
+              <div className="cart-total">
+                Tổng tiền: <b>{money(cartTotal)}</b>
+              </div>
+            )}
+          </aside>
         </div>
-        <ActionRow>
-          <button onClick={p.addCart}>
-            <Plus /> Thêm giỏ
-          </button>
-          <button onClick={() => p.run(p.createInvoice)}>Tạo hóa đơn</button>
-          <button onClick={() => p.setCart([])}>Xóa giỏ</button>
-        </ActionRow>
-        <CartTable rows={p.cart} onRemove={p.removeCartItem} />
-        {p.cart.length > 0 && (
-          <div className="cart-total">
-            Tổng tiền: <b>{money(cartTotal)}</b>
-          </div>
-        )}
       </Card>
 
       <Card title="Đơn hàng / trạng thái">
