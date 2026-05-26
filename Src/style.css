@@ -2575,6 +2575,35 @@ body.dark .smart-picker-item:hover {
   color: #073d31;
 }
 
+.product-filter-row {
+  display: grid;
+  grid-template-columns: auto minmax(130px, 180px) auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.product-filter-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #073d31;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.product-filter-row input[type="checkbox"] {
+  width: 16px;
+  min-height: 16px;
+  margin: 0;
+}
+
+.product-filter-row select,
+.product-filter-row button {
+  min-height: 38px;
+  margin: 0 !important;
+}
+
 .product-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -2856,6 +2885,94 @@ body.dark .smart-picker-item:hover {
   color: #fff8e8;
 }
 
+.payment-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.payment-tabs button {
+  min-height: 38px !important;
+  margin: 0 !important;
+  justify-content: center;
+  padding: 8px !important;
+}
+
+.payment-tabs button.active {
+  background: #0b4d40;
+  border-color: #0b4d40;
+  color: #fff8e8;
+}
+
+.held-cart-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px;
+  background: #fffdf7;
+  border: 1px solid #dfc98f;
+  border-radius: 8px;
+}
+
+.held-cart-list > b {
+  color: #073d31;
+  font-size: 13px;
+}
+
+.held-cart-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.held-cart-item span {
+  min-width: 0;
+  color: #073d31;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.held-cart-item small {
+  display: block;
+  color: #7c6a45;
+  font-weight: 700;
+}
+
+.held-cart-item button {
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 5px 8px !important;
+}
+
+.qty-stepper {
+  display: inline-grid;
+  grid-template-columns: 28px minmax(28px, auto) 28px;
+  align-items: center;
+  border: 1px solid #d5bd83;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fffdf7;
+}
+
+.qty-stepper button {
+  min-height: 28px !important;
+  width: 28px;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent;
+}
+
+.qty-stepper span {
+  min-width: 28px;
+  text-align: center;
+  color: #073d31;
+  font-weight: 800;
+}
+
 .pos-checkout .table-wrap {
   max-height: 250px;
   overflow: auto;
@@ -2873,7 +2990,27 @@ body.dark .smart-picker-item:hover {
 
 .pos-checkout .cart-total {
   margin-top: 0;
+  display: grid;
+  gap: 6px;
   text-align: left;
+  font-size: 14px;
+}
+
+.pos-checkout .cart-total span,
+.pos-checkout .cart-total strong {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pos-checkout .cart-total strong {
+  padding-top: 6px;
+  border-top: 1px solid #d7bd7c;
+  font-size: 16px;
+}
+
+.pos-checkout .cart-total b {
+  font-size: inherit;
 }
 
 .cart-product-cell {
@@ -2914,7 +3051,9 @@ body.dark .product-tile,
 body.dark .product-preview,
 body.dark .pos-checkout,
 body.dark .variant-option,
-body.dark .variant-empty {
+body.dark .variant-empty,
+body.dark .held-cart-list,
+body.dark .qty-stepper {
   background: #172520;
   border-color: #35594e;
   color: #f7dc91;
@@ -2926,7 +3065,11 @@ body.dark .product-preview h3,
 body.dark .product-preview-facts span,
 body.dark .product-preview-variant,
 body.dark .variant-panel-title,
-body.dark .variant-option-body b {
+body.dark .variant-option-body b,
+body.dark .product-filter-row label,
+body.dark .held-cart-list > b,
+body.dark .held-cart-item span,
+body.dark .qty-stepper span {
   color: #f7dc91;
 }
 
@@ -2944,7 +3087,8 @@ body.dark .product-image-empty,
 body.dark .product-grid-empty,
 body.dark .variant-panel-title span,
 body.dark .variant-option-body small,
-body.dark .variant-empty {
+body.dark .variant-empty,
+body.dark .held-cart-item small {
   color: #d6c799;
 }
 
@@ -2953,6 +3097,13 @@ body.dark .product-preview-facts span,
 body.dark .product-preview-variant {
   background: #20352d;
   border-color: #35594e;
+}
+
+body.dark .payment-tabs button.active,
+body.dark .pos-checkout .action-row button:first-child {
+  background: #d6b56d;
+  border-color: #d6b56d;
+  color: #073d31;
 }
 
 @media (max-width: 1180px) {
@@ -2980,7 +3131,9 @@ body.dark .product-preview-variant {
 @media (max-width: 720px) {
   .pos-context-grid,
   .pos-sale-fields,
-  .pos-checkout .action-row {
+  .pos-checkout .action-row,
+  .payment-tabs,
+  .product-filter-row {
     grid-template-columns: 1fr;
   }
 

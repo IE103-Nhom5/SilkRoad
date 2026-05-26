@@ -210,6 +210,16 @@ function productAvailableStock(stockRows = [], variants = [], branchid, producti
     }, 0);
 }
 
+function cartTotals(cartRows = [], meta = {}) {
+  const subtotal = cartRows.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitprice || 0), 0);
+  const discountValue = Math.max(0, Number(meta.discountvalue || 0));
+  const discount =
+    meta.discounttype === "percent" ? Math.min(subtotal, Math.round((subtotal * Math.min(discountValue, 100)) / 100)) : Math.min(subtotal, discountValue);
+  const shipping = Math.max(0, Number(meta.shippingfee || 0));
+  const final = Math.max(0, subtotal - discount + shipping);
+  return { subtotal, discount, shipping, final };
+}
+
 function stockViewRows(stockRows, options, onlyLowStock = false) {
   return (stockRows || [])
     .filter((stockItem) => {
@@ -592,8 +602,22 @@ export default function App() {
   const [orderMeta, setOrderMeta] = useState({
     customerid: null,
     channelid: "",
+    customername: "",
+    customerphone: "",
+    discounttype: "amount",
+    discountvalue: 0,
+    shippingfee: 0,
+    paymentmethod: "cash",
+    note: "",
     status: "confirmed",
     paymentstatus: "paid",
+  });
+  const [heldCarts, setHeldCarts] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("silkroad-held-carts") || "[]");
+    } catch {
+      return [];
+    }
   });
   const [userForm, setUserForm] = useState({
     fullname: "",
@@ -607,6 +631,10 @@ export default function App() {
     document.body.className = dark ? "dark" : "";
     localStorage.setItem("dark", dark ? "1" : "0");
   }, [dark]);
+
+  useEffect(() => {
+    localStorage.setItem("silkroad-held-carts", JSON.stringify(heldCarts.slice(0, 10)));
+  }, [heldCarts]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -1183,6 +1211,66 @@ export default function App() {
     setCart(cart.filter((_, itemIndex) => itemIndex !== index));
   }
 
+  function updateCartQuantity(index, nextQuantity) {
+    const quantity = Number(nextQuantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      removeCartItem(index);
+      return;
+    }
+
+    const target = cart[index];
+    const stockAvailable = availableStock(options.stock, target.branchid, target.variantid);
+    const otherQuantity = cart
+      .filter((item, itemIndex) => itemIndex !== index && sameId(item.branchid, target.branchid) && sameId(item.variantid, target.variantid))
+      .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+    if (stockAvailable !== null && otherQuantity + quantity > stockAvailable) {
+      show(`Không đủ tồn khả dụng. Còn ${stockAvailable}.`);
+      return;
+    }
+
+    setCart(
+      cart.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              quantity,
+              total: quantity * Number(item.unitprice || 0),
+            }
+          : item
+      )
+    );
+  }
+
+  function holdCurrentCart() {
+    if (!cart.length) return show("Giỏ hàng trống, chưa thể lưu tạm");
+    const totals = cartTotals(cart, orderMeta);
+    const heldCart = {
+      id: uuid(),
+      cart,
+      orderMeta,
+      createdat: new Date().toISOString(),
+      total: totals.final,
+      label: `${cart.length} dòng - ${money(totals.final)}`,
+    };
+    setHeldCarts([heldCart, ...heldCarts].slice(0, 10));
+    setCart([]);
+    show("Đã lưu đơn tạm");
+  }
+
+  function restoreHeldCart(id) {
+    const heldCart = heldCarts.find((item) => item.id === id);
+    if (!heldCart) return;
+    setCart(heldCart.cart || []);
+    setOrderMeta((current) => ({ ...current, ...(heldCart.orderMeta || {}) }));
+    setHeldCarts(heldCarts.filter((item) => item.id !== id));
+    show("Đã khôi phục đơn tạm");
+  }
+
+  function deleteHeldCart(id) {
+    setHeldCarts(heldCarts.filter((item) => item.id !== id));
+  }
+
   async function createInvoice() {
     if (!guard("orders")) return;
     if (!cart.length) return show("Giỏ hàng trống");
@@ -1193,7 +1281,7 @@ export default function App() {
     }
 
     const orderid = uuid();
-    const total = cart.reduce((sum, item) => sum + item.quantity * item.unitprice, 0);
+    const totals = cartTotals(cart, orderMeta);
     const channelid = orderMeta.channelid || channelIdOf(options.channels[0]);
     if (!channelid) {
       return show("Vui lòng chọn hoặc nhập kênh bán trước khi tạo hóa đơn");
@@ -1225,10 +1313,18 @@ export default function App() {
         orderdate: new Date().toISOString(),
         orderstatus: orderMeta.status,
         paymentstatus: orderMeta.paymentstatus,
-        totalamount: total,
-        discountamount: 0,
-        shippingfee: 0,
-        note: "Demo hóa đơn từ frontend",
+        totalamount: totals.final,
+        discountamount: totals.discount,
+        shippingfee: totals.shipping,
+        note: [
+          orderMeta.note || "Hóa đơn từ frontend",
+          orderMeta.customername ? `KH: ${orderMeta.customername}` : "",
+          orderMeta.customerphone ? `SĐT: ${orderMeta.customerphone}` : "",
+          orderMeta.paymentmethod ? `Thanh toán: ${orderMeta.paymentmethod}` : "",
+          `Tạm tính: ${money(totals.subtotal)}`,
+        ]
+          .filter(Boolean)
+          .join(" | "),
       },
     ]);
     if (orderError) throw orderError;
@@ -1479,9 +1575,14 @@ export default function App() {
                 orderMeta={orderMeta}
                 setOrderMeta={setOrderMeta}
                 addCart={addCart}
+                updateCartQuantity={updateCartQuantity}
                 removeCartItem={removeCartItem}
                 cart={cart}
                 setCart={setCart}
+                heldCarts={heldCarts}
+                holdCurrentCart={holdCurrentCart}
+                restoreHeldCart={restoreHeldCart}
+                deleteHeldCart={deleteHeldCart}
                 createInvoice={createInvoice}
                 loadOrdersFriendly={loadOrdersFriendly}
                 exportRows={exportRows}
@@ -1819,23 +1920,55 @@ function ProductImage({ src, alt, className = "" }) {
   return <img className={className} src={src} alt={alt || "Ảnh sản phẩm"} loading="lazy" onError={() => setFailed(true)} />;
 }
 
-function ProductPickerGrid({ products, variants, stockRows, branchid, selectedProductId, productSearch, setProductSearch, onSelectProduct }) {
+function ProductPickerGrid({ products, variants, stockRows, branchid, selectedProductId, productSearch, setProductSearch, onSelectProduct, onSelectVariant }) {
+  const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const [sortMode, setSortMode] = useState("name");
   const keyword = productSearch.trim().toLowerCase();
   const activeProducts = products.filter((product) => str(first(product, ["status"], "active")).toLowerCase() !== "inactive");
-  const filteredProducts = activeProducts.filter((product) => {
-    if (!keyword) return true;
-    const productId = productIdOf(product);
-    const productVariants = variants.filter((variant) => sameId(productIdOf(variant), productId));
-    const searchable = [
-      productLabel(product),
-      first(product, ["brand"], ""),
-      first(product, ["gender"], ""),
-      ...productVariants.flatMap((variant) => [variantLabel(variant), variant?.sku, variant?.barcode, variant?.size, variant?.color]),
-    ]
-      .join(" ")
-      .toLowerCase();
-    return searchable.includes(keyword);
-  });
+  const filteredProducts = activeProducts
+    .filter((product) => {
+      const productId = productIdOf(product);
+      const productVariants = variants.filter((variant) => sameId(productIdOf(variant), productId));
+      const stockValue = productAvailableStock(stockRows, variants, branchid, productId);
+      if (onlyAvailable && branchid && Number(stockValue || 0) <= 0) return false;
+      if (!keyword) return true;
+      const searchable = [
+        productLabel(product),
+        first(product, ["brand"], ""),
+        first(product, ["gender"], ""),
+        ...productVariants.flatMap((variant) => [variantLabel(variant), variant?.sku, variant?.barcode, variant?.size, variant?.color]),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return searchable.includes(keyword);
+    })
+    .sort((a, b) => {
+      if (sortMode === "price") {
+        return Number(first(a, ["defaultsellingprice", "default_selling_price"], 0)) - Number(first(b, ["defaultsellingprice", "default_selling_price"], 0));
+      }
+      if (sortMode === "stock") {
+        return productAvailableStock(stockRows, variants, branchid, productIdOf(b)) - productAvailableStock(stockRows, variants, branchid, productIdOf(a));
+      }
+      return productLabel(a).localeCompare(productLabel(b), "vi");
+    });
+
+  function quickPick() {
+    const term = productSearch.trim().toLowerCase();
+    if (!term) return;
+    const exactVariant = variants.find((variant) =>
+      [variant?.barcode, variant?.sku].some((value) => str(value).trim().toLowerCase() === term)
+    );
+    if (exactVariant) {
+      const product = products.find((item) => sameId(productIdOf(item), productIdOf(exactVariant))) || exactVariant.product;
+      if (product) onSelectProduct(product);
+      onSelectVariant?.(exactVariant);
+      setProductSearch("");
+      return;
+    }
+    if (filteredProducts.length === 1) {
+      onSelectProduct(filteredProducts[0]);
+    }
+  }
 
   return (
     <div className="pos-product-panel">
@@ -1845,7 +1978,25 @@ function ProductPickerGrid({ products, variants, stockRows, branchid, selectedPr
           value={productSearch}
           placeholder="Tìm sản phẩm, barcode, màu, size..."
           onChange={(event) => setProductSearch(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              quickPick();
+            }
+          }}
         />
+      </div>
+      <div className="product-filter-row">
+        <label>
+          <input type="checkbox" checked={onlyAvailable} onChange={(event) => setOnlyAvailable(event.target.checked)} />
+          Còn hàng
+        </label>
+        <select value={sortMode} onChange={(event) => setSortMode(event.target.value)}>
+          <option value="name">Tên A-Z</option>
+          <option value="stock">Tồn nhiều</option>
+          <option value="price">Giá thấp</option>
+        </select>
+        <button type="button" onClick={quickPick}>Chọn nhanh</button>
       </div>
 
       <div className="product-grid">
@@ -2272,7 +2423,7 @@ function Adjustment(p) {
 
 function Orders(p) {
   const [productSearch, setProductSearch] = useState("");
-  const cartTotal = p.cart.reduce((sum, item) => sum + Number(item.total || item.quantity * item.unitprice || 0), 0);
+  const totals = cartTotals(p.cart, p.orderMeta);
   const selectedProduct = p.options.products.find((item) => sameId(productIdOf(item), p.cartItem.productid)) || null;
   const selectedVariant = p.options.variants.find((item) => sameId(variantIdOf(item), p.cartItem.variantid)) || null;
 
@@ -2339,6 +2490,7 @@ function Orders(p) {
               productSearch={productSearch}
               setProductSearch={setProductSearch}
               onSelectProduct={selectProduct}
+              onSelectVariant={selectVariant}
             />
           </div>
 
@@ -2365,20 +2517,62 @@ function Orders(p) {
               <Field label="Đơn giá">
                 <input type="number" min="0" value={p.cartItem.unitprice} onChange={(e) => p.setCartItem({ ...p.cartItem, unitprice: e.target.value })} />
               </Field>
+              <Field label="Chiết khấu">
+                <input type="number" min="0" value={p.orderMeta.discountvalue} onChange={(e) => p.setOrderMeta({ ...p.orderMeta, discountvalue: e.target.value })} />
+              </Field>
+              <Field label="Kiểu giảm">
+                <select value={p.orderMeta.discounttype} onChange={(e) => p.setOrderMeta({ ...p.orderMeta, discounttype: e.target.value })}>
+                  <option value="amount">VND</option>
+                  <option value="percent">%</option>
+                </select>
+              </Field>
+              <Field label="Phí vận chuyển">
+                <input type="number" min="0" value={p.orderMeta.shippingfee} onChange={(e) => p.setOrderMeta({ ...p.orderMeta, shippingfee: e.target.value })} />
+              </Field>
+              <Field label="SĐT khách">
+                <input value={p.orderMeta.customerphone} placeholder="Tùy chọn" onChange={(e) => p.setOrderMeta({ ...p.orderMeta, customerphone: e.target.value })} />
+              </Field>
             </div>
+            <div className="payment-tabs">
+              {[
+                ["cash", "Tiền mặt"],
+                ["card", "Thẻ"],
+                ["transfer", "Chuyển khoản"],
+              ].map(([value, label]) => (
+                <button
+                  type="button"
+                  key={value}
+                  className={p.orderMeta.paymentmethod === value ? "active" : ""}
+                  onClick={() => p.setOrderMeta({ ...p.orderMeta, paymentmethod: value })}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <Field label="Tên khách / ghi chú">
+              <input
+                value={p.orderMeta.customername}
+                placeholder="Tên khách"
+                onChange={(e) => p.setOrderMeta({ ...p.orderMeta, customername: e.target.value })}
+              />
+              <input value={p.orderMeta.note} placeholder="Ghi chú hóa đơn" onChange={(e) => p.setOrderMeta({ ...p.orderMeta, note: e.target.value })} />
+            </Field>
             <ActionRow>
               <button onClick={p.addCart}>
                 <Plus /> Thêm giỏ
               </button>
               <button onClick={() => p.run(p.createInvoice)}>Tạo hóa đơn</button>
               <button onClick={() => p.setCart([])}>Xóa giỏ</button>
+              <button onClick={p.holdCurrentCart}>Lưu tạm</button>
             </ActionRow>
-            <CartTable rows={p.cart} onRemove={p.removeCartItem} />
-            {p.cart.length > 0 && (
-              <div className="cart-total">
-                Tổng tiền: <b>{money(cartTotal)}</b>
-              </div>
-            )}
+            <HeldCartList rows={p.heldCarts} onRestore={p.restoreHeldCart} onDelete={p.deleteHeldCart} />
+            <CartTable rows={p.cart} onRemove={p.removeCartItem} onQuantityChange={p.updateCartQuantity} />
+            <div className="cart-total">
+              <span>Tạm tính: <b>{money(totals.subtotal)}</b></span>
+              <span>Giảm: <b>{money(totals.discount)}</b></span>
+              <span>Phí ship: <b>{money(totals.shipping)}</b></span>
+              <strong>Tổng tiền: <b>{money(totals.final)}</b></strong>
+            </div>
           </aside>
         </div>
       </Card>
@@ -2395,7 +2589,27 @@ function Orders(p) {
   );
 }
 
-function CartTable({ rows, onRemove }) {
+function HeldCartList({ rows, onRestore, onDelete }) {
+  if (!rows?.length) return null;
+
+  return (
+    <div className="held-cart-list">
+      <b>Đơn tạm</b>
+      {rows.slice(0, 3).map((item) => (
+        <div className="held-cart-item" key={item.id}>
+          <span>
+            {item.label || money(item.total)}
+            <small>{item.createdat ? new Date(item.createdat).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) : ""}</small>
+          </span>
+          <button type="button" onClick={() => onRestore(item.id)}>Mở</button>
+          <button type="button" onClick={() => onDelete(item.id)}>Xóa</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CartTable({ rows, onRemove, onQuantityChange }) {
   if (!rows?.length) return <p className="muted">Giỏ hàng trống</p>;
 
   return (
@@ -2423,7 +2637,13 @@ function CartTable({ rows, onRemove }) {
                 </div>
               </td>
               <td>{item.variantname || [item.size ? `Size ${item.size}` : "", item.color ? `Màu ${item.color}` : ""].filter(Boolean).join(" - ")}</td>
-              <td>{item.quantity}</td>
+              <td>
+                <div className="qty-stepper">
+                  <button type="button" onClick={() => onQuantityChange(index, Number(item.quantity || 0) - 1)}>-</button>
+                  <span>{item.quantity}</span>
+                  <button type="button" onClick={() => onQuantityChange(index, Number(item.quantity || 0) + 1)}>+</button>
+                </div>
+              </td>
               <td>{money(item.unitprice)}</td>
               <td>{money(item.total || item.quantity * item.unitprice)}</td>
               <td>
