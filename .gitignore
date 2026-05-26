@@ -1,0 +1,3 @@
+dist/
+.vite-cache/
+vite-dev.log
