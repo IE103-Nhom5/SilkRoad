@@ -120,6 +120,51 @@ function channelLabel(channel) {
   return first(channel, ["channelname", "channel_name", "name", "channelcode", "channel_code"], "Kênh bán");
 }
 
+function imageUrlOf(item) {
+  return str(first(item, ["imageurl", "image_url", "url", "src"], ""));
+}
+
+function imageAltOf(item) {
+  return first(item, ["alttext", "alt_text", "caption"], "");
+}
+
+function sortImages(images = []) {
+  return [...images].sort((a, b) => Number(first(a, ["sortorder", "sort_order"], 0)) - Number(first(b, ["sortorder", "sort_order"], 0)));
+}
+
+function primaryProductImage(product, images = []) {
+  const productId = productIdOf(product);
+  const productImages = sortImages(images.filter((image) => productIdOf(image) === productId));
+  return productImages.find((image) => !variantIdOf(image) && imageUrlOf(image)) || productImages.find((image) => imageUrlOf(image)) || null;
+}
+
+function primaryVariantImage(variant, images = []) {
+  const variantId = variantIdOf(variant);
+  const productId = productIdOf(variant);
+  return (
+    sortImages(images).find((image) => variantIdOf(image) === variantId && imageUrlOf(image)) ||
+    primaryProductImage({ productid: productId }, images) ||
+    null
+  );
+}
+
+function availableStock(stockRows = [], branchid, variantid) {
+  if (!branchid || !variantid) return null;
+  const stock = stockRows.find((item) => branchIdOf(item) === branchid && variantIdOf(item) === variantid);
+  if (!stock) return null;
+  return Number(stock.quantity || 0) - Number(first(stock, ["reservedquantity", "reserved_quantity"], 0) || 0);
+}
+
+function productAvailableStock(stockRows = [], variants = [], branchid, productid) {
+  if (!branchid || !productid) return null;
+  return variants
+    .filter((variant) => productIdOf(variant) === productid)
+    .reduce((sum, variant) => {
+      const value = availableStock(stockRows, branchid, variantIdOf(variant));
+      return sum + Number(value || 0);
+    }, 0);
+}
+
 function stockViewRows(stockRows, options, onlyLowStock = false) {
   return (stockRows || [])
     .filter((stockItem) => {
@@ -434,6 +479,8 @@ export default function App() {
     branches: [],
     roles: [],
     channels: [],
+    images: [],
+    stock: [],
   });
 
   // Form state
@@ -586,7 +633,7 @@ export default function App() {
       return { data: [], error: null };
     }
 
-    const [products, variants, branches, roles, channels] = await Promise.all([
+    const [products, variants, branches, roles, channels, images, stock] = await Promise.all([
       read("product", "productid, productname, brand, gender, status, defaultsellingprice", "productid, productname", "productname"),
       read(
         "product_variant",
@@ -597,16 +644,39 @@ export default function App() {
       read("branch", "branchid, branchname", null, "branchname"),
       read("role", "roleid, rolename", null, "rolename"),
       readFirstExisting(["sales_channel", "order_channel", "channel", "saleschannel"]),
+      read(
+        "product_image",
+        "imageid, productid, variantid, imageurl, alttext, sortorder",
+        "productid, variantid, imageurl",
+        null
+      ),
+      read(
+        "stock",
+        "branchid, variantid, quantity, reservedquantity, minstocklevel, lastupdated",
+        "branchid, variantid, quantity, reservedquantity",
+        null
+      ),
     ]);
 
     if (products.error) show("Lỗi tải sản phẩm: " + products.error.message);
     if (variants.error) show("Lỗi tải biến thể: " + variants.error.message);
     if (branches.error) show("Lỗi tải chi nhánh: " + branches.error.message);
 
-    const productRows = products.data || [];
+    const imageRows = images.data || [];
+    const productRows = (products.data || []).map((product) => {
+      const primaryImage = primaryProductImage(product, imageRows);
+      return {
+        ...product,
+        images: sortImages(imageRows.filter((image) => productIdOf(image) === productIdOf(product))),
+        imageurl: imageUrlOf(primaryImage),
+        imagealt: imageAltOf(primaryImage),
+      };
+    });
     const variantRows = (variants.data || []).map((variant) => ({
       ...variant,
       product: productRows.find((product) => productIdOf(product) === productIdOf(variant)) || null,
+      imageurl: imageUrlOf(primaryVariantImage(variant, imageRows)),
+      imagealt: imageAltOf(primaryVariantImage(variant, imageRows)),
     }));
     let channelRows = channels.data || [];
 
@@ -624,6 +694,8 @@ export default function App() {
       branches: branches.data || [],
       roles: roles.data || [],
       channels: channelRows,
+      images: imageRows,
+      stock: stock.data || [],
     };
 
     setOptions(loadedOptions);
@@ -749,15 +821,14 @@ export default function App() {
     if (error) throw error;
     show("Đã lưu link ảnh");
     setImageForm({ productid: imageForm.productid, variantid: "", imageurl: "", alttext: "" });
+    await loadOptions();
     await selectTable("product_image");
   }
 
   async function loadProductCatalog() {
     if (!guard("products")) return;
     const loadedOptions = await loadOptions();
-    const images = await supabase.from("product_image").select("productid, variantid, imageurl").limit(1000);
-    setRows(productViewRows(loadedOptions.products, loadedOptions.variants, images.data || []));
-    if (images.error) show("Không tải được ảnh sản phẩm: " + images.error.message);
+    setRows(productViewRows(loadedOptions.products, loadedOptions.variants, loadedOptions.images));
   }
 
   async function confirmPurchaseOrder() {
@@ -1041,6 +1112,9 @@ export default function App() {
         ...cartItem,
         branchname: branch ? branchLabel(branch) : "",
         productname: product ? productLabel(product) : "",
+        variantname: variantLabel(variant),
+        imageurl: imageUrlOf(variant) || imageUrlOf(product),
+        imagealt: imageAltOf(variant) || imageAltOf(product),
         sku: variant?.sku || "",
         barcode: variant?.barcode || "",
         size: variant?.size || "",
@@ -1676,6 +1750,111 @@ function ProductVariantSelector({
   );
 }
 
+function ProductImage({ src, alt, className = "" }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
+  if (!src || failed) {
+    return (
+      <div className={`${className} product-image-empty`}>
+        <PackagePlus size={26} />
+        <span>Chưa có ảnh</span>
+      </div>
+    );
+  }
+  return <img className={className} src={src} alt={alt || "Ảnh sản phẩm"} loading="lazy" onError={() => setFailed(true)} />;
+}
+
+function ProductPickerGrid({ products, variants, stockRows, branchid, selectedProductId, productSearch, setProductSearch, onSelectProduct }) {
+  const keyword = productSearch.trim().toLowerCase();
+  const activeProducts = products.filter((product) => str(first(product, ["status"], "active")).toLowerCase() !== "inactive");
+  const filteredProducts = activeProducts.filter((product) => {
+    if (!keyword) return true;
+    const productId = productIdOf(product);
+    const productVariants = variants.filter((variant) => productIdOf(variant) === productId);
+    const searchable = [
+      productLabel(product),
+      first(product, ["brand"], ""),
+      first(product, ["gender"], ""),
+      ...productVariants.flatMap((variant) => [variantLabel(variant), variant?.sku, variant?.barcode, variant?.size, variant?.color]),
+    ]
+      .join(" ")
+      .toLowerCase();
+    return searchable.includes(keyword);
+  });
+
+  return (
+    <div className="pos-product-panel">
+      <div className="pos-searchbar">
+        <Search size={18} />
+        <input
+          value={productSearch}
+          placeholder="Tìm sản phẩm, barcode, màu, size..."
+          onChange={(event) => setProductSearch(event.target.value)}
+        />
+      </div>
+
+      <div className="product-grid">
+        {filteredProducts.slice(0, 48).map((product) => {
+          const productId = productIdOf(product);
+          const productVariants = variants.filter((variant) => productIdOf(variant) === productId);
+          const stockValue = productAvailableStock(stockRows, variants, branchid, productId);
+          const defaultPrice = Number(first(product, ["defaultsellingprice", "default_selling_price"], 0));
+
+          return (
+            <button
+              type="button"
+              key={productId}
+              className={`product-tile ${selectedProductId === productId ? "active" : ""}`}
+              onClick={() => onSelectProduct(product)}
+            >
+              <ProductImage src={imageUrlOf(product)} alt={imageAltOf(product) || productLabel(product)} className="product-thumb" />
+              <span className="product-tile-name">{productLabel(product)}</span>
+              <span className="product-tile-meta">
+                {productVariants.length} biến thể
+                {defaultPrice > 0 ? ` · ${money(defaultPrice)}` : ""}
+              </span>
+              <span className="product-stock-pill">{branchid ? `${stockValue ?? 0} có thể bán` : "Chưa chọn chi nhánh"}</span>
+            </button>
+          );
+        })}
+        {!filteredProducts.length && <div className="product-grid-empty">Không thấy sản phẩm phù hợp</div>}
+      </div>
+    </div>
+  );
+}
+
+function ProductPreview({ product, variant, variants, stockRows, branchid }) {
+  const productVariants = product ? variants.filter((item) => productIdOf(item) === productIdOf(product)) : [];
+  const previewImage = imageUrlOf(variant) || imageUrlOf(product);
+  const previewAlt = imageAltOf(variant) || imageAltOf(product) || productLabel(product);
+  const stockValue = variant
+    ? availableStock(stockRows, branchid, variantIdOf(variant))
+    : product
+      ? productAvailableStock(stockRows, variants, branchid, productIdOf(product))
+      : null;
+  const price = Number(variant?.sellingprice || first(product, ["defaultsellingprice", "default_selling_price"], 0));
+
+  return (
+    <aside className="product-preview">
+      <ProductImage src={previewImage} alt={previewAlt} className="product-preview-image" />
+      <div className="product-preview-body">
+        <span className="product-preview-kicker">Sản phẩm đang chọn</span>
+        <h3>{product ? productLabel(product) : "Chưa chọn sản phẩm"}</h3>
+        {product && (
+          <>
+            <div className="product-preview-facts">
+              <span>{productVariants.length} biến thể</span>
+              <span>{price > 0 ? money(price) : "Chưa có giá"}</span>
+              <span>{branchid ? `${stockValue ?? 0} có thể bán` : "Chưa chọn chi nhánh"}</span>
+            </div>
+            {variant && <p className="product-preview-variant">{variantLabel(variant)}</p>}
+          </>
+        )}
+      </div>
+    </aside>
+  );
+}
+
 function Products(p) {
   const imageVariants = p.imageForm.productid ? p.options.variants.filter((item) => productIdOf(item) === p.imageForm.productid) : [];
 
@@ -1992,70 +2171,98 @@ function Adjustment(p) {
 }
 
 function Orders(p) {
+  const [productSearch, setProductSearch] = useState("");
   const cartTotal = p.cart.reduce((sum, item) => sum + Number(item.total || item.quantity * item.unitprice || 0), 0);
+  const selectedProduct = p.options.products.find((item) => productIdOf(item) === p.cartItem.productid) || null;
+  const selectedVariant = p.options.variants.find((item) => variantIdOf(item) === p.cartItem.variantid) || null;
+
+  function selectProduct(product) {
+    p.setCartItem({
+      ...p.cartItem,
+      productid: productIdOf(product),
+      variantid: "",
+      unitprice: first(product, ["defaultsellingprice", "default_selling_price"], p.cartItem.unitprice || 0),
+    });
+  }
 
   return (
     <>
       <Card title="Bán hàng - chọn sản phẩm">
-        <div className="sales-form-grid">
-          <Field label="Chi nhánh bán">
-            <select value={p.cartItem.branchid} onChange={(e) => p.setCartItem({ ...p.cartItem, branchid: e.target.value })}>
-              <option value="">Chọn chi nhánh</option>
-              {p.options.branches.map((item) => (
-                <option key={branchIdOf(item)} value={branchIdOf(item)}>
-                  {branchLabel(item)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Kênh bán">
-            {p.options.channels.length ? (
-              <select value={p.orderMeta.channelid} onChange={(e) => p.setOrderMeta({ ...p.orderMeta, channelid: e.target.value })}>
-                <option value="">Chọn kênh bán</option>
-                {p.options.channels.map((item) => (
-                  <option key={channelIdOf(item)} value={channelIdOf(item)}>
-                    {channelLabel(item)}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                value={p.orderMeta.channelid}
-                placeholder="Nhập channelid bắt buộc của đơn hàng"
-                onChange={(e) => p.setOrderMeta({ ...p.orderMeta, channelid: e.target.value })}
+        <div className="pos-workspace">
+          <div className="pos-main">
+            <div className="sales-form-grid">
+              <Field label="Chi nhánh bán">
+                <select value={p.cartItem.branchid} onChange={(e) => p.setCartItem({ ...p.cartItem, branchid: e.target.value })}>
+                  <option value="">Chọn chi nhánh</option>
+                  {p.options.branches.map((item) => (
+                    <option key={branchIdOf(item)} value={branchIdOf(item)}>
+                      {branchLabel(item)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Kênh bán">
+                {p.options.channels.length ? (
+                  <select value={p.orderMeta.channelid} onChange={(e) => p.setOrderMeta({ ...p.orderMeta, channelid: e.target.value })}>
+                    <option value="">Chọn kênh bán</option>
+                    {p.options.channels.map((item) => (
+                      <option key={channelIdOf(item)} value={channelIdOf(item)}>
+                        {channelLabel(item)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={p.orderMeta.channelid}
+                    placeholder="Nhập channelid bắt buộc của đơn hàng"
+                    onChange={(e) => p.setOrderMeta({ ...p.orderMeta, channelid: e.target.value })}
+                  />
+                )}
+              </Field>
+              <ProductVariantSelector
+                products={p.options.products}
+                variants={p.options.variants}
+                productId={p.cartItem.productid}
+                variantId={p.cartItem.variantid}
+                productLabelText="Sản phẩm gốc"
+                variantLabelText="Biến thể bán"
+                onProductChange={selectProduct}
+                onVariantChange={(variant) =>
+                  p.setCartItem({
+                    ...p.cartItem,
+                    productid: variant ? productIdOf(variant) : p.cartItem.productid,
+                    variantid: variantIdOf(variant),
+                    unitprice: variant?.sellingprice || first(variant?.product, ["defaultsellingprice", "default_selling_price"], p.cartItem.unitprice || 0),
+                  })
+                }
               />
-            )}
-          </Field>
-          <ProductVariantSelector
-            products={p.options.products}
+              <Field label="Số lượng">
+                <input type="number" min="1" value={p.cartItem.quantity} onChange={(e) => p.setCartItem({ ...p.cartItem, quantity: e.target.value })} />
+              </Field>
+              <Field label="Đơn giá">
+                <input type="number" min="0" value={p.cartItem.unitprice} onChange={(e) => p.setCartItem({ ...p.cartItem, unitprice: e.target.value })} />
+              </Field>
+            </div>
+
+            <ProductPickerGrid
+              products={p.options.products}
+              variants={p.options.variants}
+              stockRows={p.options.stock}
+              branchid={p.cartItem.branchid}
+              selectedProductId={p.cartItem.productid}
+              productSearch={productSearch}
+              setProductSearch={setProductSearch}
+              onSelectProduct={selectProduct}
+            />
+          </div>
+
+          <ProductPreview
+            product={selectedProduct}
+            variant={selectedVariant}
             variants={p.options.variants}
-            productId={p.cartItem.productid}
-            variantId={p.cartItem.variantid}
-            productLabelText="Sản phẩm gốc"
-            variantLabelText="Biến thể bán"
-            onProductChange={(product) =>
-              p.setCartItem({
-                ...p.cartItem,
-                productid: productIdOf(product),
-                variantid: "",
-                unitprice: first(product, ["defaultsellingprice", "default_selling_price"], p.cartItem.unitprice || 0),
-              })
-            }
-            onVariantChange={(variant) =>
-              p.setCartItem({
-                ...p.cartItem,
-                productid: variant ? productIdOf(variant) : p.cartItem.productid,
-                variantid: variantIdOf(variant),
-                unitprice: variant?.sellingprice || first(variant?.product, ["defaultsellingprice", "default_selling_price"], p.cartItem.unitprice || 0),
-              })
-            }
+            stockRows={p.options.stock}
+            branchid={p.cartItem.branchid}
           />
-          <Field label="Số lượng">
-            <input type="number" min="1" value={p.cartItem.quantity} onChange={(e) => p.setCartItem({ ...p.cartItem, quantity: e.target.value })} />
-          </Field>
-          <Field label="Đơn giá">
-            <input type="number" min="0" value={p.cartItem.unitprice} onChange={(e) => p.setCartItem({ ...p.cartItem, unitprice: e.target.value })} />
-          </Field>
         </div>
         <ActionRow>
           <button onClick={p.addCart}>
@@ -2105,8 +2312,13 @@ function CartTable({ rows, onRemove }) {
           {rows.map((item, index) => (
             <tr key={`${item.variantid}-${index}`}>
               <td>{item.branchname}</td>
-              <td>{item.productname}</td>
-              <td>{[item.size ? `Size ${item.size}` : "", item.color ? `Màu ${item.color}` : "", item.barcode ? `Barcode ${item.barcode}` : ""].filter(Boolean).join(" - ")}</td>
+              <td>
+                <div className="cart-product-cell">
+                  <ProductImage src={item.imageurl} alt={item.imagealt || item.productname} className="cart-product-thumb" />
+                  <span>{item.productname}</span>
+                </div>
+              </td>
+              <td>{item.variantname || [item.size ? `Size ${item.size}` : "", item.color ? `Màu ${item.color}` : ""].filter(Boolean).join(" - ")}</td>
               <td>{item.quantity}</td>
               <td>{money(item.unitprice)}</td>
               <td>{money(item.total || item.quantity * item.unitprice)}</td>
