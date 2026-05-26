@@ -277,16 +277,22 @@ export default function App() {
     });
   }
   async function loadProfile(email) {
-    const { data, error } = await supabase.from("users").select("*, role(*)").eq("email", email).maybeSingle();
-    if (error || !data) {
-      setProfile(null);
-      show("Auth OK nhưng chưa có profile trong bảng users");
-      return;
-    }
-    setProfile(data);
-    await loadOptions();
-    show("Đăng nhập quyền: " + roleName(data));
+  const { data, error } = await supabase
+    .from("users")
+    .select("*, role(*)")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (error || !data) {
+    setProfile(null);
+    show("Auth OK nhưng chưa có profile trong bảng users");
+    return;
   }
+
+  setProfile(data);
+  await loadOptions();
+  show("Đăng nhập quyền: " + roleName(data));
+}
 
   async function signIn() {
     const { error } = await supabase.auth.signInWithPassword(login);
