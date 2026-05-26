@@ -20,6 +20,9 @@ const ROLE_FEATURES = {
     "transfer",
     "adjustment",
     "orders",
+    "customers",
+    "returns",
+    "channels",
     "users",
     "reports",
     "query",
@@ -32,11 +35,14 @@ const ROLE_FEATURES = {
     "transfer",
     "adjustment",
     "orders",
+    "customers",
+    "returns",
+    "channels",
     "reports",
     "query",
   ],
   warehouse_staff: ["dashboard", "purchase", "stock", "transfer", "adjustment", "reports", "query"],
-  sales_staff: ["dashboard", "products", "stock", "orders", "query"],
+  sales_staff: ["dashboard", "products", "stock", "orders", "customers", "returns", "query"],
 };
 
 const MENU = [
@@ -47,6 +53,9 @@ const MENU = [
   ["transfer", "Chuyển kho", RefreshCcw],
   ["adjustment", "Kiểm kho", ClipboardList],
   ["orders", "Bán hàng", ShoppingCart],
+  ["customers", "Khách hàng", Users],
+  ["returns", "Đổi trả", RefreshCcw],
+  ["channels", "Kênh bán", Boxes],
   ["users", "RBAC", Users],
   ["reports", "Báo cáo", BarChart3],
   ["query", "Tra bảng", Search],
@@ -283,6 +292,57 @@ function orderViewRows(orders, branches) {
         "Ghi chú": order.note || "",
       };
     });
+}
+
+function customerViewRows(customers = []) {
+  return customers
+    .slice()
+    .sort((a, b) => str(b.createdat || b.created_at).localeCompare(str(a.createdat || a.created_at)))
+    .map((item) => ({
+      "Khách hàng": first(item, ["fullname", "full_name"], ""),
+      "SĐT": first(item, ["phonenumber", "phone_number"], ""),
+      "Email": item.email || "",
+      "Giới tính": item.gender || "",
+      "Điểm": first(item, ["loyaltypoints", "loyalty_points"], 0),
+      "Tổng chi tiêu": money(first(item, ["totalspent", "total_spent"], 0)),
+      "Trạng thái": item.status || "",
+      "Ngày tạo": str(item.createdat || item.created_at).slice(0, 19).replace("T", " "),
+    }));
+}
+
+function channelPriceViewRows(rows = [], options = {}) {
+  return rows.map((item) => {
+    const channel = (options.channels || []).find((row) => sameId(channelIdOf(row), channelIdOf(item)));
+    const variant = (options.variants || []).find((row) => sameId(variantIdOf(row), variantIdOf(item)));
+    return {
+      "Kênh": channel ? channelLabel(channel) : channelIdOf(item),
+      "Sản phẩm": productLabel(variant?.product),
+      "Biến thể": variantLabel(variant),
+      "Giá kênh": money(first(item, ["sellingprice", "selling_price"], 0)),
+      "Mã ngoài": first(item, ["externalproductid", "external_product_id"], ""),
+      "Cập nhật": str(item.updatedat || item.updated_at).slice(0, 19).replace("T", " "),
+    };
+  });
+}
+
+function allocationViewRows(rows = [], options = {}) {
+  return rows.map((item) => {
+    const branch = (options.branches || []).find((row) => sameId(branchIdOf(row), branchIdOf(item)));
+    const channel = (options.channels || []).find((row) => sameId(channelIdOf(row), channelIdOf(item)));
+    const variant = (options.variants || []).find((row) => sameId(variantIdOf(row), variantIdOf(item)));
+    const allocated = Number(first(item, ["allocatedquantity", "allocated_quantity"], 0));
+    const sold = Number(first(item, ["soldquantity", "sold_quantity"], 0));
+    return {
+      "Chi nhánh": branch ? branchLabel(branch) : branchIdOf(item),
+      "Kênh": channel ? channelLabel(channel) : channelIdOf(item),
+      "Sản phẩm": productLabel(variant?.product),
+      "Biến thể": variantLabel(variant),
+      "Phân bổ": allocated,
+      "Đã bán": sold,
+      "Còn theo kênh": allocated - sold,
+      "Cập nhật": str(item.updatedat || item.updated_at).slice(0, 19).replace("T", " "),
+    };
+  });
 }
 
 function stockHistoryViewRows(historyRows, options) {
@@ -574,6 +634,9 @@ export default function App() {
     branches: [],
     roles: [],
     channels: [],
+    customers: [],
+    channelPrices: [],
+    allocations: [],
     images: [],
     stock: [],
   });
@@ -658,6 +721,36 @@ export default function App() {
     } catch {
       return [];
     }
+  });
+  const [customerForm, setCustomerForm] = useState({
+    customerid: "",
+    fullname: "",
+    phonenumber: "",
+    email: "",
+    gender: "",
+    status: "active",
+  });
+  const [channelForm, setChannelForm] = useState({
+    channelid: "",
+    productid: "",
+    variantid: "",
+    sellingprice: 0,
+    externalproductid: "",
+    branchid: "",
+    allocatedquantity: 0,
+  });
+  const [returnForm, setReturnForm] = useState({
+    orderid: "",
+    branchid: "",
+    productid: "",
+    variantid: "",
+    returnquantity: 1,
+    condition: "good",
+    actiontype: "refund",
+    refundmethod: "cash",
+    refundamount: 0,
+    reason: "",
+    note: "",
   });
   const [userForm, setUserForm] = useState({
     fullname: "",
@@ -901,12 +994,15 @@ export default function App() {
       return supabase.from(table).select("*").limit(limit);
     }
 
-    const [products, variants, branches, roles, channels, images, stock] = await Promise.all([
+    const [products, variants, branches, roles, channels, customers, channelPrices, allocations, images, stock] = await Promise.all([
       readAll("product"),
       readAll("product_variant"),
       readAll("branch"),
       readAll("role"),
       readFirstExisting(["sales_channel", "order_channel", "channel", "saleschannel"]),
+      readAll("customer"),
+      readAll("channel_price"),
+      readAll("inventory_allocation"),
       readAll("product_image"),
       readAll("stock"),
     ]);
@@ -956,6 +1052,9 @@ export default function App() {
       branches: branches.data || [],
       roles: roles.data || [],
       channels: channelRows,
+      customers: customers.data || [],
+      channelPrices: channelPrices.data || [],
+      allocations: allocations.data || [],
       images: imageRows,
       stock: stock.data || [],
     };
@@ -1153,7 +1252,7 @@ export default function App() {
         historyid: uuid(),
         branchid: purchaseForm.branchid,
         variantid: purchaseForm.variantid,
-        transactiontype: "purchase_in",
+        transactiontype: "purchase",
         referencetype: purchaseForm.purchaseorderid.trim() ? "PURCHASE_ORDER" : "MANUAL_RECEIVE",
         referenceid: referenceId,
         quantitychange: quantity,
@@ -1237,10 +1336,37 @@ export default function App() {
     if (!from.data) throw new Error("Không tìm thấy tồn kho chi nhánh gửi");
     if (Number(from.data.quantity) < q) throw new Error("Không đủ tồn để chuyển");
 
+    const transferId = uuid();
+    const now = new Date().toISOString();
+    const transferOrder = await supabase.from("transfer_order").insert([
+      {
+        transferid: transferId,
+        frombranchid: transferForm.frombranchid,
+        tobranchid: transferForm.tobranchid,
+        createdby: profile?.userid || null,
+        shipdate: now,
+        receivedate: now,
+        status: "received",
+        note: "Chuyển kho nhanh từ app",
+      },
+    ]);
+    if (transferOrder.error) throw transferOrder.error;
+
+    const transferDetail = await supabase.from("transfer_order_detail").insert([
+      {
+        transferid: transferId,
+        variantid: transferForm.variantid,
+        requestedquantity: q,
+        actualquantity: q,
+        note: "Tạo từ thao tác chuyển kho nhanh",
+      },
+    ]);
+    if (transferDetail.error) throw transferDetail.error;
+
     const updates = [
       supabase
         .from("stock")
-        .update({ quantity: Number(from.data.quantity) - q, lastupdated: new Date().toISOString() })
+        .update({ quantity: Number(from.data.quantity) - q, lastupdated: now })
         .eq("branchid", transferForm.frombranchid)
         .eq("variantid", transferForm.variantid),
     ];
@@ -1249,7 +1375,7 @@ export default function App() {
       updates.push(
         supabase
           .from("stock")
-          .update({ quantity: Number(to.data.quantity) + q, lastupdated: new Date().toISOString() })
+          .update({ quantity: Number(to.data.quantity) + q, lastupdated: now })
           .eq("branchid", transferForm.tobranchid)
           .eq("variantid", transferForm.variantid)
       );
@@ -1262,7 +1388,7 @@ export default function App() {
             quantity: q,
             reservedquantity: 0,
             minstocklevel: 0,
-            lastupdated: new Date().toISOString(),
+            lastupdated: now,
           },
         ])
       );
@@ -1272,35 +1398,34 @@ export default function App() {
     const err = res.find((x) => x.error)?.error;
     if (err) throw err;
 
-    const referenceId = uuid();
     const { error: historyError } = await supabase.from("stock_history").insert([
       {
         historyid: uuid(),
         branchid: transferForm.frombranchid,
         variantid: transferForm.variantid,
         transactiontype: "transfer_out",
-        referencetype: "TRANSFER_DEMO",
-        referenceid: referenceId,
+        referencetype: "TRANSFER_ORDER",
+        referenceid: transferId,
         quantitychange: -q,
         quantitybefore: from.data.quantity,
         quantityafter: Number(from.data.quantity) - q,
         performedby: profile?.userid || null,
-        timestamp: new Date().toISOString(),
-        note: "Demo chuyển kho xuất",
+        timestamp: now,
+        note: "Xuất kho theo phiếu chuyển",
       },
       {
         historyid: uuid(),
         branchid: transferForm.tobranchid,
         variantid: transferForm.variantid,
         transactiontype: "transfer_in",
-        referencetype: "TRANSFER_DEMO",
-        referenceid: referenceId,
+        referencetype: "TRANSFER_ORDER",
+        referenceid: transferId,
         quantitychange: q,
         quantitybefore: to.data?.quantity || 0,
         quantityafter: Number(to.data?.quantity || 0) + q,
         performedby: profile?.userid || null,
-        timestamp: new Date().toISOString(),
-        note: "Demo chuyển kho nhập",
+        timestamp: now,
+        note: "Nhập kho theo phiếu chuyển",
       },
     ]);
     if (historyError) throw historyError;
@@ -1323,9 +1448,34 @@ export default function App() {
     if (!old.data) throw new Error("Không tìm thấy tồn kho để kiểm");
 
     const before = Number(old.data.quantity);
+    const adjustmentId = uuid();
+    const now = new Date().toISOString();
+    const adjustment = await supabase.from("stock_adjustment").insert([
+      {
+        adjustmentid: adjustmentId,
+        branchid: adjustForm.branchid,
+        createdby: profile?.userid || null,
+        status: "completed",
+        note: adjustForm.note || "Kiểm kho nhanh từ app",
+        createdat: now,
+        completedat: now,
+      },
+    ]);
+    if (adjustment.error) throw adjustment.error;
+
+    const adjustmentDetail = await supabase.from("stock_adjustment_detail").insert([
+      {
+        adjustmentid: adjustmentId,
+        variantid: adjustForm.variantid,
+        systemquantity: before,
+        actualquantity: after,
+      },
+    ]);
+    if (adjustmentDetail.error) throw adjustmentDetail.error;
+
     const { error } = await supabase
       .from("stock")
-      .update({ quantity: after, lastupdated: new Date().toISOString() })
+      .update({ quantity: after, lastupdated: now })
       .eq("branchid", adjustForm.branchid)
       .eq("variantid", adjustForm.variantid);
     if (error) throw error;
@@ -1336,14 +1486,14 @@ export default function App() {
         branchid: adjustForm.branchid,
         variantid: adjustForm.variantid,
         transactiontype: "adjustment",
-        referencetype: "STOCK_ADJUSTMENT_DEMO",
-        referenceid: uuid(),
+        referencetype: "STOCK_ADJUSTMENT",
+        referenceid: adjustmentId,
         quantitychange: after - before,
         quantitybefore: before,
         quantityafter: after,
         performedby: profile?.userid || null,
-        timestamp: new Date().toISOString(),
-        note: adjustForm.note || "Demo kiểm kho",
+        timestamp: now,
+        note: adjustForm.note || "Kiểm kho từ app",
       },
     ]);
     if (historyError) throw historyError;
@@ -1475,6 +1625,274 @@ export default function App() {
     setHeldCarts(heldCarts.filter((item) => item.id !== id));
   }
 
+  async function findOrCreateCustomerFromOrder() {
+    const phone = trim(orderMeta.customerphone);
+    const name = trim(orderMeta.customername);
+    if (orderMeta.customerid) return orderMeta.customerid;
+    if (!phone && !name) return null;
+
+    let existing = null;
+    if (phone) {
+      const byPhone = await supabase.from("customer").select("*").eq("phonenumber", phone).maybeSingle();
+      if (byPhone.error) throw byPhone.error;
+      existing = byPhone.data;
+    }
+
+    if (existing) {
+      if (name && name !== first(existing, ["fullname", "full_name"], "")) {
+        const { error } = await supabase.from("customer").update({ fullname: name, updatedat: new Date().toISOString() }).eq("customerid", existing.customerid);
+        if (error) throw error;
+      }
+      return existing.customerid;
+    }
+
+    const customerid = uuid();
+    const { error } = await supabase.from("customer").insert([
+      {
+        customerid,
+        fullname: name || `Khách ${phone || new Date().toLocaleTimeString("vi-VN")}`,
+        phonenumber: phone || null,
+        status: "active",
+      },
+    ]);
+    if (error) throw error;
+    return customerid;
+  }
+
+  async function addCustomerSpend(customerid, amount) {
+    if (!customerid || amount <= 0) return;
+    const current = await supabase.from("customer").select("*").eq("customerid", customerid).maybeSingle();
+    if (current.error || !current.data) return;
+    const totalspent = Number(first(current.data, ["totalspent", "total_spent"], 0)) + amount;
+    const loyaltypoints = Number(first(current.data, ["loyaltypoints", "loyalty_points"], 0)) + Math.floor(amount / 10000);
+    await supabase.from("customer").update({ totalspent, loyaltypoints, updatedat: new Date().toISOString() }).eq("customerid", customerid);
+  }
+
+  async function createOrUpdateCustomer() {
+    if (!guard("customers")) return;
+    const fullname = trim(customerForm.fullname);
+    const phonenumber = trim(customerForm.phonenumber);
+    const email = trim(customerForm.email);
+    if (!fullname) return show("Vui lòng nhập tên khách hàng");
+    if (!phonenumber && !email) return show("Vui lòng nhập SĐT hoặc email để tránh trùng khách");
+
+    let existing = null;
+    if (customerForm.customerid) {
+      const byId = await supabase.from("customer").select("*").eq("customerid", customerForm.customerid).maybeSingle();
+      if (byId.error) throw byId.error;
+      existing = byId.data;
+    } else if (phonenumber) {
+      const byPhone = await supabase.from("customer").select("*").eq("phonenumber", phonenumber).maybeSingle();
+      if (byPhone.error) throw byPhone.error;
+      existing = byPhone.data;
+    } else if (email) {
+      const byEmail = await supabase.from("customer").select("*").eq("email", email).maybeSingle();
+      if (byEmail.error) throw byEmail.error;
+      existing = byEmail.data;
+    }
+
+    const payload = {
+      fullname,
+      phonenumber: phonenumber || null,
+      email: email || null,
+      gender: customerForm.gender || null,
+      status: customerForm.status,
+      updatedat: new Date().toISOString(),
+    };
+
+    const result = existing
+      ? await supabase.from("customer").update(payload).eq("customerid", existing.customerid)
+      : await supabase.from("customer").insert([{ ...payload, customerid: uuid() }]);
+    if (result.error) throw result.error;
+
+    show(existing ? "Đã cập nhật khách hàng" : "Đã thêm khách hàng");
+    setCustomerForm({ customerid: "", fullname: "", phonenumber: "", email: "", gender: "", status: "active" });
+    await loadCustomersFriendly();
+  }
+
+  async function loadCustomersFriendly() {
+    if (!guard("customers")) return;
+    const { data, error } = await supabase.from("customer").select("*").order("createdat", { ascending: false }).limit(500);
+    if (error) throw error;
+    setRows(customerViewRows(data || []));
+  }
+
+  async function saveChannelPrice() {
+    if (!guard("channels")) return;
+    if (!channelForm.channelid || !channelForm.variantid) return show("Vui lòng chọn kênh bán, sản phẩm và biến thể");
+    const sellingprice = Number(channelForm.sellingprice);
+    if (!Number.isFinite(sellingprice) || sellingprice < 0) return show("Giá kênh không hợp lệ");
+
+    const { error } = await supabase.from("channel_price").upsert(
+      [
+        {
+          channelid: channelForm.channelid,
+          variantid: channelForm.variantid,
+          sellingprice,
+          externalproductid: trim(channelForm.externalproductid) || null,
+          updatedat: new Date().toISOString(),
+        },
+      ],
+      { onConflict: "channelid,variantid" }
+    );
+    if (error) throw error;
+    show("Đã lưu giá theo kênh");
+    await loadChannelPricesFriendly();
+  }
+
+  async function saveInventoryAllocation() {
+    if (!guard("channels")) return;
+    if (!channelForm.branchid || !channelForm.channelid || !channelForm.variantid) return show("Vui lòng chọn chi nhánh, kênh bán và biến thể");
+    const allocatedquantity = Number(channelForm.allocatedquantity);
+    if (!Number.isFinite(allocatedquantity) || allocatedquantity < 0) return show("Số lượng phân bổ không hợp lệ");
+
+    const stock = await supabase.from("stock").select("*").eq("branchid", channelForm.branchid).eq("variantid", channelForm.variantid).maybeSingle();
+    if (stock.error) throw stock.error;
+    if (!stock.data) return show("Chưa có tồn kho cho biến thể này tại chi nhánh");
+    if (allocatedquantity > Number(stock.data.quantity || 0)) return show("Phân bổ không được vượt quá tồn kho thực tế");
+
+    const existing = await supabase
+      .from("inventory_allocation")
+      .select("*")
+      .eq("branchid", channelForm.branchid)
+      .eq("variantid", channelForm.variantid)
+      .eq("channelid", channelForm.channelid)
+      .maybeSingle();
+    if (existing.error) throw existing.error;
+
+    const { error } = await supabase.from("inventory_allocation").upsert(
+      [
+        {
+          branchid: channelForm.branchid,
+          variantid: channelForm.variantid,
+          channelid: channelForm.channelid,
+          allocatedquantity,
+          soldquantity: Number(first(existing.data, ["soldquantity", "sold_quantity"], 0)),
+          updatedat: new Date().toISOString(),
+        },
+      ],
+      { onConflict: "branchid,variantid,channelid" }
+    );
+    if (error) throw error;
+    show("Đã lưu phân bổ tồn theo kênh");
+    await loadAllocationsFriendly();
+  }
+
+  async function loadChannelPricesFriendly() {
+    if (!guard("channels")) return;
+    const loadedOptions = await loadOptions();
+    const { data, error } = await supabase.from("channel_price").select("*").limit(1000);
+    if (error) throw error;
+    setRows(channelPriceViewRows(data || [], loadedOptions));
+  }
+
+  async function loadAllocationsFriendly() {
+    if (!guard("channels")) return;
+    const loadedOptions = await loadOptions();
+    const { data, error } = await supabase.from("inventory_allocation").select("*").limit(1000);
+    if (error) throw error;
+    setRows(allocationViewRows(data || [], loadedOptions));
+  }
+
+  async function createReturnOrder() {
+    if (!guard("returns")) return;
+    if (!returnForm.orderid.trim() || !returnForm.branchid || !returnForm.variantid) return show("Vui lòng nhập đơn gốc, chi nhánh và biến thể đổi trả");
+    const quantity = Number(returnForm.returnquantity);
+    const refundamount = Number(returnForm.refundamount || 0);
+    if (!Number.isFinite(quantity) || quantity <= 0) return show("Số lượng đổi trả phải lớn hơn 0");
+    if (!Number.isFinite(refundamount) || refundamount < 0) return show("Tiền hoàn không hợp lệ");
+
+    const detail = await supabase
+      .from("order_detail")
+      .select("*")
+      .eq("orderid", returnForm.orderid.trim())
+      .eq("variantid", returnForm.variantid)
+      .maybeSingle();
+    if (detail.error) throw detail.error;
+    if (!detail.data) return show("Không tìm thấy sản phẩm này trong đơn gốc");
+    if (quantity > Number(detail.data.quantity || 0)) return show("Số lượng trả vượt số lượng đã bán");
+
+    const returnid = uuid();
+    const now = new Date().toISOString();
+    const { error: orderError } = await supabase.from("return_order").insert([
+      {
+        returnid,
+        orderid: returnForm.orderid.trim(),
+        branchid: returnForm.branchid,
+        createdby: profile?.userid || null,
+        returndate: now,
+        reason: returnForm.reason || null,
+        actiontype: returnForm.actiontype,
+        refundmethod: returnForm.actiontype === "refund" ? returnForm.refundmethod : null,
+        refundamount,
+        status: "completed",
+        note: returnForm.note || null,
+      },
+    ]);
+    if (orderError) throw orderError;
+
+    const { error: detailError } = await supabase.from("return_detail").insert([
+      {
+        returnid,
+        variantid: returnForm.variantid,
+        returnquantity: quantity,
+        condition: returnForm.condition,
+        refundamount,
+      },
+    ]);
+    if (detailError) throw detailError;
+
+    if (returnForm.condition !== "damaged") {
+      const stock = await supabase.from("stock").select("*").eq("branchid", returnForm.branchid).eq("variantid", returnForm.variantid).maybeSingle();
+      if (stock.error) throw stock.error;
+      const before = Number(stock.data?.quantity || 0);
+      const after = before + quantity;
+      const stockResult = stock.data
+        ? await supabase.from("stock").update({ quantity: after, lastupdated: now }).eq("branchid", returnForm.branchid).eq("variantid", returnForm.variantid)
+        : await supabase.from("stock").insert([{ branchid: returnForm.branchid, variantid: returnForm.variantid, quantity: after, reservedquantity: 0, minstocklevel: 0, lastupdated: now }]);
+      if (stockResult.error) throw stockResult.error;
+
+      const { error: historyError } = await supabase.from("stock_history").insert([
+        {
+          historyid: uuid(),
+          branchid: returnForm.branchid,
+          variantid: returnForm.variantid,
+          transactiontype: "return",
+          referencetype: "RETURN_ORDER",
+          referenceid: returnid,
+          quantitychange: quantity,
+          quantitybefore: before,
+          quantityafter: after,
+          performedby: profile?.userid || null,
+          timestamp: now,
+          note: returnForm.reason || "Hoàn kho từ đơn đổi trả",
+        },
+      ]);
+      if (historyError) throw historyError;
+    }
+
+    show("Đã tạo phiếu đổi trả");
+    setReturnForm({ orderid: "", branchid: "", productid: "", variantid: "", returnquantity: 1, condition: "good", actiontype: "refund", refundmethod: "cash", refundamount: 0, reason: "", note: "" });
+    await loadReturnsFriendly();
+  }
+
+  async function loadReturnsFriendly() {
+    if (!guard("returns")) return;
+    const { data, error } = await supabase.from("return_order").select("*").order("returndate", { ascending: false }).limit(300);
+    if (error) throw error;
+    setRows(
+      (data || []).map((item) => ({
+        "Ngày": str(item.returndate || item.return_date).slice(0, 19).replace("T", " "),
+        "Đơn gốc": item.orderid || "",
+        "Hành động": first(item, ["actiontype", "action_type"], ""),
+        "Hoàn tiền": money(first(item, ["refundamount", "refund_amount"], 0)),
+        "Trạng thái": item.status || "",
+        "Lý do": item.reason || "",
+        "Ghi chú": item.note || "",
+      }))
+    );
+  }
+
   async function createInvoice() {
     if (!guard("orders")) return;
     if (!cart.length) return show("Giỏ hàng trống");
@@ -1494,30 +1912,45 @@ export default function App() {
     const stockResult = await supabase.from("stock").select("*").limit(5000);
     if (stockResult.error) throw stockResult.error;
     const latestStockRows = stockResult.data || [];
+    const allocationResult = await supabase.from("inventory_allocation").select("*").eq("channelid", channelid).limit(5000);
+    if (allocationResult.error) throw allocationResult.error;
+    const latestAllocations = allocationResult.data || [];
     const stockChecks = cart.map((item) => ({
       item,
       stock: findStockRow(latestStockRows, item.branchid, item.variantid),
+      allocation:
+        latestAllocations.find(
+          (row) => sameId(branchIdOf(row), item.branchid) && sameId(variantIdOf(row), item.variantid) && sameId(channelIdOf(row), channelid)
+        ) || null,
     }));
 
-    for (const { item, stock } of stockChecks) {
+    for (const { item, stock, allocation } of stockChecks) {
       const itemName = [item.productname, item.variantname].filter(Boolean).join(" - ");
       if (!stock) throw new Error(`Chưa có tồn kho cho ${itemName || "sản phẩm đã chọn"} tại ${item.branchname || "chi nhánh này"}`);
       if (availableStockOf(stock) < item.quantity) {
         throw new Error(`Không đủ tồn khả dụng cho ${itemName || "sản phẩm đã chọn"}. Còn ${availableStockOf(stock)}, cần ${item.quantity}.`);
       }
+      if (allocation) {
+        const channelAvailable = Number(first(allocation, ["availableforchannel", "available_for_channel"], 0));
+        if (channelAvailable < item.quantity) {
+          throw new Error(`Kênh bán không đủ số lượng phân bổ cho ${itemName}. Còn ${channelAvailable}, cần ${item.quantity}.`);
+        }
+      }
     }
+
+    const customerid = await findOrCreateCustomerFromOrder();
 
     const { error: orderError } = await supabase.from("orders").insert([
       {
         orderid,
         branchid,
-        customerid: orderMeta.customerid || null,
+        customerid,
         channelid,
         createdby: profile?.userid || null,
         orderdate: new Date().toISOString(),
         orderstatus: orderMeta.status,
         paymentstatus: orderMeta.paymentstatus,
-        totalamount: totals.final,
+        totalamount: totals.subtotal,
         discountamount: totals.discount,
         shippingfee: totals.shipping,
         note: [
@@ -1533,7 +1966,7 @@ export default function App() {
     ]);
     if (orderError) throw orderError;
 
-    for (const { item, stock: old } of stockChecks) {
+    for (const { item, stock: old, allocation } of stockChecks) {
       const { error: detailError } = await supabase.from("order_detail").insert([
         {
           orderid,
@@ -1554,6 +1987,19 @@ export default function App() {
           .eq("variantid", variantIdOf(old));
         if (stockError) throw stockError;
 
+        if (allocation) {
+          const allocationUpdate = await supabase
+            .from("inventory_allocation")
+            .update({
+              soldquantity: Number(first(allocation, ["soldquantity", "sold_quantity"], 0)) + item.quantity,
+              updatedat: new Date().toISOString(),
+            })
+            .eq("branchid", item.branchid)
+            .eq("variantid", item.variantid)
+            .eq("channelid", channelid);
+          if (allocationUpdate.error) throw allocationUpdate.error;
+        }
+
         const { error: historyError } = await supabase.from("stock_history").insert([
           {
             historyid: uuid(),
@@ -1573,6 +2019,22 @@ export default function App() {
         if (historyError) throw historyError;
       }
     }
+
+    if (totals.final > 0) {
+      const { error: paymentError } = await supabase.from("payment").insert([
+        {
+          paymentid: uuid(),
+          orderid,
+          method: orderMeta.paymentmethod,
+          amount: totals.final,
+          status: orderMeta.paymentstatus === "paid" ? "success" : "pending",
+          paidat: orderMeta.paymentstatus === "paid" ? new Date().toISOString() : null,
+        },
+      ]);
+      if (paymentError) throw paymentError;
+    }
+
+    await addCustomerSpend(customerid, totals.final);
 
     setCart([]);
     show("Đã tạo hóa đơn và trừ kho");
@@ -1819,6 +2281,46 @@ export default function App() {
                 loadOrdersFriendly={loadOrdersFriendly}
                 exportRows={exportRows}
                 selectTable={selectTable}
+                rows={rows}
+              />
+            )}
+            {page === "customers" && (
+              <Customers
+                run={run}
+                customerForm={customerForm}
+                setCustomerForm={setCustomerForm}
+                createOrUpdateCustomer={createOrUpdateCustomer}
+                loadCustomersFriendly={loadCustomersFriendly}
+                selectTable={selectTable}
+                exportRows={exportRows}
+                rows={rows}
+              />
+            )}
+            {page === "returns" && (
+              <Returns
+                options={options}
+                run={run}
+                returnForm={returnForm}
+                setReturnForm={setReturnForm}
+                createReturnOrder={createReturnOrder}
+                loadReturnsFriendly={loadReturnsFriendly}
+                selectTable={selectTable}
+                exportRows={exportRows}
+                rows={rows}
+              />
+            )}
+            {page === "channels" && (
+              <Channels
+                options={options}
+                run={run}
+                channelForm={channelForm}
+                setChannelForm={setChannelForm}
+                saveChannelPrice={saveChannelPrice}
+                saveInventoryAllocation={saveInventoryAllocation}
+                loadChannelPricesFriendly={loadChannelPricesFriendly}
+                loadAllocationsFriendly={loadAllocationsFriendly}
+                selectTable={selectTable}
+                exportRows={exportRows}
                 rows={rows}
               />
             )}
@@ -2811,7 +3313,9 @@ function Orders(p) {
               {[
                 ["cash", "Tiền mặt"],
                 ["card", "Thẻ"],
-                ["transfer", "Chuyển khoản"],
+                ["bank_transfer", "Chuyển khoản"],
+                ["momo", "MoMo"],
+                ["vnpay", "VNPAY"],
               ].map(([value, label]) => (
                 <button
                   type="button"
@@ -2933,6 +3437,190 @@ function CartTable({ rows, onRemove, onQuantityChange }) {
   );
 }
 
+function Customers(p) {
+  return (
+    <>
+      <Card title="Khách hàng / CRM">
+        <div className="sales-form-grid">
+          <Field label="Tên khách hàng">
+            <input value={p.customerForm.fullname} placeholder="Nguyễn Văn A" onChange={(e) => p.setCustomerForm({ ...p.customerForm, fullname: e.target.value })} />
+          </Field>
+          <Field label="Số điện thoại">
+            <input value={p.customerForm.phonenumber} placeholder="090..." onChange={(e) => p.setCustomerForm({ ...p.customerForm, phonenumber: e.target.value })} />
+          </Field>
+          <Field label="Email">
+            <input value={p.customerForm.email} placeholder="email@domain.com" onChange={(e) => p.setCustomerForm({ ...p.customerForm, email: e.target.value })} />
+          </Field>
+          <Field label="Giới tính">
+            <select value={p.customerForm.gender} onChange={(e) => p.setCustomerForm({ ...p.customerForm, gender: e.target.value })}>
+              <option value="">Chưa chọn</option>
+              <option value="male">Nam</option>
+              <option value="female">Nữ</option>
+              <option value="other">Khác</option>
+            </select>
+          </Field>
+          <Field label="Trạng thái">
+            <select value={p.customerForm.status} onChange={(e) => p.setCustomerForm({ ...p.customerForm, status: e.target.value })}>
+              <option value="active">Đang hoạt động</option>
+              <option value="inactive">Ngưng hoạt động</option>
+              <option value="blocked">Chặn</option>
+            </select>
+          </Field>
+        </div>
+        <ActionRow>
+          <button onClick={() => p.run(p.createOrUpdateCustomer)}>Lưu khách hàng</button>
+          <button onClick={() => p.run(p.loadCustomersFriendly)}>Tải danh sách dễ đọc</button>
+          <button onClick={() => p.run(() => p.selectTable("customer"))}>Tải bảng gốc</button>
+          <button onClick={() => p.exportRows("customers")}>Xuất CSV</button>
+        </ActionRow>
+      </Card>
+      <DataTable rows={p.rows} />
+    </>
+  );
+}
+
+function Returns(p) {
+  return (
+    <>
+      <Card title="Đổi trả / hoàn tiền">
+        <div className="sales-form-grid">
+          <Field label="Mã đơn gốc">
+            <input value={p.returnForm.orderid} placeholder="OrderID" onChange={(e) => p.setReturnForm({ ...p.returnForm, orderid: e.target.value })} />
+          </Field>
+          <Field label="Chi nhánh nhận trả">
+            <select value={p.returnForm.branchid} onChange={(e) => p.setReturnForm({ ...p.returnForm, branchid: e.target.value })}>
+              <option value="">Chọn chi nhánh</option>
+              {p.options.branches.map((item) => (
+                <option key={branchIdOf(item)} value={branchIdOf(item)}>
+                  {branchLabel(item)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <ProductVariantSelector
+            products={p.options.products}
+            variants={p.options.variants}
+            productId={p.returnForm.productid}
+            variantId={p.returnForm.variantid}
+            onProductChange={(product) => p.setReturnForm({ ...p.returnForm, productid: productIdOf(product), variantid: "" })}
+            onVariantChange={(variant) =>
+              p.setReturnForm({
+                ...p.returnForm,
+                productid: variant ? productIdOf(variant) : p.returnForm.productid,
+                variantid: variantIdOf(variant),
+              })
+            }
+          />
+          <Field label="Số lượng trả">
+            <input type="number" min="1" value={p.returnForm.returnquantity} onChange={(e) => p.setReturnForm({ ...p.returnForm, returnquantity: e.target.value })} />
+          </Field>
+          <Field label="Tình trạng hàng">
+            <select value={p.returnForm.condition} onChange={(e) => p.setReturnForm({ ...p.returnForm, condition: e.target.value })}>
+              <option value="new">Mới</option>
+              <option value="good">Còn tốt</option>
+              <option value="damaged">Hỏng</option>
+            </select>
+          </Field>
+          <Field label="Hành động">
+            <select value={p.returnForm.actiontype} onChange={(e) => p.setReturnForm({ ...p.returnForm, actiontype: e.target.value })}>
+              <option value="refund">Hoàn tiền</option>
+              <option value="exchange">Đổi hàng</option>
+              <option value="restock_only">Chỉ nhập lại kho</option>
+            </select>
+          </Field>
+          <Field label="Phương thức hoàn">
+            <select value={p.returnForm.refundmethod} onChange={(e) => p.setReturnForm({ ...p.returnForm, refundmethod: e.target.value })}>
+              <option value="cash">Tiền mặt</option>
+              <option value="bank_transfer">Chuyển khoản</option>
+              <option value="loyalty_points">Điểm tích lũy</option>
+            </select>
+          </Field>
+          <Field label="Số tiền hoàn">
+            <input type="number" min="0" value={p.returnForm.refundamount} onChange={(e) => p.setReturnForm({ ...p.returnForm, refundamount: e.target.value })} />
+          </Field>
+          <Field label="Lý do">
+            <input value={p.returnForm.reason} placeholder="Sai size, lỗi sản phẩm..." onChange={(e) => p.setReturnForm({ ...p.returnForm, reason: e.target.value })} />
+          </Field>
+          <Field label="Ghi chú">
+            <input value={p.returnForm.note} placeholder="Ghi chú nội bộ" onChange={(e) => p.setReturnForm({ ...p.returnForm, note: e.target.value })} />
+          </Field>
+        </div>
+        <ActionRow>
+          <button onClick={() => p.run(p.createReturnOrder)}>Tạo phiếu đổi trả</button>
+          <button onClick={() => p.run(p.loadReturnsFriendly)}>Tải phiếu đổi trả</button>
+          <button onClick={() => p.run(() => p.selectTable("return_detail"))}>Tải chi tiết trả hàng</button>
+          <button onClick={() => p.exportRows("returns")}>Xuất CSV</button>
+        </ActionRow>
+      </Card>
+      <DataTable rows={p.rows} />
+    </>
+  );
+}
+
+function Channels(p) {
+  return (
+    <>
+      <Card title="Kênh bán / giá / phân bổ tồn">
+        <div className="sales-form-grid">
+          <Field label="Kênh bán">
+            <select value={p.channelForm.channelid} onChange={(e) => p.setChannelForm({ ...p.channelForm, channelid: e.target.value })}>
+              <option value="">Chọn kênh</option>
+              {p.options.channels.map((item) => (
+                <option key={channelIdOf(item)} value={channelIdOf(item)}>
+                  {channelLabel(item)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <ProductVariantSelector
+            products={p.options.products}
+            variants={p.options.variants}
+            productId={p.channelForm.productid}
+            variantId={p.channelForm.variantid}
+            onProductChange={(product) => p.setChannelForm({ ...p.channelForm, productid: productIdOf(product), variantid: "" })}
+            onVariantChange={(variant) =>
+              p.setChannelForm({
+                ...p.channelForm,
+                productid: variant ? productIdOf(variant) : p.channelForm.productid,
+                variantid: variantIdOf(variant),
+                sellingprice: variant?.sellingprice || p.channelForm.sellingprice,
+              })
+            }
+          />
+          <Field label="Giá bán theo kênh">
+            <input type="number" min="0" value={p.channelForm.sellingprice} onChange={(e) => p.setChannelForm({ ...p.channelForm, sellingprice: e.target.value })} />
+          </Field>
+          <Field label="Mã sản phẩm ngoài sàn">
+            <input value={p.channelForm.externalproductid} placeholder="Shopee/TikTok item id" onChange={(e) => p.setChannelForm({ ...p.channelForm, externalproductid: e.target.value })} />
+          </Field>
+          <Field label="Chi nhánh phân bổ">
+            <select value={p.channelForm.branchid} onChange={(e) => p.setChannelForm({ ...p.channelForm, branchid: e.target.value })}>
+              <option value="">Chọn chi nhánh</option>
+              {p.options.branches.map((item) => (
+                <option key={branchIdOf(item)} value={branchIdOf(item)}>
+                  {branchLabel(item)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Số lượng phân bổ">
+            <input type="number" min="0" value={p.channelForm.allocatedquantity} onChange={(e) => p.setChannelForm({ ...p.channelForm, allocatedquantity: e.target.value })} />
+          </Field>
+        </div>
+        <ActionRow>
+          <button onClick={() => p.run(p.saveChannelPrice)}>Lưu giá kênh</button>
+          <button onClick={() => p.run(p.saveInventoryAllocation)}>Lưu phân bổ tồn</button>
+          <button onClick={() => p.run(p.loadChannelPricesFriendly)}>Xem giá kênh</button>
+          <button onClick={() => p.run(p.loadAllocationsFriendly)}>Xem phân bổ tồn</button>
+          <button onClick={() => p.run(() => p.selectTable("channel_sync_log"))}>Log đồng bộ</button>
+          <button onClick={() => p.exportRows("channels")}>Xuất CSV</button>
+        </ActionRow>
+      </Card>
+      <DataTable rows={p.rows} />
+    </>
+  );
+}
+
 function UsersPage(p) {
   return (
     <>
@@ -2977,6 +3665,10 @@ function Reports({ run, buildReports, selectTable, exportRows, rows }) {
       <Card title="Báo cáo">
         <ActionRow>
           <button onClick={() => run(buildReports)}>Báo cáo tổng hợp</button>
+          <button onClick={() => run(() => selectTable("vw_order_summary", 500))}>View đơn hàng</button>
+          <button onClick={() => run(() => selectTable("vw_revenue_by_channel", 500))}>Doanh thu theo kênh</button>
+          <button onClick={() => run(() => selectTable("vw_low_stock_alert", 500))}>Cảnh báo tồn thấp</button>
+          <button onClick={() => run(() => selectTable("vw_stock_movement_report", 500))}>Biến động tồn kho</button>
           <button onClick={() => run(() => selectTable("stock"))}>Bảng tồn kho gốc</button>
           <button onClick={() => run(() => selectTable("orders"))}>Bảng đơn hàng gốc</button>
           <button onClick={() => run(() => selectTable("stock_history"))}>Bảng nhập/xuất kho gốc</button>
@@ -2989,7 +3681,42 @@ function Reports({ run, buildReports, selectTable, exportRows, rows }) {
 }
 
 function Query({ run, queryTable, setQueryTable, selectTable, rows }) {
-  const allowedTables = ["product", "product_variant", "product_image", "branch", "stock", "stock_history", "purchase_order", "orders", "order_detail", "users", "role"];
+  const allowedTables = [
+    "product",
+    "product_variant",
+    "product_image",
+    "product_category",
+    "attribute",
+    "supplier",
+    "supplier_product",
+    "branch",
+    "stock",
+    "stock_history",
+    "inventory_allocation",
+    "purchase_order",
+    "purchase_order_detail",
+    "transfer_order",
+    "transfer_order_detail",
+    "stock_adjustment",
+    "stock_adjustment_detail",
+    "sales_channel",
+    "channel_price",
+    "channel_sync_log",
+    "customer",
+    "orders",
+    "order_detail",
+    "payment",
+    "return_order",
+    "return_detail",
+    "users",
+    "role",
+    "vw_product_variant_catalog",
+    "vw_stock_by_branch",
+    "vw_low_stock_alert",
+    "vw_order_summary",
+    "vw_revenue_by_channel",
+    "vw_stock_movement_report",
+  ];
 
   return (
     <>
