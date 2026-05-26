@@ -663,6 +663,7 @@ export default function App() {
 
   // Data state
   const [rows, setRows] = useState([]);
+  const [globalSearch, setGlobalSearch] = useState("");
   const [queryTable, setQueryTable] = useState("product");
   const [options, setOptions] = useState({
     products: [],
@@ -2475,6 +2476,29 @@ export default function App() {
     await selectTable("users");
   }
 
+
+  function rowMatchesGlobalSearch(row, keyword) {
+    const normalizedKeyword = str(keyword).trim().toLowerCase();
+    if (!normalizedKeyword) return true;
+
+    const text = Object.entries(row || {})
+      .filter(([key]) => {
+        const normalizedKey = String(key).toLowerCase().replace(/[\s_-]/g, "");
+        return !(normalizedKey === "id" || normalizedKey.endsWith("id"));
+      })
+      .map(([, value]) => {
+        if (value === null || value === undefined) return "";
+        if (typeof value === "object") return JSON.stringify(value);
+        return String(value);
+      })
+      .join(" ")
+      .toLowerCase();
+
+    return text.includes(normalizedKeyword);
+  }
+
+  const visibleRows = rows.filter((row) => rowMatchesGlobalSearch(row, globalSearch));
+
   if (!session) {
     return <Login login={login} setLogin={setLogin} signIn={signIn} signUp={signUp} resetPassword={resetPassword} toast={toast} />;
   }
@@ -2525,11 +2549,25 @@ export default function App() {
 
       <main className="main">
         <header className="topbar">
-          <button className="menu-toggle" onClick={toggleSidebar}>
-            <Menu />
-          </button>
-          <b>{page.toUpperCase()}</b>
-          <span />
+          <div className="topbar-title-block">
+            <b>{page.toUpperCase()}</b>
+            <span className="topbar-subtitle">SilkRoad Management</span>
+          </div>
+
+          <div className="topbar-search" role="search">
+            <Search size={18} />
+            <input
+              value={globalSearch}
+              placeholder="Tìm trong bảng hiện tại: sản phẩm, SKU, barcode, chi nhánh..."
+              onChange={(event) => setGlobalSearch(event.target.value)}
+            />
+            {globalSearch && (
+              <button type="button" className="topbar-search-clear" onClick={() => setGlobalSearch("")} aria-label="Xóa tìm kiếm">
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
           <div className="topbar-actions">
             <button className="theme-toggle" title={dark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"} onClick={() => setDark(!dark)}>
               {dark ? <Sun /> : <Moon />}
@@ -2565,7 +2603,7 @@ export default function App() {
           <Skeleton />
         ) : (
           <div className="content">
-            {page === "dashboard" && <Dashboard run={run} dashboardData={dashboardData} rows={rows} />}
+            {page === "dashboard" && <Dashboard run={run} dashboardData={dashboardData} rows={visibleRows} />}
             {page === "products" && (
               <Products
                 options={options}
@@ -2594,7 +2632,7 @@ export default function App() {
                 loadProductCatalog={loadProductCatalog}
                 exportRows={exportRows}
                 selectTable={selectTable}
-                rows={rows}
+                rows={visibleRows}
               />
             )}
             {page === "purchase" && (
@@ -2607,7 +2645,7 @@ export default function App() {
                 confirmPurchaseOrder={confirmPurchaseOrder}
                 receiveStockManual={receiveStockManual}
                 selectTable={selectTable}
-                rows={rows}
+                rows={visibleRows}
               />
             )}
             {page === "stock" && (
@@ -2621,7 +2659,7 @@ export default function App() {
                 stockFilter={stockFilter}
                 setStockFilter={setStockFilter}
                 exportRows={exportRows}
-                rows={rows}
+                rows={visibleRows}
               />
             )}
             {page === "transfer" && <Transfer options={options} run={run} transferForm={transferForm} setTransferForm={setTransferForm} transferStock={transferStock} />}
@@ -2647,7 +2685,7 @@ export default function App() {
                 loadOrdersFriendly={loadOrdersFriendly}
                 exportRows={exportRows}
                 selectTable={selectTable}
-                rows={rows}
+                rows={visibleRows}
               />
             )}
             {page === "customers" && (
@@ -2659,7 +2697,7 @@ export default function App() {
                 loadCustomersFriendly={loadCustomersFriendly}
                 selectTable={selectTable}
                 exportRows={exportRows}
-                rows={rows}
+                rows={visibleRows}
               />
             )}
             {page === "returns" && (
@@ -2672,7 +2710,7 @@ export default function App() {
                 loadReturnsFriendly={loadReturnsFriendly}
                 selectTable={selectTable}
                 exportRows={exportRows}
-                rows={rows}
+                rows={visibleRows}
               />
             )}
             {page === "channels" && (
@@ -2693,12 +2731,12 @@ export default function App() {
                 loadAllocationsFriendly={loadAllocationsFriendly}
                 selectTable={selectTable}
                 exportRows={exportRows}
-                rows={rows}
+                rows={visibleRows}
               />
             )}
-            {page === "users" && <UsersPage run={run} userForm={userForm} setUserForm={setUserForm} createOrUpdateUser={createOrUpdateUser} selectTable={selectTable} rows={rows} />}
-            {page === "reports" && <Reports run={run} buildReports={buildReports} selectTable={selectTable} exportRows={exportRows} rows={rows} />}
-            {page === "query" && <Query run={run} queryTable={queryTable} setQueryTable={setQueryTable} selectTable={selectTable} exportRows={exportRows} rows={rows} />}
+            {page === "users" && <UsersPage run={run} userForm={userForm} setUserForm={setUserForm} createOrUpdateUser={createOrUpdateUser} selectTable={selectTable} rows={visibleRows} />}
+            {page === "reports" && <Reports run={run} buildReports={buildReports} selectTable={selectTable} exportRows={exportRows} rows={visibleRows} />}
+            {page === "query" && <Query run={run} queryTable={queryTable} setQueryTable={setQueryTable} selectTable={selectTable} exportRows={exportRows} rows={visibleRows} />}
           </div>
         )}
       </main>
@@ -3639,7 +3677,7 @@ function Stock({ options, run, loadStockFriendly, loadStockHistoryFriendly, sele
           <button onClick={() => exportRows("stock")}>Xuất CSV</button>
         </ActionRow>
       </Card>
-      <DataTable rows={rows} />
+      <DataTable rows={visibleRows} />
     </>
   );
 }
@@ -4261,7 +4299,7 @@ function Reports({ run, buildReports, selectTable, exportRows, rows }) {
           <button onClick={() => exportRows("reports")}>Xuất CSV</button>
         </ActionRow>
       </Card>
-      <DataTable rows={rows} />
+      <DataTable rows={visibleRows} />
     </>
   );
 }
@@ -4323,7 +4361,7 @@ function Query({ run, queryTable, setQueryTable, selectTable, rows }) {
           <button onClick={() => downloadRowsAsCsv(rows, `silkroad-${queryTable}-${todayISO()}.csv`)}>Xuất CSV</button>
         </ActionRow>
       </Card>
-      <DataTable rows={rows} />
+      <DataTable rows={visibleRows} />
     </>
   );
 }

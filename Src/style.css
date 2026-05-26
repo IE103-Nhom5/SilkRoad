@@ -5125,3 +5125,235 @@ body.dark .inline-check {
     grid-row: 2;
   }
 }
+
+
+/* =========================================================
+   FINAL FIX: Sidebar menu button + clean topbar + live search
+   Added by ChatGPT. This block only overrides layout; it does not remove old CSS.
+========================================================= */
+:root {
+  --sr-sidebar-open-width: 280px;
+  --sr-sidebar-rail-width: 78px;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.sidebar {
+  z-index: 50 !important;
+}
+
+.sidebar-brand {
+  display: grid !important;
+  grid-template-columns: 42px 1fr !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.sidebar-menu-toggle {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(2, 47, 38, 0.72) !important;
+  border: 1px solid rgba(214, 181, 109, 0.62) !important;
+  color: #f6e7b0 !important;
+  cursor: pointer !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,.18) !important;
+}
+
+.sidebar-menu-toggle:hover {
+  background: rgba(11, 91, 77, 0.95) !important;
+  transform: translateY(-1px);
+}
+
+/* The menu trigger must live in sidebar, so hide any older topbar menu trigger safely. */
+.topbar > .menu-toggle,
+.topbar > button.menu-toggle,
+.topbar > button:first-child.menu-toggle {
+  display: none !important;
+}
+
+.main {
+  min-width: 0 !important;
+}
+
+.topbar {
+  min-height: 72px !important;
+  display: grid !important;
+  grid-template-columns: minmax(145px, max-content) minmax(220px, 1fr) auto !important;
+  gap: 18px !important;
+  align-items: center !important;
+  position: sticky !important;
+  top: 14px !important;
+  z-index: 30 !important;
+  overflow: visible !important;
+}
+
+.topbar-title-block {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+}
+
+.topbar-title-block > b,
+.topbar > b {
+  white-space: nowrap !important;
+  letter-spacing: .08em !important;
+}
+
+.topbar-subtitle {
+  font-size: 12px !important;
+  color: rgba(23, 53, 47, .62) !important;
+  white-space: nowrap !important;
+}
+
+.topbar-search {
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 46px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 0 12px 0 15px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, .86) !important;
+  border: 1px solid rgba(188, 164, 109, .5) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.65), 0 10px 24px rgba(31, 24, 9, .06) !important;
+}
+
+.topbar-search svg {
+  flex: 0 0 auto !important;
+  color: #856b32 !important;
+}
+
+.topbar-search input {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: 42px !important;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  color: #17352f !important;
+  font-size: 14px !important;
+}
+
+.topbar-search input::placeholder {
+  color: rgba(23, 53, 47, .48) !important;
+}
+
+.topbar-search-clear {
+  flex: 0 0 auto !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(188, 164, 109, .45) !important;
+  background: rgba(244, 232, 200, .82) !important;
+  color: #123d33 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.topbar-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  min-width: max-content !important;
+}
+
+.account-menu {
+  position: relative !important;
+}
+
+.account-dropdown {
+  right: 0 !important;
+  left: auto !important;
+  z-index: 80 !important;
+}
+
+body.dark .topbar-subtitle {
+  color: rgba(246, 231, 176, .62) !important;
+}
+
+body.dark .topbar-search {
+  background: rgba(8, 39, 32, .88) !important;
+  border-color: rgba(214, 181, 109, .34) !important;
+}
+
+body.dark .topbar-search input {
+  color: #f6e7b0 !important;
+}
+
+body.dark .topbar-search input::placeholder {
+  color: rgba(246, 231, 176, .5) !important;
+}
+
+body.dark .topbar-search svg {
+  color: #d6b56d !important;
+}
+
+body.dark .topbar-search-clear {
+  background: rgba(16, 72, 60, .9) !important;
+  color: #f6e7b0 !important;
+  border-color: rgba(214, 181, 109, .4) !important;
+}
+
+@media (min-width: 961px) {
+  .app-shell.sidebar-open .main {
+    margin-left: var(--sr-sidebar-open-width) !important;
+    width: calc(100% - var(--sr-sidebar-open-width)) !important;
+  }
+
+  .app-shell.sidebar-closed .main {
+    margin-left: var(--sr-sidebar-rail-width) !important;
+    width: calc(100% - var(--sr-sidebar-rail-width)) !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .topbar {
+    grid-template-columns: 1fr auto !important;
+    top: 10px !important;
+  }
+
+  .topbar-search {
+    grid-column: 1 / -1 !important;
+    order: 3 !important;
+  }
+
+  .topbar-actions {
+    justify-self: end !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    min-height: auto !important;
+    gap: 12px !important;
+    padding: 14px !important;
+  }
+
+  .topbar-title-block > b {
+    font-size: 13px !important;
+  }
+
+  .topbar-subtitle {
+    display: none !important;
+  }
+
+  .topbar-search {
+    height: 42px !important;
+  }
+
+  .account-trigger span {
+    display: none !important;
+  }
+}
