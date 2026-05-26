@@ -666,6 +666,11 @@ export default function App() {
     rolename: "sales_staff",
     status: "active",
   });
+  const [profileForm, setProfileForm] = useState({
+    fullname: "",
+    username: "",
+    status: "active",
+  });
 
   useEffect(() => {
     document.body.className = dark ? "dark" : "";
@@ -714,27 +719,63 @@ export default function App() {
     const bodies = {
       account: (
         <div className="account-modal-body">
-          <p><b>{fullName}</b></p>
-          <p>{email}</p>
-          <p>Quyền: {role}</p>
+          <div className="account-profile-card">
+            <UserCircle size={36} />
+            <div>
+              <b>{fullName}</b>
+              <span>{email}</span>
+            </div>
+          </div>
+          <form className="account-form" onSubmit={saveCurrentProfile}>
+            <Field label="Họ tên">
+              <input name="fullname" defaultValue={profileForm.fullname} />
+            </Field>
+            <Field label="Username">
+              <input name="username" defaultValue={profileForm.username} />
+            </Field>
+            <Field label="Trạng thái">
+              <select name="status" defaultValue={profileForm.status}>
+                <option value="active">Đang hoạt động</option>
+                <option value="inactive">Ngưng hoạt động</option>
+              </select>
+            </Field>
+            <p>Quyền hiện tại: {role}</p>
+            <button type="submit">Lưu tài khoản</button>
+          </form>
         </div>
       ),
       info: (
         <div className="account-modal-body">
-          <p>SilkRoad POS quản lý bán hàng, kho, nhập hàng, báo cáo và phân quyền.</p>
-          <p>Phiên đăng nhập: {email || "Chưa xác định"}</p>
+          <div className="account-info-grid">
+            <span>Email</span><b>{email || "Chưa xác định"}</b>
+            <span>Vai trò</span><b>{role}</b>
+            <span>Auth ID</span><b>{session?.user?.id || "Chưa xác định"}</b>
+            <span>Đăng nhập</span><b>{session?.user?.last_sign_in_at ? new Date(session.user.last_sign_in_at).toLocaleString("vi-VN") : "Chưa xác định"}</b>
+          </div>
+          <button onClick={() => run(loadOptions)}>Làm mới dữ liệu nền</button>
         </div>
       ),
       settings: (
         <div className="account-modal-body">
           <p>Giao diện: {dark ? "Chế độ tối" : "Chế độ sáng"}</p>
-          <button onClick={() => setDark(!dark)}>{dark ? "Chuyển sang sáng" : "Chuyển sang tối"}</button>
+          <div className="account-action-grid">
+            <button onClick={() => setDark(!dark)}>{dark ? "Chuyển sang sáng" : "Chuyển sang tối"}</button>
+            <button onClick={toggleSidebar}>{sidebar ? "Thu gọn menu" : "Mở rộng menu"}</button>
+            <button onClick={() => { setHeldCarts([]); show("Đã xóa đơn tạm"); }}>Xóa đơn tạm</button>
+            <button onClick={() => run(loadOptions)}>Tải lại tùy chọn</button>
+          </div>
         </div>
       ),
       help: (
         <div className="account-modal-body">
           <p>Quy trình nhanh: chọn chi nhánh, chọn sản phẩm, chọn biến thể, thêm giỏ rồi tạo hóa đơn.</p>
           <p>Nếu hóa đơn lỗi, kiểm tra kênh bán, tồn kho và quyền tài khoản.</p>
+          <div className="account-action-grid">
+            <button onClick={() => goToPage("orders")}>Mở bán hàng</button>
+            <button onClick={() => goToPage("products")}>Mở hàng hóa</button>
+            <button onClick={() => goToPage("stock")}>Mở kho</button>
+            <button onClick={() => goToPage("reports")}>Mở báo cáo</button>
+          </div>
         </div>
       ),
     };
@@ -746,6 +787,44 @@ export default function App() {
     };
     setAccountMenu(false);
     setModal({ title: titles[kind], body: bodies[kind] });
+  }
+
+  function goToPage(nextPage) {
+    setPage(nextPage);
+    setModal(null);
+    setAccountMenu(false);
+    if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebar(false);
+  }
+
+  async function saveCurrentProfile(event) {
+    event.preventDefault();
+    if (!profile?.email) return show("Không tìm thấy email tài khoản để cập nhật");
+    const formData = new FormData(event.currentTarget);
+    const payload = {
+      fullname: str(formData.get("fullname")).trim(),
+      username: str(formData.get("username")).trim(),
+      status: str(formData.get("status")).trim() || "active",
+    };
+    if (!payload.fullname || !payload.username) return show("Vui lòng nhập họ tên và username");
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.from("users").update(payload).eq("email", profile.email).select("*, role(*)").maybeSingle();
+      if (error) throw error;
+      const nextProfile = data || { ...profile, ...payload };
+      setProfile(nextProfile);
+      setProfileForm({
+        fullname: first(nextProfile, ["fullname", "full_name"], ""),
+        username: first(nextProfile, ["username"], ""),
+        status: first(nextProfile, ["status"], "active"),
+      });
+      setModal(null);
+      show("Đã cập nhật tài khoản");
+    } catch (error) {
+      show(error.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -896,6 +975,11 @@ export default function App() {
       return;
     }
     setProfile(data);
+    setProfileForm({
+      fullname: first(data, ["fullname", "full_name"], ""),
+      username: first(data, ["username"], ""),
+      status: first(data, ["status"], "active"),
+    });
     await loadOptions();
     show("Đăng nhập quyền: " + roleName(data));
   }
@@ -909,6 +993,14 @@ export default function App() {
     const { error } = await supabase.auth.signUp(login);
     if (error) show(error.message);
     else show("Đã tạo Auth. Tiếp theo tạo profile users để phân quyền.");
+  }
+
+  async function resetPassword() {
+    if (!login.email.trim()) return show("Vui lòng nhập email trước khi đặt lại mật khẩu");
+    const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
+    const { error } = await supabase.auth.resetPasswordForEmail(login.email.trim(), { redirectTo });
+    if (error) show(error.message);
+    else show("Đã gửi email đặt lại mật khẩu nếu tài khoản tồn tại.");
   }
 
   async function signOut() {
@@ -1578,7 +1670,7 @@ export default function App() {
   }
 
   if (!session) {
-    return <Login login={login} setLogin={setLogin} signIn={signIn} signUp={signUp} toast={toast} />;
+    return <Login login={login} setLogin={setLogin} signIn={signIn} signUp={signUp} resetPassword={resetPassword} toast={toast} />;
   }
 
   return (
@@ -1740,9 +1832,23 @@ export default function App() {
   );
 }
 
-function Login({ login, setLogin, signIn, signUp, toast }) {
+function Login({ login, setLogin, signIn, signUp, resetPassword, toast }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
+
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem("silkroad-remember-email");
+    if (rememberedEmail) {
+      setRemember(true);
+      setLogin((current) => ({ ...current, email: rememberedEmail }));
+    }
+  }, [setLogin]);
+
+  function submitLogin() {
+    if (remember && login.email) localStorage.setItem("silkroad-remember-email", login.email);
+    if (!remember) localStorage.removeItem("silkroad-remember-email");
+    signIn();
+  }
 
   return (
     <div
@@ -1784,7 +1890,7 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
                 setLogin({ ...login, email: e.target.value })
               }
               onKeyDown={(e) => {
-                if (e.key === "Enter") signIn();
+                if (e.key === "Enter") submitLogin();
               }}
             />
           </div>
@@ -1800,7 +1906,7 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
                 setLogin({ ...login, password: e.target.value })
               }
               onKeyDown={(e) => {
-                if (e.key === "Enter") signIn();
+                if (e.key === "Enter") submitLogin();
               }}
             />
 
@@ -1827,9 +1933,7 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
             <button
               type="button"
               className="sr-login-link"
-              onClick={() =>
-                alert("Demo: dùng Supabase Auth để reset password.")
-              }
+              onClick={resetPassword}
             >
               Quên mật khẩu?
             </button>
@@ -1838,7 +1942,7 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
           <button
             type="button"
             className="sr-login-submit"
-            onClick={signIn}
+            onClick={submitLogin}
           >
             login
           </button>
