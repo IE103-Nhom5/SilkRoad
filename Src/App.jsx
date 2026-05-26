@@ -1380,6 +1380,8 @@ function Stock({ run, loadStockFriendly, loadLowStock, rows }) {
       <DataTable rows={rows} />
     </>
   );
+}
+
 function Transfer(p) {
   return (
     <Card title="Chuyển kho">
