@@ -227,7 +227,7 @@ export default function App() {
   const [productsRes, variantsRes, branchesRes, rolesRes] = await Promise.all([
     supabase
       .from("product")
-      .select("productid, productname, brand, defaultsellingprice")
+      .select("productid, productname, defaultsellingprice")
       .order("productname"),
 
     supabase
