@@ -1035,11 +1035,11 @@ export default function App() {
     const todayOrders = (o.data || []).filter((r) => str(r.orderdate || r.createdat || r.created_at).startsWith(todayISO())).length;
 
     setRows([
-      { metric: "Tổng sản phẩm", value: p.count || 0 },
-      { metric: "Tổng tồn kho", value: totalStock },
-      { metric: "Doanh thu", value: money(revenue) },
-      { metric: "Đơn hàng hôm nay", value: todayOrders },
-      { metric: "Log nhập/xuất", value: (h.data || []).length },
+      { metric: "Tổng sản phẩm", value: p.count || 0, rawValue: p.count || 0 },
+      { metric: "Tổng tồn kho", value: totalStock, rawValue: totalStock },
+      { metric: "Doanh thu", value: money(revenue), rawValue: revenue },
+      { metric: "Đơn hàng hôm nay", value: todayOrders, rawValue: todayOrders },
+      { metric: "Log nhập/xuất", value: (h.data || []).length, rawValue: (h.data || []).length },
     ]);
   }
 
@@ -2057,25 +2057,52 @@ function Modal({ title, children, onClose }) {
 }
 
 function Dashboard({ run, dashboardData, rows }) {
-  const max = Math.max(...rows.map((r) => Number(r.value) || 0), 1);
+  const dashboardRows = (rows || []).filter((r) => r && Object.prototype.hasOwnProperty.call(r, "metric"));
+  const displayRows = dashboardRows.length
+    ? dashboardRows
+    : [
+        { metric: "Tổng sản phẩm", value: "Chưa tải", rawValue: 0 },
+        { metric: "Tổng tồn kho", value: "Chưa tải", rawValue: 0 },
+        { metric: "Doanh thu", value: "Chưa tải", rawValue: 0 },
+        { metric: "Đơn hàng hôm nay", value: "Chưa tải", rawValue: 0 },
+      ];
+
+  useEffect(() => {
+    if (!dashboardRows.length) dashboardData().catch(console.error);
+  }, []);
+
+  const numberOf = (row) => {
+    if (row.rawValue !== undefined) return Number(row.rawValue) || 0;
+    if (typeof row.value === "number") return row.value;
+    return Number(String(row.value || "").replace(/[^\d.-]/g, "")) || 0;
+  };
+  const max = Math.max(...displayRows.map(numberOf), 1);
+
   return (
     <Card title="Dashboard">
-      <button onClick={() => run(dashboardData)}>Tải thống kê</button>
-      <Grid>
-        {rows.map((r, i) => (
+      <div className="dashboard-toolbar">
+        <button onClick={() => run(dashboardData)}>Tải thống kê</button>
+      </div>
+      <div className="dashboard-grid">
+        {displayRows.map((r, i) => (
           <div className="metric" key={i}>
             <b>{r.metric}</b>
             <strong>{r.value}</strong>
           </div>
         ))}
-      </Grid>
-      <h3>Biểu đồ nhập/xuất kho demo</h3>
-      {rows.map((r, i) => (
-        <div className="bar" key={i}>
-          <span>{r.metric}</span>
-          <i style={{ width: ((Number(r.value) || 0) / max) * 100 + "%" }} />
-        </div>
-      ))}
+      </div>
+      <h3>Biểu đồ tổng quan</h3>
+      <div className="dashboard-chart">
+        {displayRows.map((r, i) => {
+          const width = Math.max((numberOf(r) / max) * 100, numberOf(r) > 0 ? 6 : 0);
+          return (
+            <div className="bar" key={i}>
+              <span>{r.metric}</span>
+              <i style={{ width: width + "%" }} />
+            </div>
+          );
+        })}
+      </div>
     </Card>
   );
 }
