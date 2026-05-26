@@ -521,6 +521,7 @@ export default function App() {
   const [page, setPage] = useState("dashboard");
   const [dark, setDark] = useState(localStorage.getItem("dark") === "1");
   const [sidebar, setSidebar] = useState(() => (typeof window === "undefined" ? true : window.innerWidth > 960));
+  const [sidebarRailLocked, setSidebarRailLocked] = useState(false);
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(null);
@@ -655,6 +656,17 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("silkroad-held-carts", JSON.stringify(heldCarts.slice(0, 10)));
   }, [heldCarts]);
+
+  function toggleSidebar() {
+    setSidebar((current) => {
+      const next = !current;
+      if (!next && typeof window !== "undefined" && window.innerWidth > 900) {
+        setSidebarRailLocked(true);
+        window.setTimeout(() => setSidebarRailLocked(false), 420);
+      }
+      return next;
+    });
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -1490,7 +1502,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell ${sidebar ? "sidebar-open" : "sidebar-closed"}`}>
+    <div className={`app-shell ${sidebar ? "sidebar-open" : "sidebar-closed"} ${sidebarRailLocked ? "sidebar-rail-locked" : ""}`}>
       {toast && <div className="toast">{toast}</div>}
       {modal && (
         <Modal title={modal.title} onClose={() => setModal(null)}>
@@ -1530,7 +1542,7 @@ export default function App() {
 
       <main className="main">
         <header className="topbar">
-          <button onClick={() => setSidebar(!sidebar)}>
+          <button className="menu-toggle" onClick={toggleSidebar}>
             <Menu />
           </button>
           <b>{page.toUpperCase()}</b>

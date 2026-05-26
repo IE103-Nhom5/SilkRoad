@@ -3482,14 +3482,18 @@ body.dark .pos-checkout .action-row button:first-child {
     min-width: var(--sidebar-rail-w) !important;
     max-width: var(--sidebar-rail-w) !important;
     padding: 12px 10px !important;
+    border-radius: 0 22px 22px 0;
+    border-right: 1px solid rgba(214, 181, 109, 0.68);
+    overflow: hidden !important;
     transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, box-shadow 0.2s ease;
   }
 
-  .app-shell.sidebar-closed .sidebar:hover {
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover {
     width: var(--sidebar-open-w) !important;
     min-width: var(--sidebar-open-w) !important;
     max-width: var(--sidebar-open-w) !important;
     padding: 14px !important;
+    border-radius: 0 26px 26px 0;
     z-index: 75;
     box-shadow: 18px 0 42px rgba(0, 0, 0, 0.24);
   }
@@ -3513,19 +3517,19 @@ body.dark .pos-checkout .action-row button:first-child {
     display: none;
   }
 
-  .app-shell.sidebar-closed .sidebar:hover .sidebar-brand {
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover .sidebar-brand {
     display: block;
     min-height: 0;
     margin-bottom: 22px;
   }
 
-  .app-shell.sidebar-closed .sidebar:hover .sidebar-logo-img {
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover .sidebar-logo-img {
     width: 180px;
     height: auto;
     margin: 0 0 8px;
   }
 
-  .app-shell.sidebar-closed .sidebar:hover .sidebar-brand small {
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover .sidebar-brand small {
     display: block;
   }
 
@@ -3539,13 +3543,13 @@ body.dark .pos-checkout .action-row button:first-child {
     display: none;
   }
 
-  .app-shell.sidebar-closed .sidebar:hover button {
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover button {
     justify-content: flex-start;
     gap: 10px !important;
     padding: 10px 12px !important;
   }
 
-  .app-shell.sidebar-closed .sidebar:hover button span {
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover button span {
     display: inline;
   }
 
@@ -3553,20 +3557,39 @@ body.dark .pos-checkout .action-row button:first-child {
     grid-template-columns: auto minmax(0, auto) minmax(0, 1fr) auto auto;
   }
 
-  .topbar > button:first-child {
+  .topbar > button:first-child,
+  .menu-toggle {
     width: 50px;
     min-width: 50px;
     justify-content: center;
     padding: 0;
+    border-radius: 999px !important;
   }
 
   .app-shell.sidebar-open .topbar > button:first-child {
     position: fixed;
-    left: calc(var(--sidebar-open-w) - 66px);
+    left: calc(var(--sidebar-open-w) - 62px);
     top: 14px;
     z-index: 90;
     background: rgba(255, 250, 240, 0.94);
     box-shadow: 0 8px 24px rgba(31, 23, 8, 0.14);
+  }
+
+  .app-shell.sidebar-closed .topbar > button:first-child {
+    position: fixed;
+    left: 14px;
+    top: 14px;
+    z-index: 90;
+    background: rgba(255, 250, 240, 0.94);
+    box-shadow: 0 8px 24px rgba(31, 23, 8, 0.14);
+  }
+
+  .app-shell.sidebar-open .topbar {
+    padding-left: 76px;
+  }
+
+  .app-shell.sidebar-closed .topbar {
+    padding-left: 76px;
   }
 }
 
