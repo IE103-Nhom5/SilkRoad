@@ -1,23 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
-import {
-  BarChart3,
-  Boxes,
-  ClipboardList,
-  LogOut,
-  Menu,
-  Moon,
-  PackagePlus,
-  Plus,
-  RefreshCcw,
-  Search,
-  ShoppingCart,
-  Sun,
-  Users,
-  X,
-  AlertTriangle,
-  Upload,
-} from "lucide-react";
 import bg from "./assets/silkroad-bg.png";
 import loginBg from "./assets/login-bg.png";
 import loginFrameImg from "./assets/login-frame.png";
@@ -90,16 +72,191 @@ function first(obj, keys, fallback = "") {
   return fallback;
 }
 
-function variantLabel(item) {
-  return [
-    item?.sku ? `SKU ${item.sku}` : "Chưa có SKU",
-    item?.barcode ? `Barcode ${item.barcode}` : "",
-    item?.size ? `Size ${item.size}` : "",
-    item?.color ? `Màu ${item.color}` : "",
-    item?.sellingprice ? money(item.sellingprice) : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+function IconBase({ size = 24, children, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      {children}
+    </svg>
+  );
+}
+
+function BarChart3(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M3 3v18h18" />
+      <path d="M8 17V9" />
+      <path d="M13 17V5" />
+      <path d="M18 17v-6" />
+    </IconBase>
+  );
+}
+
+function Boxes(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M7 8l5-3 5 3-5 3-5-3z" />
+      <path d="M7 8v6l5 3 5-3V8" />
+      <path d="M3 14l4-2 5 3v5l-5-3-4 2v-5z" />
+      <path d="M21 14l-4-2-5 3v5l5-3 4 2v-5z" />
+    </IconBase>
+  );
+}
+
+function ClipboardList(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M9 4h6l1 2h3v15H5V6h3l1-2z" />
+      <path d="M9 12h6" />
+      <path d="M9 16h6" />
+      <path d="M8 8h8" />
+    </IconBase>
+  );
+}
+
+function LogOut(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M10 17l5-5-5-5" />
+      <path d="M15 12H3" />
+      <path d="M21 3v18h-8" />
+    </IconBase>
+  );
+}
+
+function Menu(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M4 6h16" />
+      <path d="M4 12h16" />
+      <path d="M4 18h16" />
+    </IconBase>
+  );
+}
+
+function Moon(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M21 13a8 8 0 1 1-10-10 7 7 0 0 0 10 10z" />
+    </IconBase>
+  );
+}
+
+function PackagePlus(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 3l8 4-8 4-8-4 8-4z" />
+      <path d="M4 7v10l8 4 8-4V7" />
+      <path d="M12 11v10" />
+      <path d="M16 14h4" />
+      <path d="M18 12v4" />
+    </IconBase>
+  );
+}
+
+function Plus(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </IconBase>
+  );
+}
+
+function RefreshCcw(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+      <path d="M3 21v-5h5" />
+    </IconBase>
+  );
+}
+
+function Search(props) {
+  return (
+    <IconBase {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </IconBase>
+  );
+}
+
+function ShoppingCart(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M6 6h15l-2 8H8L6 3H3" />
+      <circle cx="9" cy="20" r="1" />
+      <circle cx="18" cy="20" r="1" />
+    </IconBase>
+  );
+}
+
+function Sun(props) {
+  return (
+    <IconBase {...props}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="M4.9 4.9l1.4 1.4" />
+      <path d="M17.7 17.7l1.4 1.4" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="M4.9 19.1l1.4-1.4" />
+      <path d="M17.7 6.3l1.4-1.4" />
+    </IconBase>
+  );
+}
+
+function Users(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
+      <circle cx="9.5" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.9" />
+      <path d="M16 3.2a4 4 0 0 1 0 7.6" />
+    </IconBase>
+  );
+}
+
+function X(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M18 6L6 18" />
+      <path d="M6 6l12 12" />
+    </IconBase>
+  );
+}
+
+function AlertTriangle(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 3l10 18H2L12 3z" />
+      <path d="M12 9v5" />
+      <path d="M12 18h.01" />
+    </IconBase>
+  );
+}
+
+function Upload(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 3v12" />
+      <path d="M7 8l5-5 5 5" />
+      <path d="M5 21h14" />
+    </IconBase>
+  );
 }
 
 export default function App() {
@@ -151,13 +308,11 @@ export default function App() {
   const [transferForm, setTransferForm] = useState({
     frombranchid: "",
     tobranchid: "",
-    productid: "",
     variantid: "",
     quantity: 1,
   });
   const [adjustForm, setAdjustForm] = useState({
     branchid: "",
-    productid: "",
     variantid: "",
     actualquantity: 0,
     note: "",
@@ -165,7 +320,6 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [cartItem, setCartItem] = useState({
     branchid: "",
-    productid: "",
     variantid: "",
     quantity: 1,
     unitprice: 0,
@@ -236,91 +390,33 @@ export default function App() {
     return true;
   }
 
-async function loadOptions() {
-    async function read(table, columns, fallbackColumns, orderColumn) {
-      let query = supabase.from(table).select(columns);
-      if (orderColumn) query = query.order(orderColumn);
-      let result = await query;
-
-      if (result.error && fallbackColumns) {
-        console.warn(`Fallback select for ${table}:`, result.error.message);
-        let fallbackQuery = supabase.from(table).select(fallbackColumns);
-        if (orderColumn) fallbackQuery = fallbackQuery.order(orderColumn);
-        result = await fallbackQuery;
-      }
-
-      return result;
-    }
-
-    const [productsRes, variantsRes, branchesRes, rolesRes] = await Promise.all([
-      read(
-        "product",
-        "productid, productname, brand, defaultsellingprice",
-        "productid, productname, defaultsellingprice",
-        "productname"
-      ),
-      read(
-        "product_variant",
-        "variantid, productid, sku, barcode, size, color, sellingprice",
-        "variantid, productid, sku, barcode, sellingprice",
-        "sku"
-      ),
-      read("branch", "branchid, branchname", null, "branchname"),
-      read("role", "roleid, rolename", null, "rolename"),
+  async function loadOptions() {
+    const [products, variants, branches, roles] = await Promise.all([
+      supabase.from("product").select("productid, productname").order("productname"),
+      supabase.from("product_variant").select("variantid, sku, barcode, sellingprice, productid").order("sku"),
+      supabase.from("branch").select("branchid, branchname").order("branchname"),
+      supabase.from("role").select("roleid, rolename").order("rolename"),
     ]);
 
-    console.log("productsRes", productsRes);
-    console.log("variantsRes", variantsRes);
-    console.log("branchesRes", branchesRes);
-    console.log("rolesRes", rolesRes);
-
-    if (productsRes.error) show("Lỗi product: " + productsRes.error.message);
-    if (variantsRes.error) show("Lỗi product_variant: " + variantsRes.error.message);
-    if (branchesRes.error) show("Lỗi branch: " + branchesRes.error.message);
-
-    const products = productsRes.data || [];
-
-    const variants = (variantsRes.data || []).map((variant) => ({
-      ...variant,
-      product:
-        products.find((product) => product.productid === variant.productid) ||
-        null,
-    }));
-
-    const loaded = {
-      products,
-      variants,
-      branches: branchesRes.data || [],
-      roles: rolesRes.data || [],
-    };
-
-    setOptions(loaded);
-
-    if ((loaded.branches.length === 0 || loaded.variants.length === 0) && !branchesRes.error && !variantsRes.error) {
-      show(
-        `Đã tải: ${loaded.branches.length} chi nhánh, ${loaded.variants.length} SKU. Nếu dropdown trống, kiểm tra RLS hoặc dữ liệu mẫu.`
-      );
-    }
-
-    return loaded;
+    setOptions({
+      products: products.data || [],
+      variants: variants.data || [],
+      branches: branches.data || [],
+      roles: roles.data || [],
+    });
   }
+
   async function loadProfile(email) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*, role(*)")
-    .eq("email", email)
-    .maybeSingle();
-
-  if (error || !data) {
-    setProfile(null);
-    show("Auth OK nhưng chưa có profile trong bảng users");
-    return;
+    const { data, error } = await supabase.from("users").select("*, role(*)").eq("email", email).maybeSingle();
+    if (error || !data) {
+      setProfile(null);
+      show("Auth OK nhưng chưa có profile trong bảng users");
+      return;
+    }
+    setProfile(data);
+    await loadOptions();
+    show("Đăng nhập quyền: " + roleName(data));
   }
-
-  setProfile(data);
-  await loadOptions();
-  show("Đăng nhập quyền: " + roleName(data));
-}
 
   async function signIn() {
     const { error } = await supabase.auth.signInWithPassword(login);
@@ -407,135 +503,27 @@ async function loadOptions() {
     await selectTable("product_image");
   }
 
-  async function loadStockFriendly() {
+  async function loadLowStock() {
     if (!guard("stock")) return;
-
-    const opts = await loadOptions();
-
-    const { data, error } = await supabase
-      .from("stock")
-      .select("*")
-      .order("lastupdated", { ascending: false });
-
+    const { data, error } = await supabase.from("stock").select("*");
     if (error) throw error;
-
-    const friendlyRows = (data || []).map((stockItem) => {
-      const branch = opts.branches.find(
-        (item) => item.branchid === stockItem.branchid
-      );
-
-      const variant = opts.variants.find(
-        (item) => item.variantid === stockItem.variantid
-      );
-
-      const quantity = Number(stockItem.quantity || 0);
-      const reserved = Number(stockItem.reservedquantity || 0);
-
-      return {
-        "Chi nhánh": branch?.branchname || "Chưa xác định",
-        "Sản phẩm": variant?.product?.productname || "Chưa ghép sản phẩm",
-        "SKU": variant?.sku || "Chưa có SKU",
-        "Barcode": variant?.barcode || "",
-        "Size": variant?.size || "",
-        "Màu": variant?.color || "",
-        "Tồn kho": quantity,
-        "Đã giữ": reserved,
-        "Tồn khả dụng": quantity - reserved,
-        "Mức tối thiểu": stockItem.minstocklevel || stockItem.min_stock_level || 0,
-        "Cập nhật": stockItem.lastupdated
-          ? new Date(stockItem.lastupdated).toLocaleString("vi-VN")
-          : "",
-      };
-    });
-
-    setRows(friendlyRows);
-  }
-
-
- async function loadLowStock() {
-    if (!guard("stock")) return;
-
-    const opts = await loadOptions();
-
-    const { data, error } = await supabase
-      .from("stock")
-      .select("*")
-      .order("quantity", { ascending: true });
-
-    if (error) throw error;
-
-    const lowRows = (data || [])
-      .filter((stockItem) => {
-        const quantity = Number(stockItem.quantity || 0);
-        const min = Number(stockItem.minstocklevel || stockItem.min_stock_level || 5);
-        return quantity <= min;
-      })
-      .map((stockItem) => {
-        const branch = opts.branches.find(
-          (item) => item.branchid === stockItem.branchid
-        );
-
-        const variant = opts.variants.find(
-          (item) => item.variantid === stockItem.variantid
-        );
-
-        return {
-          "Chi nhánh": branch?.branchname || "Chưa xác định",
-          "Sản phẩm": variant?.product?.productname || "Chưa ghép sản phẩm",
-          "SKU": variant?.sku || "Chưa có SKU",
-          "Barcode": variant?.barcode || "",
-          "Size": variant?.size || "",
-          "Màu": variant?.color || "",
-          "Tồn kho": Number(stockItem.quantity || 0),
-          "Mức tối thiểu": stockItem.minstocklevel || stockItem.min_stock_level || 0,
-          "Trạng thái": "Sắp hết hàng",
-          "Cập nhật": stockItem.lastupdated
-            ? new Date(stockItem.lastupdated).toLocaleString("vi-VN")
-            : "",
-        };
-      });
-
-    setRows(lowRows);
+    setRows((data || []).filter((r) => Number(r.quantity || 0) <= Number(r.minstocklevel || r.min_stock_level || 5)));
     show("Đã lọc cảnh báo sắp hết hàng");
   }
 
   async function transferStock() {
     if (!guard("transfer")) return;
-
-    if (
-      !transferForm.frombranchid ||
-      !transferForm.tobranchid ||
-      !transferForm.variantid
-    ) {
-      return show("Vui lòng chọn đủ chi nhánh gửi, chi nhánh nhận và sản phẩm/SKU");
-    }
-
-    if (transferForm.frombranchid === transferForm.tobranchid) {
-      return show("Chi nhánh gửi và chi nhánh nhận không được trùng nhau");
+    if (!transferForm.frombranchid || !transferForm.tobranchid || !transferForm.variantid) {
+      return show("Vui lòng chọn đủ chi nhánh gửi, chi nhánh nhận và SKU");
     }
 
     const q = Number(transferForm.quantity);
-
-    if (!Number.isFinite(q) || q <= 0) {
-      return show("Số lượng chuyển phải lớn hơn 0");
-    }
-
     const from = await supabase
       .from("stock")
       .select("*")
       .eq("branchid", transferForm.frombranchid)
       .eq("variantid", transferForm.variantid)
       .maybeSingle();
-
-    if (from.error) throw from.error;
-    if (!from.data) throw new Error("Không tìm thấy tồn kho chi nhánh gửi");
-
-    const beforeFrom = Number(from.data.quantity || 0);
-
-    if (beforeFrom < q) {
-      throw new Error("Không đủ tồn để chuyển");
-    }
-
     const to = await supabase
       .from("stock")
       .select("*")
@@ -543,20 +531,13 @@ async function loadOptions() {
       .eq("variantid", transferForm.variantid)
       .maybeSingle();
 
-    if (to.error) throw to.error;
-
-    const afterFrom = beforeFrom - q;
-    const beforeTo = Number(to.data?.quantity || 0);
-    const afterTo = beforeTo + q;
-    const now = new Date().toISOString();
+    if (from.error || !from.data) throw new Error("Không tìm thấy tồn kho chi nhánh gửi");
+    if (Number(from.data.quantity) < q) throw new Error("Không đủ tồn để chuyển");
 
     const updates = [
       supabase
         .from("stock")
-        .update({
-          quantity: afterFrom,
-          lastupdated: now,
-        })
+        .update({ quantity: Number(from.data.quantity) - q, lastupdated: new Date().toISOString() })
         .eq("branchid", transferForm.frombranchid)
         .eq("variantid", transferForm.variantid),
     ];
@@ -565,10 +546,7 @@ async function loadOptions() {
       updates.push(
         supabase
           .from("stock")
-          .update({
-            quantity: afterTo,
-            lastupdated: now,
-          })
+          .update({ quantity: Number(to.data.quantity) + q, lastupdated: new Date().toISOString() })
           .eq("branchid", transferForm.tobranchid)
           .eq("variantid", transferForm.variantid)
       );
@@ -581,19 +559,18 @@ async function loadOptions() {
             quantity: q,
             reservedquantity: 0,
             minstocklevel: 0,
-            lastupdated: now,
+            lastupdated: new Date().toISOString(),
           },
         ])
       );
     }
 
     const res = await Promise.all(updates);
-    const err = res.find((item) => item.error)?.error;
+    const err = res.find((x) => x.error)?.error;
     if (err) throw err;
 
     const referenceId = uuid();
-
-    const { error: historyError } = await supabase.from("stock_history").insert([
+    await supabase.from("stock_history").insert([
       {
         historyid: uuid(),
         branchid: transferForm.frombranchid,
@@ -602,10 +579,10 @@ async function loadOptions() {
         referencetype: "TRANSFER_DEMO",
         referenceid: referenceId,
         quantitychange: -q,
-        quantitybefore: beforeFrom,
-        quantityafter: afterFrom,
+        quantitybefore: from.data.quantity,
+        quantityafter: Number(from.data.quantity) - q,
         performedby: profile?.userid || null,
-        timestamp: now,
+        timestamp: new Date().toISOString(),
         note: "Demo chuyển kho xuất",
       },
       {
@@ -616,56 +593,35 @@ async function loadOptions() {
         referencetype: "TRANSFER_DEMO",
         referenceid: referenceId,
         quantitychange: q,
-        quantitybefore: beforeTo,
-        quantityafter: afterTo,
+        quantitybefore: to.data?.quantity || 0,
+        quantityafter: Number(to.data?.quantity || 0) + q,
         performedby: profile?.userid || null,
-        timestamp: now,
+        timestamp: new Date().toISOString(),
         note: "Demo chuyển kho nhập",
       },
     ]);
 
-    if (historyError) throw historyError;
-
     show("Chuyển kho thành công");
-    await loadStockFriendly();
+    await selectTable("stock");
   }
 
   async function adjustStock() {
     if (!guard("adjustment")) return;
+    if (!adjustForm.branchid || !adjustForm.variantid) return show("Vui lòng chọn chi nhánh và SKU");
 
-    if (!adjustForm.branchid || !adjustForm.variantid) {
-      return show("Vui lòng chọn chi nhánh và sản phẩm/SKU");
-    }
+    const old = await supabase.from("stock").select("*").eq("branchid", adjustForm.branchid).eq("variantid", adjustForm.variantid).maybeSingle();
+    if (old.error || !old.data) throw new Error("Không tìm thấy tồn kho để kiểm");
 
-    const actual = Number(adjustForm.actualquantity);
-
-    if (!Number.isFinite(actual) || actual < 0) {
-      return show("Số lượng thực tế phải lớn hơn hoặc bằng 0");
-    }
-
-    const old = await supabase
-      .from("stock")
-      .select("*")
-      .eq("branchid", adjustForm.branchid)
-      .eq("variantid", adjustForm.variantid)
-      .maybeSingle();
-
-    if (old.error) throw old.error;
-    if (!old.data) throw new Error("Không tìm thấy tồn kho để kiểm");
-
-    const before = Number(old.data.quantity || 0);
-    const after = actual;
-    const now = new Date().toISOString();
-
+    const before = Number(old.data.quantity);
+    const after = Number(adjustForm.actualquantity);
     const { error } = await supabase
       .from("stock")
-      .update({ quantity: after, lastupdated: now })
+      .update({ quantity: after, lastupdated: new Date().toISOString() })
       .eq("branchid", adjustForm.branchid)
       .eq("variantid", adjustForm.variantid);
-
     if (error) throw error;
 
-    const { error: historyError } = await supabase.from("stock_history").insert([
+    await supabase.from("stock_history").insert([
       {
         historyid: uuid(),
         branchid: adjustForm.branchid,
@@ -677,73 +633,27 @@ async function loadOptions() {
         quantitybefore: before,
         quantityafter: after,
         performedby: profile?.userid || null,
-        timestamp: now,
+        timestamp: new Date().toISOString(),
         note: adjustForm.note || "Demo kiểm kho",
       },
     ]);
 
-    if (historyError) throw historyError;
-
     show("Kiểm kho xong, đã cập nhật tồn");
-    await loadStockFriendly();
+    await selectTable("stock");
   }
 
   function addCart() {
-    if (!cartItem.branchid) return show("Vui lòng chọn chi nhánh");
-    if (!cartItem.variantid) return show("Vui lòng chọn sản phẩm/SKU");
-
-    const branch = options.branches.find(
-      (item) => item.branchid === cartItem.branchid
-    );
-
-    const variant = options.variants.find(
-      (item) => item.variantid === cartItem.variantid
-    );
-
-    if (!variant) return show("Không tìm thấy SKU đã chọn. Hãy tải lại trang.");
-
-    const quantity = Number(cartItem.quantity || 1);
-    const unitprice = Number(
-      cartItem.unitprice ||
-        variant?.sellingprice ||
-        variant?.product?.defaultsellingprice ||
-        0
-    );
-
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      return show("Số lượng phải lớn hơn 0");
-    }
-
-    if (!Number.isFinite(unitprice) || unitprice <= 0) {
-      return show("Đơn giá phải lớn hơn 0");
-    }
-
+    if (!cartItem.branchid || !cartItem.variantid) return show("Vui lòng chọn chi nhánh và SKU");
+    const variant = options.variants.find((v) => v.variantid === cartItem.variantid);
     setCart([
       ...cart,
       {
-        branchid: cartItem.branchid,
-        branchname: branch?.branchname || "",
-        productid: variant?.productid || "",
-        productname: variant?.product?.productname || "Chưa ghép sản phẩm",
-        variantid: cartItem.variantid,
-        sku: variant?.sku || "Chưa có SKU",
-        barcode: variant?.barcode || "",
-        size: variant?.size || "",
-        color: variant?.color || "",
-        quantity,
-        unitprice,
-        total: quantity * unitprice,
+        ...cartItem,
+        sku: variant?.sku || "",
+        quantity: Number(cartItem.quantity),
+        unitprice: Number(cartItem.unitprice),
       },
     ]);
-
-    setCartItem({
-      ...cartItem,
-      variantid: "",
-      quantity: 1,
-      unitprice: 0,
-    });
-
-    show("Đã thêm sản phẩm vào giỏ");
   }
 
   async function createInvoice() {
@@ -752,36 +662,26 @@ async function loadOptions() {
 
     const branchid = cart[0].branchid;
     const orderid = uuid();
+    const total = cart.reduce((sum, item) => sum + item.quantity * item.unitprice, 0);
 
-    const total = cart.reduce(
-      (sum, item) =>
-        sum + Number(item.quantity || 0) * Number(item.unitprice || 0),
-      0
-    );
-
-    const channelid = orderMeta.channelid || (await getDefaultChannelId());
-
-    const { error: orderError } = await supabase.from("orders").insert([
-      {
-        orderid,
-        branchid,
-        customerid: orderMeta.customerid || null,
-        channelid,
-        createdby: profile?.userid || null,
-        orderdate: new Date().toISOString(),
-        orderstatus: orderMeta.status,
-        paymentstatus: orderMeta.paymentstatus,
-        totalamount: total,
-        discountamount: 0,
-        shippingfee: 0,
-        note: "Demo hóa đơn từ frontend",
-      },
-    ]);
-
+    const { error: orderError } = await supabase.from('orders').insert([{
+  orderid,
+  branchid,
+  customerid: orderMeta.customerid || null,
+  channelid: orderMeta.channelid || null,
+  createdby: profile?.userid || null,
+  orderdate: new Date().toISOString(),
+  orderstatus: orderMeta.status,
+  paymentstatus: orderMeta.paymentstatus,
+  totalamount: total,
+  discountamount: 0,
+  shippingfee: 0,
+  note: 'Demo hóa đơn từ frontend'
+}]);
     if (orderError) throw orderError;
 
     for (const item of cart) {
-      const { error: detailError } = await supabase.from("order_detail").insert([
+      await supabase.from("order_detail").insert([
         {
           orderid,
           variantid: item.variantid,
@@ -790,89 +690,35 @@ async function loadOptions() {
         },
       ]);
 
-      if (detailError) throw detailError;
-
-      const old = await supabase
-        .from("stock")
-        .select("*")
-        .eq("branchid", item.branchid)
-        .eq("variantid", item.variantid)
-        .maybeSingle();
-
-      if (old.error) throw old.error;
-
+      const old = await supabase.from("stock").select("*").eq("branchid", item.branchid).eq("variantid", item.variantid).maybeSingle();
       if (old.data) {
-        const before = Number(old.data.quantity || 0);
-        const soldQty = Number(item.quantity || 0);
-        const after = before - soldQty;
-        const now = new Date().toISOString();
-
-        if (after < 0) {
-          throw new Error(`Không đủ tồn kho cho sản phẩm ${item.productname || item.sku || "đã chọn"}`);
-        }
-
-        const { error: stockError } = await supabase
+        await supabase
           .from("stock")
-          .update({
-            quantity: after,
-            lastupdated: now,
-          })
+          .update({ quantity: Number(old.data.quantity) - item.quantity })
           .eq("branchid", item.branchid)
           .eq("variantid", item.variantid);
-
-        if (stockError) throw stockError;
-
-        const { error: historyError } = await supabase
-          .from("stock_history")
-          .insert([
-            {
-              historyid: uuid(),
-              branchid: item.branchid,
-              variantid: item.variantid,
-              transactiontype: "sales",
-              referencetype: "ORDERS",
-              referenceid: orderid,
-              quantitychange: -soldQty,
-              quantitybefore: before,
-              quantityafter: after,
-              performedby: profile?.userid || null,
-              timestamp: now,
-              note: "Bán hàng demo",
-            },
-          ]);
-
-        if (historyError) throw historyError;
+        await supabase.from("stock_history").insert([
+          {
+            historyid: uuid(),
+            branchid: item.branchid,
+            variantid: item.variantid,
+            transactiontype: "sales",
+            referencetype: "ORDERS",
+            referenceid: orderid,
+            quantitychange: -item.quantity,
+            quantitybefore: old.data.quantity,
+            quantityafter: Number(old.data.quantity) - item.quantity,
+            performedby: profile?.userid || null,
+            timestamp: new Date().toISOString(),
+            note: "Bán hàng demo",
+          },
+        ]);
       }
     }
 
     setCart([]);
     show("Đã tạo hóa đơn và trừ kho");
     await selectTable("orders");
-  }
-
-async function getDefaultChannelId() {
-    const primary = await supabase
-      .from("sales_channel")
-      .select("channelid")
-      .eq("channelname", "POS")
-      .maybeSingle();
-
-    if (primary.error) throw primary.error;
-    if (primary.data?.channelid) return primary.data.channelid;
-
-    const fallback = await supabase
-      .from("sales_channel")
-      .select("channelid")
-      .limit(1)
-      .maybeSingle();
-
-    if (fallback.error) throw fallback.error;
-
-    if (!fallback.data?.channelid) {
-      throw new Error("Chưa có dữ liệu trong bảng sales_channel. Hãy tạo kênh POS trước.");
-    }
-
-    return fallback.data.channelid;
   }
 
   async function createOrUpdateUser() {
@@ -969,14 +815,7 @@ async function getDefaultChannelId() {
                 rows={rows}
               />
             )}
-            {page === "stock" && (
-              <Stock
-                run={run}
-                loadStockFriendly={loadStockFriendly}
-                loadLowStock={loadLowStock}
-                rows={rows}
-              />
-            )}
+            {page === "stock" && <Stock run={run} selectTable={selectTable} loadLowStock={loadLowStock} rows={rows} />}
             {page === "transfer" && <Transfer options={options} run={run} transferForm={transferForm} setTransferForm={setTransferForm} transferStock={transferStock} />}
             {page === "adjustment" && <Adjustment options={options} run={run} adjustForm={adjustForm} setAdjustForm={setAdjustForm} adjustStock={adjustStock} />}
             {page === "orders" && (
@@ -1149,11 +988,21 @@ function DataTable({ rows }) {
     return normalized === "id" || normalized.endsWith("id");
   };
 
+  const formatValue = (value) => {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "object") return JSON.stringify(value);
+    return str(value);
+  };
+
   const allKeys = Object.keys(rows[0]);
   const keys = allKeys.filter((key) => !isIdColumn(key));
 
   if (!keys.length) {
-    return <p className="muted">Dữ liệu chỉ có mã kỹ thuật nên đã được ẩn khỏi giao diện.</p>;
+    return (
+      <p className="muted">
+        Dữ liệu chỉ có mã kỹ thuật nên đã được ẩn khỏi giao diện.
+      </p>
+    );
   }
 
   return (
@@ -1161,41 +1010,17 @@ function DataTable({ rows }) {
       <table>
         <thead>
           <tr>
-            {keys.map((k) => (
-              <th key={k}>{k}</th>
+            {keys.map((key) => (
+              <th key={key}>{key}</th>
             ))}
           </tr>
         </thead>
+
         <tbody>
-          {rows.map((r, i) => (
-            <tr key={i}>
-              {keys.map((k) => (
-                <td key={k}>{typeof r[k] === "object" && r[k] !== null ? JSON.stringify(r[k]) : str(r[k])}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}) {
-  if (!rows?.length) return <p className="muted">Chưa có dữ liệu</p>;
-  const keys = Object.keys(rows[0]);
-  return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            {keys.map((k) => (
-              <th key={k}>{k}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i}>
-              {keys.map((k) => (
-                <td key={k}>{typeof r[k] === "object" && r[k] !== null ? JSON.stringify(r[k]) : str(r[k])}</td>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {keys.map((key) => (
+                <td key={key}>{formatValue(row[key])}</td>
               ))}
             </tr>
           ))}
@@ -1254,264 +1079,54 @@ function Dashboard({ run, dashboardData, rows }) {
 }
 
 function Products(p) {
-  const variantListForImage = p.options.variants.filter(
-    (item) => item.productid === p.imageForm.productid
-  );
-
   return (
     <>
-      <Card title="Hàng hóa - thêm sản phẩm mới">
-        <div className="sales-form-grid">
-          <div className="field">
-            <label>Tên sản phẩm</label>
-            <input
-              placeholder="Ví dụ: Áo sơ mi linen"
-              value={p.productForm.productname}
-              onChange={(e) =>
-                p.setProductForm({ ...p.productForm, productname: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Thương hiệu</label>
-            <input
-              placeholder="Ví dụ: SilkRoad"
-              value={p.productForm.brand}
-              onChange={(e) =>
-                p.setProductForm({ ...p.productForm, brand: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Giới tính</label>
-            <select
-              value={p.productForm.gender}
-              onChange={(e) =>
-                p.setProductForm({ ...p.productForm, gender: e.target.value })
-              }
-            >
-              <option value="unisex">Unisex</option>
-              <option value="male">Nam</option>
-              <option value="female">Nữ</option>
-            </select>
-          </div>
-
-          <div className="field">
-            <label>Giá bán mặc định</label>
-            <input
-              type="number"
-              min="0"
-              placeholder="Ví dụ: 350000"
-              value={p.productForm.defaultsellingprice}
-              onChange={(e) =>
-                p.setProductForm({
-                  ...p.productForm,
-                  defaultsellingprice: e.target.value,
-                })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Trạng thái</label>
-            <select
-              value={p.productForm.status}
-              onChange={(e) =>
-                p.setProductForm({ ...p.productForm, status: e.target.value })
-              }
-            >
-              <option value="active">Đang bán</option>
-              <option value="inactive">Ngưng bán</option>
-            </select>
-          </div>
-        </div>
-
-        <button onClick={() => p.run(p.addProduct)}>
-          <Plus /> Thêm sản phẩm
-        </button>
-        <button onClick={() => p.run(() => p.selectTable("product"))}>
-          Tải danh sách sản phẩm
-        </button>
+      <Card title="Hàng hóa - sản phẩm">
+        <input placeholder="Tên sản phẩm" onChange={(e) => p.setProductForm({ ...p.productForm, productname: e.target.value })} />
+        <input placeholder="Brand" onChange={(e) => p.setProductForm({ ...p.productForm, brand: e.target.value })} />
+        <input type="number" placeholder="Giá bán" onChange={(e) => p.setProductForm({ ...p.productForm, defaultsellingprice: e.target.value })} />
+        <button onClick={() => p.run(p.addProduct)}>Thêm sản phẩm</button>
+        <button onClick={() => p.run(() => p.selectTable("product"))}>Tải sản phẩm</button>
       </Card>
 
-      <Card title="Biến thể sản phẩm - size / màu / SKU / barcode">
-        <div className="sales-form-grid">
-          <div className="field">
-            <label>Sản phẩm cha</label>
-            <select
-              value={p.variantForm.productid}
-              onChange={(e) =>
-                p.setVariantForm({ ...p.variantForm, productid: e.target.value })
-              }
-            >
-              <option value="">Chọn sản phẩm</option>
-              {p.options.products.map((item) => (
-                <option key={item.productid} value={item.productid}>
-                  {item.productname}
-                  {item.brand ? ` - ${item.brand}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label>SKU</label>
-            <input
-              placeholder="Ví dụ: ASM-LINEN-M-BLK"
-              value={p.variantForm.sku}
-              onChange={(e) =>
-                p.setVariantForm({ ...p.variantForm, sku: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Barcode</label>
-            <input
-              placeholder="Ví dụ: 893..."
-              value={p.variantForm.barcode}
-              onChange={(e) =>
-                p.setVariantForm({ ...p.variantForm, barcode: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Size</label>
-            <select
-              value={p.variantForm.size}
-              onChange={(e) =>
-                p.setVariantForm({ ...p.variantForm, size: e.target.value })
-              }
-            >
-              <option value="XS">XS</option>
-              <option value="S">S</option>
-              <option value="M">M</option>
-              <option value="L">L</option>
-              <option value="XL">XL</option>
-              <option value="XXL">XXL</option>
-            </select>
-          </div>
-
-          <div className="field">
-            <label>Màu</label>
-            <input
-              placeholder="Ví dụ: Đen"
-              value={p.variantForm.color}
-              onChange={(e) =>
-                p.setVariantForm({ ...p.variantForm, color: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Giá nhập</label>
-            <input
-              type="number"
-              min="0"
-              value={p.variantForm.costprice}
-              onChange={(e) =>
-                p.setVariantForm({ ...p.variantForm, costprice: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Giá bán</label>
-            <input
-              type="number"
-              min="0"
-              value={p.variantForm.sellingprice}
-              onChange={(e) =>
-                p.setVariantForm({ ...p.variantForm, sellingprice: e.target.value })
-              }
-            />
-          </div>
-        </div>
-
-        <button onClick={() => p.run(p.addVariant)}>
-          <Plus /> Thêm biến thể
-        </button>
-        <button onClick={() => p.run(() => p.selectTable("product_variant"))}>
-          Tải danh sách biến thể
-        </button>
+      <Card title="Biến thể size/color + SKU/barcode">
+        <select onChange={(e) => p.setVariantForm({ ...p.variantForm, productid: e.target.value })}>
+          <option value="">Chọn sản phẩm</option>
+          {p.options.products.map((item) => (
+            <option key={item.productid} value={item.productid}>
+              {item.productname}
+            </option>
+          ))}
+        </select>
+        <input placeholder="SKU" onChange={(e) => p.setVariantForm({ ...p.variantForm, sku: e.target.value })} />
+        <input placeholder="Barcode" onChange={(e) => p.setVariantForm({ ...p.variantForm, barcode: e.target.value })} />
+        <input placeholder="Size" onChange={(e) => p.setVariantForm({ ...p.variantForm, size: e.target.value })} />
+        <input placeholder="Color" onChange={(e) => p.setVariantForm({ ...p.variantForm, color: e.target.value })} />
+        <button onClick={() => p.run(p.addVariant)}>Thêm biến thể</button>
+        <button onClick={() => p.run(() => p.selectTable("product_variant"))}>Tải biến thể</button>
       </Card>
 
-      <Card title="Ảnh sản phẩm">
-        <div className="sales-form-grid">
-          <div className="field">
-            <label>Sản phẩm</label>
-            <select
-              value={p.imageForm.productid}
-              onChange={(e) =>
-                p.setImageForm({
-                  ...p.imageForm,
-                  productid: e.target.value,
-                  variantid: "",
-                })
-              }
-            >
-              <option value="">Chọn sản phẩm</option>
-              {p.options.products.map((item) => (
-                <option key={item.productid} value={item.productid}>
-                  {item.productname}
-                  {item.brand ? ` - ${item.brand}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label>Biến thể áp dụng</label>
-            <select
-              value={p.imageForm.variantid}
-              disabled={!p.imageForm.productid}
-              onChange={(e) =>
-                p.setImageForm({ ...p.imageForm, variantid: e.target.value })
-              }
-            >
-              <option value="">Ảnh chung cho sản phẩm</option>
-              {variantListForImage.map((item) => (
-                <option key={item.variantid} value={item.variantid}>
-                  {item.sku}
-                  {item.size ? ` - Size ${item.size}` : ""}
-                  {item.color ? ` - ${item.color}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label>Link ảnh</label>
-            <input
-              placeholder="Dán URL ảnh"
-              value={p.imageForm.imageurl}
-              onChange={(e) =>
-                p.setImageForm({ ...p.imageForm, imageurl: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Mô tả ảnh</label>
-            <input
-              placeholder="Ví dụ: Ảnh mặt trước"
-              value={p.imageForm.alttext}
-              onChange={(e) =>
-                p.setImageForm({ ...p.imageForm, alttext: e.target.value })
-              }
-            />
-          </div>
-        </div>
-
-        <button onClick={() => p.run(p.addImage)}>
-          <Upload /> Lưu ảnh
-        </button>
-        <button onClick={() => p.run(() => p.selectTable("product_image"))}>
-          Tải danh sách ảnh
-        </button>
+      <Card title="Upload ảnh bằng URL">
+        <Upload />
+        <select onChange={(e) => p.setImageForm({ ...p.imageForm, productid: e.target.value })}>
+          <option value="">Chọn sản phẩm</option>
+          {p.options.products.map((item) => (
+            <option key={item.productid} value={item.productid}>
+              {item.productname}
+            </option>
+          ))}
+        </select>
+        <select onChange={(e) => p.setImageForm({ ...p.imageForm, variantid: e.target.value })}>
+          <option value="">Ảnh chung sản phẩm</option>
+          {p.options.variants.map((item) => (
+            <option key={item.variantid} value={item.variantid}>
+              {item.sku} - {item.barcode}
+            </option>
+          ))}
+        </select>
+        <input placeholder="Image URL" onChange={(e) => p.setImageForm({ ...p.imageForm, imageurl: e.target.value })} />
+        <button onClick={() => p.run(p.addImage)}>Lưu ảnh</button>
+        <button onClick={() => p.run(() => p.selectTable("product_image"))}>Tải ảnh</button>
       </Card>
 
       <DataTable rows={p.rows} />
@@ -1519,193 +1134,16 @@ function Products(p) {
   );
 }
 
-
-function ProductVariantSelector({
-  products,
-  variants,
-  productId,
-  variantId,
-  onProductChange,
-  onVariantChange,
-  productLabel = "Sản phẩm chính",
-  variantLabelText = "Biến thể",
-}) {
-  const [keyword, setKeyword] = useState("");
-
-  const normalizedKeyword = keyword.trim().toLowerCase();
-  const selectedProduct = products.find((item) => item.productid === productId) || null;
-  const selectedVariant = variants.find((item) => item.variantid === variantId) || null;
-
-  const filteredProducts = products.filter((item) => {
-    if (!normalizedKeyword) return true;
-    return [item.productname, item.brand]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase()
-      .includes(normalizedKeyword);
-  });
-
-  const variantsOfProduct = variants.filter((item) => item.productid === productId);
-
-  return (
-    <div className="product-variant-picker">
-      <div className="field">
-        <label>{productLabel}</label>
-        <input
-          className="smart-picker-search"
-          placeholder="Tìm tên sản phẩm chính..."
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-        />
-        <select
-          value={productId || ""}
-          onChange={(e) => {
-            const product = products.find((item) => item.productid === e.target.value) || null;
-            onProductChange(product);
-          }}
-        >
-          <option value="">Chọn sản phẩm chính</option>
-          {filteredProducts.map((item) => (
-            <option key={item.productid} value={item.productid}>
-              {item.productname}{item.brand ? ` - ${item.brand}` : ""}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="field">
-        <label>{variantLabelText}</label>
-        <select
-          value={variantId || ""}
-          disabled={!productId}
-          onChange={(e) => {
-            const variant = variants.find((item) => item.variantid === e.target.value) || null;
-            onVariantChange(variant);
-          }}
-        >
-          <option value="">{productId ? "Chọn size / màu / SKU" : "Chọn sản phẩm chính trước"}</option>
-          {variantsOfProduct.map((item) => (
-            <option key={item.variantid} value={item.variantid}>
-              {variantLabel(item)}
-            </option>
-          ))}
-        </select>
-        {productId && variantsOfProduct.length === 0 && (
-          <small className="picker-help">
-            Sản phẩm này chưa có biến thể. Hãy tạo SKU/biến thể ở mục Hàng hóa trước.
-          </small>
-        )}
-        {selectedProduct && selectedVariant && (
-          <small className="picker-help">
-            Đã chọn: {selectedProduct.productname} · {variantLabel(selectedVariant)}
-          </small>
-        )}
-      </div>
-    </div>
-  );
-}) {
-  const [open, setOpen] = useState(false);
-  const [keyword, setKeyword] = useState("");
-
-  const selected = variants.find((item) => item.variantid === value);
-
-  const normalizedKeyword = keyword.trim().toLowerCase();
-
-  const filtered = variants
-    .filter((item) => {
-      if (!normalizedKeyword) return true;
-
-      return [
-        item?.product?.productname,
-        item?.sku,
-        item?.barcode,
-        item?.size,
-        item?.color,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedKeyword);
-    })
-    .slice(0, 80);
-
-  return (
-    <div className="field smart-picker">
-      <label>{label}</label>
-
-      <button
-        type="button"
-        className={`smart-picker-trigger ${selected ? "has-value" : ""}`}
-        onClick={() => setOpen(!open)}
-      >
-        <span>{selected ? variantLabel(selected) : placeholder}</span>
-        <Search size={16} />
-      </button>
-
-      {open && (
-        <div className="smart-picker-panel">
-          <input
-            autoFocus
-            className="smart-picker-search"
-            placeholder="Tìm theo tên, SKU hoặc barcode..."
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
-
-          <div className="smart-picker-list">
-            {filtered.length === 0 ? (
-              <p className="smart-picker-empty">
-                Không có SKU phù hợp. Kiểm tra dữ liệu product_variant hoặc quyền SELECT.
-              </p>
-            ) : (
-              filtered.map((item) => (
-                <button
-                  type="button"
-                  key={item.variantid}
-                  className="smart-picker-item"
-                  onClick={() => {
-                    onChange(item);
-                    setOpen(false);
-                    setKeyword("");
-                  }}
-                >
-                  <b>{item.product?.productname || "Sản phẩm"}</b>
-                  <span>
-                    {item.sku || "Chưa có SKU"}
-                    {item.barcode ? ` · ${item.barcode}` : ""}
-                  </span>
-                  <small>
-                    {[item.size ? `Size ${item.size}` : "", item.color, item.sellingprice ? money(item.sellingprice) : ""]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </small>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Stock({ run, loadStockFriendly, loadLowStock, rows }) {
+function Stock({ run, selectTable, loadLowStock, rows }) {
   return (
     <>
       <Card title="Kho hàng">
-        <p className="muted">
-          Xem tồn kho theo tên chi nhánh, sản phẩm, SKU, size và màu. Không hiển thị ID kỹ thuật.
-        </p>
-
-        <button onClick={() => run(loadStockFriendly)}>
-          Xem tồn kho hiện tại
-        </button>
-
+        <button onClick={() => run(() => selectTable("stock"))}>Xem tồn kho</button>
+        <button onClick={() => run(() => selectTable("stock_history"))}>Lịch sử tồn kho</button>
         <button onClick={() => run(loadLowStock)}>
           <AlertTriangle /> Cảnh báo sắp hết hàng
         </button>
       </Card>
-
       <DataTable rows={rows} />
     </>
   );
@@ -1714,89 +1152,32 @@ function Stock({ run, loadStockFriendly, loadLowStock, rows }) {
 function Transfer(p) {
   return (
     <Card title="Chuyển kho">
-      <div className="sales-form-grid">
-        <div className="field">
-          <label>Chi nhánh gửi</label>
-          <select
-            value={p.transferForm.frombranchid}
-            onChange={(e) =>
-              p.setTransferForm({
-                ...p.transferForm,
-                frombranchid: e.target.value,
-              })
-            }
-          >
-            <option value="">Chọn chi nhánh gửi</option>
-            {p.options.branches.map((item) => (
-              <option key={item.branchid} value={item.branchid}>
-                {item.branchname}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label>Chi nhánh nhận</label>
-          <select
-            value={p.transferForm.tobranchid}
-            onChange={(e) =>
-              p.setTransferForm({
-                ...p.transferForm,
-                tobranchid: e.target.value,
-              })
-            }
-          >
-            <option value="">Chọn chi nhánh nhận</option>
-            {p.options.branches.map((item) => (
-              <option key={item.branchid} value={item.branchid}>
-                {item.branchname}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <ProductVariantSelector
-          products={p.options.products}
-          variants={p.options.variants}
-          productId={p.transferForm.productid}
-          variantId={p.transferForm.variantid}
-          productLabel="Sản phẩm chính"
-          variantLabelText="Biến thể cần chuyển"
-          onProductChange={(product) =>
-            p.setTransferForm({
-              ...p.transferForm,
-              productid: product?.productid || "",
-              variantid: "",
-            })
-          }
-          onVariantChange={(variant) =>
-            p.setTransferForm({
-              ...p.transferForm,
-              productid: variant?.productid || p.transferForm.productid,
-              variantid: variant?.variantid || "",
-            })
-          }
-        />
-
-        <div className="field">
-          <label>Số lượng chuyển</label>
-          <input
-            type="number"
-            min="1"
-            value={p.transferForm.quantity}
-            onChange={(e) =>
-              p.setTransferForm({
-                ...p.transferForm,
-                quantity: e.target.value,
-              })
-            }
-          />
-        </div>
-      </div>
-
-      <button onClick={() => p.run(p.transferStock)}>
-        Xác nhận chuyển kho
-      </button>
+      <select onChange={(e) => p.setTransferForm({ ...p.transferForm, frombranchid: e.target.value })}>
+        <option value="">Chi nhánh gửi</option>
+        {p.options.branches.map((item) => (
+          <option key={item.branchid} value={item.branchid}>
+            {item.branchname}
+          </option>
+        ))}
+      </select>
+      <select onChange={(e) => p.setTransferForm({ ...p.transferForm, tobranchid: e.target.value })}>
+        <option value="">Chi nhánh nhận</option>
+        {p.options.branches.map((item) => (
+          <option key={item.branchid} value={item.branchid}>
+            {item.branchname}
+          </option>
+        ))}
+      </select>
+      <select onChange={(e) => p.setTransferForm({ ...p.transferForm, variantid: e.target.value })}>
+        <option value="">Chọn SKU</option>
+        {p.options.variants.map((item) => (
+          <option key={item.variantid} value={item.variantid}>
+            {item.sku} - {item.barcode}
+          </option>
+        ))}
+      </select>
+      <input type="number" placeholder="Số lượng" onChange={(e) => p.setTransferForm({ ...p.transferForm, quantity: e.target.value })} />
+      <button onClick={() => p.run(p.transferStock)}>Xác nhận chuyển kho</button>
     </Card>
   );
 }
@@ -1804,241 +1185,66 @@ function Transfer(p) {
 function Adjustment(p) {
   return (
     <Card title="Kiểm kho">
-      <div className="sales-form-grid">
-        <div className="field">
-          <label>Chi nhánh kiểm kho</label>
-          <select
-            value={p.adjustForm.branchid}
-            onChange={(e) =>
-              p.setAdjustForm({
-                ...p.adjustForm,
-                branchid: e.target.value,
-              })
-            }
-          >
-            <option value="">Chọn chi nhánh</option>
-            {p.options.branches.map((item) => (
-              <option key={item.branchid} value={item.branchid}>
-                {item.branchname}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <ProductVariantSelector
-          products={p.options.products}
-          variants={p.options.variants}
-          productId={p.adjustForm.productid}
-          variantId={p.adjustForm.variantid}
-          productLabel="Sản phẩm chính"
-          variantLabelText="Biến thể kiểm kho"
-          onProductChange={(product) =>
-            p.setAdjustForm({
-              ...p.adjustForm,
-              productid: product?.productid || "",
-              variantid: "",
-            })
-          }
-          onVariantChange={(variant) =>
-            p.setAdjustForm({
-              ...p.adjustForm,
-              productid: variant?.productid || p.adjustForm.productid,
-              variantid: variant?.variantid || "",
-            })
-          }
-        />
-
-        <div className="field">
-          <label>Số lượng thực tế</label>
-          <input
-            type="number"
-            min="0"
-            value={p.adjustForm.actualquantity}
-            onChange={(e) =>
-              p.setAdjustForm({
-                ...p.adjustForm,
-                actualquantity: e.target.value,
-              })
-            }
-          />
-        </div>
-
-        <div className="field">
-          <label>Ghi chú kiểm kho</label>
-          <input
-            placeholder="Ví dụ: Lệch tồn sau kiểm kê"
-            value={p.adjustForm.note}
-            onChange={(e) =>
-              p.setAdjustForm({
-                ...p.adjustForm,
-                note: e.target.value,
-              })
-            }
-          />
-        </div>
-      </div>
-
-      <button onClick={() => p.run(p.adjustStock)}>
-        Hoàn tất kiểm kho
-      </button>
+      <select onChange={(e) => p.setAdjustForm({ ...p.adjustForm, branchid: e.target.value })}>
+        <option value="">Chọn chi nhánh</option>
+        {p.options.branches.map((item) => (
+          <option key={item.branchid} value={item.branchid}>
+            {item.branchname}
+          </option>
+        ))}
+      </select>
+      <select onChange={(e) => p.setAdjustForm({ ...p.adjustForm, variantid: e.target.value })}>
+        <option value="">Chọn SKU</option>
+        {p.options.variants.map((item) => (
+          <option key={item.variantid} value={item.variantid}>
+            {item.sku} - {item.barcode}
+          </option>
+        ))}
+      </select>
+      <input type="number" placeholder="Số lượng thực tế" onChange={(e) => p.setAdjustForm({ ...p.adjustForm, actualquantity: e.target.value })} />
+      <input placeholder="Ghi chú" onChange={(e) => p.setAdjustForm({ ...p.adjustForm, note: e.target.value })} />
+      <button onClick={() => p.run(p.adjustStock)}>Hoàn tất kiểm kho</button>
     </Card>
   );
 }
 
 function Orders(p) {
-  const cartTotal = p.cart.reduce(
-    (sum, item) =>
-      sum + Number(item.total || item.quantity * item.unitprice || 0),
-    0
-  );
-
   return (
     <>
-      <Card title="Bán hàng - chọn sản phẩm">
-        <div className="sales-form-grid">
-          <div className="field">
-            <label>Chi nhánh bán</label>
-            <select
-              value={p.cartItem.branchid}
-              onChange={(e) =>
-                p.setCartItem({
-                  ...p.cartItem,
-                  branchid: e.target.value,
-                })
-              }
-            >
-              <option value="">Chọn chi nhánh</option>
-              {p.options.branches.map((item) => (
-                <option key={item.branchid} value={item.branchid}>
-                  {item.branchname}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <ProductVariantSelector
-            products={p.options.products}
-            variants={p.options.variants}
-            productId={p.cartItem.productid}
-            variantId={p.cartItem.variantid}
-            productLabel="Sản phẩm chính"
-            variantLabelText="Biến thể bán"
-            onProductChange={(product) =>
-              p.setCartItem({
-                ...p.cartItem,
-                productid: product?.productid || "",
-                variantid: "",
-                unitprice: product?.defaultsellingprice || 0,
-              })
-            }
-            onVariantChange={(selectedVariant) =>
-              p.setCartItem({
-                ...p.cartItem,
-                productid: selectedVariant?.productid || p.cartItem.productid,
-                variantid: selectedVariant?.variantid || "",
-                unitprice:
-                  selectedVariant?.sellingprice ||
-                  selectedVariant?.product?.defaultsellingprice ||
-                  p.cartItem.unitprice ||
-                  0,
-              })
-            }
-          />
-
-          <div className="field">
-            <label>Số lượng</label>
-            <input
-              type="number"
-              min="1"
-              value={p.cartItem.quantity}
-              onChange={(e) =>
-                p.setCartItem({
-                  ...p.cartItem,
-                  quantity: e.target.value,
-                })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Đơn giá</label>
-            <input
-              type="number"
-              min="0"
-              value={p.cartItem.unitprice}
-              onChange={(e) =>
-                p.setCartItem({
-                  ...p.cartItem,
-                  unitprice: e.target.value,
-                })
-              }
-            />
-          </div>
-        </div>
-
+      <Card title="Bán hàng - giỏ hàng đa chi nhánh">
+        <select onChange={(e) => p.setCartItem({ ...p.cartItem, branchid: e.target.value })}>
+          <option value="">Chọn chi nhánh</option>
+          {p.options.branches.map((item) => (
+            <option key={item.branchid} value={item.branchid}>
+              {item.branchname}
+            </option>
+          ))}
+        </select>
+        <select
+          onChange={(e) => {
+            const selected = p.options.variants.find((item) => item.variantid === e.target.value);
+            p.setCartItem({ ...p.cartItem, variantid: e.target.value, unitprice: selected?.sellingprice || p.cartItem.unitprice });
+          }}
+        >
+          <option value="">Chọn SKU</option>
+          {p.options.variants.map((item) => (
+            <option key={item.variantid} value={item.variantid}>
+              {item.sku} - {item.barcode}
+            </option>
+          ))}
+        </select>
+        <input type="number" placeholder="SL" value={p.cartItem.quantity} onChange={(e) => p.setCartItem({ ...p.cartItem, quantity: e.target.value })} />
+        <input type="number" placeholder="Đơn giá" value={p.cartItem.unitprice} onChange={(e) => p.setCartItem({ ...p.cartItem, unitprice: e.target.value })} />
         <button onClick={p.addCart}>
-          <Plus /> Thêm vào giỏ
+          <Plus /> Thêm giỏ
         </button>
-
-        <button onClick={() => p.run(p.createInvoice)}>
-          Tạo hóa đơn
-        </button>
-
-        <button onClick={() => p.setCart([])}>
-          Xóa giỏ
-        </button>
-      </Card>
-
-      <Card title="Giỏ hàng">
-        {p.cart.length === 0 ? (
-          <p className="muted">Chưa có sản phẩm trong giỏ</p>
-        ) : (
-          <>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Chi nhánh</th>
-                    <th>Sản phẩm</th>
-                    <th>SKU</th>
-                    <th>Barcode</th>
-                    <th>Size</th>
-                    <th>Màu</th>
-                    <th>SL</th>
-                    <th>Đơn giá</th>
-                    <th>Thành tiền</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {p.cart.map((item, index) => (
-                    <tr key={index}>
-                      <td>{item.branchname}</td>
-                      <td>{item.productname}</td>
-                      <td>{item.sku}</td>
-                      <td>{item.barcode}</td>
-                      <td>{item.size}</td>
-                      <td>{item.color}</td>
-                      <td>{item.quantity}</td>
-                      <td>{money(item.unitprice)}</td>
-                      <td>{money(item.total || item.quantity * item.unitprice)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="cart-total">
-              Tổng tiền: <b>{money(cartTotal)}</b>
-            </div>
-          </>
-        )}
+        <button onClick={() => p.run(p.createInvoice)}>Tạo hóa đơn</button>
+        <button onClick={() => p.setCart([])}>Xóa giỏ</button>
+        <DataTable rows={p.cart} />
       </Card>
 
       <Card title="Đơn hàng / trạng thái">
-        <button onClick={() => p.run(() => p.selectTable("orders"))}>
-          Tải đơn hàng
-        </button>
+        <button onClick={() => p.run(() => p.selectTable("orders"))}>Tải đơn hàng</button>
         <DataTable rows={p.rows} />
       </Card>
     </>
@@ -2048,79 +1254,19 @@ function Orders(p) {
 function UsersPage(p) {
   return (
     <>
-      <Card title="RBAC - phân quyền nhân viên">
-        <div className="sales-form-grid">
-          <div className="field">
-            <label>Họ tên nhân viên</label>
-            <input
-              placeholder="Ví dụ: Trần Đức Mạnh"
-              value={p.userForm.fullname}
-              onChange={(e) =>
-                p.setUserForm({ ...p.userForm, fullname: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Tên đăng nhập</label>
-            <input
-              placeholder="Ví dụ: tranducmanh"
-              value={p.userForm.username}
-              onChange={(e) =>
-                p.setUserForm({ ...p.userForm, username: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Email Auth</label>
-            <input
-              placeholder="Email đã tạo trong Supabase Auth"
-              value={p.userForm.email}
-              onChange={(e) =>
-                p.setUserForm({ ...p.userForm, email: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="field">
-            <label>Vai trò</label>
-            <select
-              value={p.userForm.rolename}
-              onChange={(e) =>
-                p.setUserForm({ ...p.userForm, rolename: e.target.value })
-              }
-            >
-              <option value="sales_staff">Nhân viên bán hàng</option>
-              <option value="warehouse_staff">Nhân viên kho</option>
-              <option value="branch_manager">Quản lý chi nhánh</option>
-              <option value="admin">Quản trị viên</option>
-            </select>
-          </div>
-
-          <div className="field">
-            <label>Trạng thái</label>
-            <select
-              value={p.userForm.status}
-              onChange={(e) =>
-                p.setUserForm({ ...p.userForm, status: e.target.value })
-              }
-            >
-              <option value="active">Đang hoạt động</option>
-              <option value="inactive">Ngưng hoạt động</option>
-            </select>
-          </div>
-        </div>
-
-        <button onClick={() => p.run(p.createOrUpdateUser)}>
-          Lưu nhân viên và phân quyền
-        </button>
-        <button onClick={() => p.run(() => p.selectTable("users"))}>
-          Xem danh sách nhân viên
-        </button>
-        <button onClick={() => p.run(() => p.selectTable("role"))}>
-          Xem danh sách vai trò
-        </button>
+      <Card title="RBAC - tạo/cập nhật nhân viên">
+        <input placeholder="Họ tên" onChange={(e) => p.setUserForm({ ...p.userForm, fullname: e.target.value })} />
+        <input placeholder="username" onChange={(e) => p.setUserForm({ ...p.userForm, username: e.target.value })} />
+        <input placeholder="email Auth" onChange={(e) => p.setUserForm({ ...p.userForm, email: e.target.value })} />
+        <select onChange={(e) => p.setUserForm({ ...p.userForm, rolename: e.target.value })}>
+          <option>sales_staff</option>
+          <option>warehouse_staff</option>
+          <option>branch_manager</option>
+          <option>admin</option>
+        </select>
+        <button onClick={() => p.run(p.createOrUpdateUser)}>Lưu role</button>
+        <button onClick={() => p.run(() => p.selectTable("users"))}>Xem users</button>
+        <button onClick={() => p.run(() => p.selectTable("role"))}>Xem role</button>
       </Card>
       <DataTable rows={p.rows} />
     </>
