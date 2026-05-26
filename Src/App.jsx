@@ -2138,6 +2138,7 @@ function ProductPickerGrid({ products, variants, stockRows, branchid, selectedPr
         </select>
         <button type="button" onClick={quickPick}>Chọn nhanh</button>
       </div>
+      {!branchid && <div className="product-branch-hint">Chọn chi nhánh để xem tồn khả dụng theo từng sản phẩm.</div>}
 
       <div className="product-grid">
         {filteredProducts.slice(0, 48).map((product) => {
@@ -2159,7 +2160,9 @@ function ProductPickerGrid({ products, variants, stockRows, branchid, selectedPr
                 {productVariants.length} biến thể
                 {defaultPrice > 0 ? ` · ${money(defaultPrice)}` : ""}
               </span>
-              <span className="product-stock-pill">{branchid ? `${stockValue ?? 0} có thể bán` : "Chưa chọn chi nhánh"}</span>
+              <span className={`product-stock-pill ${!branchid ? "pending" : Number(stockValue || 0) <= 0 ? "empty" : ""}`}>
+                {branchid ? `${stockValue ?? 0} còn` : "Chọn CN"}
+              </span>
             </button>
           );
         })}

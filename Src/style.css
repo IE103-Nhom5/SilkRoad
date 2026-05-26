@@ -2665,9 +2665,20 @@ body.dark .smart-picker-item:hover {
   margin: 0 !important;
 }
 
+.product-branch-hint {
+  margin-top: 10px;
+  padding: 9px 10px;
+  background: #eef5df;
+  border: 1px solid #b9cb97;
+  border-radius: 8px;
+  color: #224820;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
   gap: 10px;
   max-height: calc(100vh - 310px);
   overflow: auto;
@@ -2675,10 +2686,10 @@ body.dark .smart-picker-item:hover {
 }
 
 .product-tile {
-  min-height: 204px;
+  min-height: 0;
   width: 100%;
   display: grid;
-  grid-template-rows: 108px auto auto 28px;
+  grid-template-rows: clamp(92px, 11vw, 128px) minmax(34px, auto) minmax(18px, auto) minmax(26px, auto);
   gap: 7px;
   margin: 0;
   padding: 9px;
@@ -2688,6 +2699,7 @@ body.dark .smart-picker-item:hover {
   color: #073d31;
   text-align: left;
   box-shadow: none;
+  overflow: hidden;
 }
 
 .product-tile:hover,
@@ -2709,7 +2721,8 @@ body.dark .smart-picker-item:hover {
 }
 
 .product-thumb {
-  aspect-ratio: 4 / 3;
+  min-height: 0;
+  aspect-ratio: auto;
 }
 
 .product-image-empty {
@@ -2747,15 +2760,32 @@ body.dark .smart-picker-item:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
-  padding: 0 8px;
+  width: 100%;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 5px 7px;
   background: #e9f1de;
   border: 1px solid #b4c894;
-  border-radius: 999px;
+  border-radius: 8px;
   color: #224820;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
-  white-space: nowrap;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.product-stock-pill.pending {
+  background: #f2ead7;
+  border-color: #dbc589;
+  color: #70582f;
+}
+
+.product-stock-pill.empty {
+  background: #f8e1d7;
+  border-color: #d9a18d;
+  color: #7b3321;
 }
 
 .product-grid-empty {
@@ -3160,6 +3190,14 @@ body.dark .product-preview-variant {
   border-color: #35594e;
 }
 
+body.dark .product-branch-hint,
+body.dark .product-stock-pill.pending,
+body.dark .product-stock-pill.empty {
+  background: #20352d;
+  border-color: #35594e;
+  color: #d6c799;
+}
+
 body.dark .payment-tabs button.active,
 body.dark .pos-checkout .action-row button:first-child {
   background: #d6b56d;
@@ -3375,8 +3413,8 @@ body.dark .pos-checkout .action-row button:first-child {
   }
 
   .product-tile {
-    min-height: 176px;
-    grid-template-rows: 88px auto auto 26px;
+    min-height: 0;
+    grid-template-rows: 84px minmax(34px, auto) minmax(18px, auto) minmax(26px, auto);
     padding: 8px;
   }
 
@@ -3524,8 +3562,8 @@ body.dark .pos-checkout .action-row button:first-child {
   }
 
   .product-tile {
-    min-height: 160px;
-    grid-template-rows: 78px auto auto 26px;
+    min-height: 0;
+    grid-template-rows: 78px minmax(34px, auto) minmax(18px, auto) minmax(26px, auto);
   }
 }
 
