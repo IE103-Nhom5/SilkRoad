@@ -223,7 +223,7 @@ export default function App() {
     return true;
   }
 
-  async function loadOptions() {
+async function loadOptions() {
   const [productsRes, variantsRes, branchesRes, rolesRes] = await Promise.all([
     supabase
       .from("product")
@@ -232,7 +232,7 @@ export default function App() {
 
     supabase
       .from("product_variant")
-      .select("variantid, productid, sku, barcode, sellingprice")
+      .select("variantid, productid, sku, barcode, size, color, sellingprice")
       .order("sku"),
 
     supabase
@@ -251,9 +251,17 @@ export default function App() {
   console.log("branchesRes", branchesRes);
   console.log("rolesRes", rolesRes);
 
-  if (productsRes.error) show("Lỗi product: " + productsRes.error.message);
-  if (variantsRes.error) show("Lỗi product_variant: " + variantsRes.error.message);
-  if (branchesRes.error) show("Lỗi branch: " + branchesRes.error.message);
+  if (productsRes.error) {
+    show("Lỗi product: " + productsRes.error.message);
+  }
+
+  if (variantsRes.error) {
+    show("Lỗi product_variant: " + variantsRes.error.message);
+  }
+
+  if (branchesRes.error) {
+    show("Lỗi branch: " + branchesRes.error.message);
+  }
 
   const products = productsRes.data || [];
 
@@ -276,6 +284,13 @@ export default function App() {
       variantsRes.data?.length || 0
     } SKU`
   );
+
+  return {
+    products,
+    variants,
+    branches: branchesRes.data || [],
+    roles: rolesRes.data || [],
+  };
 }
   async function loadProfile(email) {
   const { data, error } = await supabase
@@ -381,94 +396,96 @@ export default function App() {
   }
 
   async function loadStockFriendly() {
-    if (!guard("stock")) return;
+  if (!guard("stock")) return;
 
-    const { data, error } = await supabase
-      .from("stock")
-      .select("*")
-      .order("lastupdated", { ascending: false });
+  const opts = await loadOptions();
 
-    if (error) throw error;
+  const { data, error } = await supabase
+    .from("stock")
+    .select("*")
+    .order("lastupdated", { ascending: false });
 
-    const friendlyRows = (data || []).map((stockItem) => {
-      const branch = options.branches.find(
+  if (error) throw error;
+
+  const friendlyRows = (data || []).map((stockItem) => {
+    const branch = opts.branches.find(
+      (item) => item.branchid === stockItem.branchid
+    );
+
+    const variant = opts.variants.find(
+      (item) => item.variantid === stockItem.variantid
+    );
+
+    const quantity = Number(stockItem.quantity || 0);
+    const reserved = Number(stockItem.reservedquantity || 0);
+
+    return {
+      "Chi nhánh": branch?.branchname || stockItem.branchid || "",
+      "Sản phẩm": variant?.product?.productname || "",
+      "SKU": variant?.sku || "",
+      "Barcode": variant?.barcode || "",
+      "Size": variant?.size || "",
+      "Màu": variant?.color || "",
+      "Tồn kho": quantity,
+      "Đã giữ": reserved,
+      "Tồn khả dụng": quantity - reserved,
+      "Mức tối thiểu": stockItem.minstocklevel || 0,
+      "Cập nhật": stockItem.lastupdated
+        ? new Date(stockItem.lastupdated).toLocaleString("vi-VN")
+        : "",
+    };
+  });
+
+  setRows(friendlyRows);
+}
+
+
+ async function loadLowStock() {
+  if (!guard("stock")) return;
+
+  const opts = await loadOptions();
+
+  const { data, error } = await supabase
+    .from("stock")
+    .select("*")
+    .order("quantity", { ascending: true });
+
+  if (error) throw error;
+
+  const lowRows = (data || [])
+    .filter((stockItem) => {
+      const quantity = Number(stockItem.quantity || 0);
+      const min = Number(stockItem.minstocklevel || stockItem.min_stock_level || 5);
+      return quantity <= min;
+    })
+    .map((stockItem) => {
+      const branch = opts.branches.find(
         (item) => item.branchid === stockItem.branchid
       );
 
-      const variant = options.variants.find(
+      const variant = opts.variants.find(
         (item) => item.variantid === stockItem.variantid
       );
-
-      const quantity = Number(stockItem.quantity || 0);
-      const reserved = Number(stockItem.reservedquantity || 0);
 
       return {
         "Chi nhánh": branch?.branchname || stockItem.branchid || "",
         "Sản phẩm": variant?.product?.productname || "",
-        "Thương hiệu": variant?.product?.brand || "",
         "SKU": variant?.sku || "",
         "Barcode": variant?.barcode || "",
         "Size": variant?.size || "",
         "Màu": variant?.color || "",
-        "Tồn kho": quantity,
-        "Đã giữ": reserved,
-        "Tồn khả dụng": quantity - reserved,
+        "Tồn kho": stockItem.quantity || 0,
         "Mức tối thiểu": stockItem.minstocklevel || 0,
+        "Trạng thái": "Sắp hết hàng",
         "Cập nhật": stockItem.lastupdated
           ? new Date(stockItem.lastupdated).toLocaleString("vi-VN")
           : "",
       };
     });
 
-    setRows(friendlyRows);
-  }
-
-
-  async function loadLowStock() {
-    if (!guard("stock")) return;
-
-    const { data, error } = await supabase
-      .from("stock")
-      .select("*")
-      .order("quantity", { ascending: true });
-
-    if (error) throw error;
-
-    const lowRows = (data || [])
-      .filter((stockItem) => {
-        const quantity = Number(stockItem.quantity || 0);
-        const min = Number(stockItem.minstocklevel || stockItem.min_stock_level || 5);
-        return quantity <= min;
-      })
-      .map((stockItem) => {
-        const branch = options.branches.find(
-          (item) => item.branchid === stockItem.branchid
-        );
-
-        const variant = options.variants.find(
-          (item) => item.variantid === stockItem.variantid
-        );
-
-        return {
-          "Chi nhánh": branch?.branchname || stockItem.branchid || "",
-          "Sản phẩm": variant?.product?.productname || "",
-          "Thương hiệu": variant?.product?.brand || "",
-          "SKU": variant?.sku || "",
-          "Barcode": variant?.barcode || "",
-          "Size": variant?.size || "",
-          "Màu": variant?.color || "",
-          "Tồn kho": stockItem.quantity || 0,
-          "Mức tối thiểu": stockItem.minstocklevel || 0,
-          "Trạng thái": "Sắp hết hàng",
-          "Cập nhật": stockItem.lastupdated
-            ? new Date(stockItem.lastupdated).toLocaleString("vi-VN")
-            : "",
-        };
-      });
-
-    setRows(lowRows);
-    show("Đã lọc cảnh báo sắp hết hàng");
-  }
+  setRows(lowRows);
+  show("Đã lọc cảnh báo sắp hết hàng");
+}
 
   async function transferStock() {
   if (!guard("transfer")) return;
@@ -696,52 +713,79 @@ export default function App() {
 }
 
   async function createInvoice() {
-    if (!guard("orders")) return;
-    if (!cart.length) return show("Giỏ hàng trống");
+  if (!guard("orders")) return;
+  if (!cart.length) return show("Giỏ hàng trống");
 
-    const branchid = cart[0].branchid;
-const orderid = uuid();
-const total = cart.reduce(
-  (sum, item) => sum + Number(item.quantity || 0) * Number(item.unitprice || 0),
-  0
-);
+  const branchid = cart[0].branchid;
+  const orderid = uuid();
 
-const channelid = orderMeta.channelid || (await getDefaultChannelId());
+  const total = cart.reduce(
+    (sum, item) =>
+      sum + Number(item.quantity || 0) * Number(item.unitprice || 0),
+    0
+  );
 
-    const { error: orderError } = await supabase.from('orders').insert([{
-  orderid,
-  branchid,
-  customerid: orderMeta.customerid || null,
-  channelid: orderMeta.channelid || null,
-  createdby: profile?.userid || null,
-  orderdate: new Date().toISOString(),
-  orderstatus: orderMeta.status,
-  paymentstatus: orderMeta.paymentstatus,
-  totalamount: total,
-  discountamount: 0,
-  shippingfee: 0,
-  note: 'Demo hóa đơn từ frontend'
-}]);
-    if (orderError) throw orderError;
+  const channelid = orderMeta.channelid || (await getDefaultChannelId());
 
-    for (const item of cart) {
-      await supabase.from("order_detail").insert([
-        {
-          orderid,
-          variantid: item.variantid,
-          quantity: item.quantity,
-          unitprice: item.unitprice,
-        },
-      ]);
+  const { error: orderError } = await supabase.from("orders").insert([
+    {
+      orderid,
+      branchid,
+      customerid: orderMeta.customerid || null,
+      channelid,
+      createdby: profile?.userid || null,
+      orderdate: new Date().toISOString(),
+      orderstatus: orderMeta.status,
+      paymentstatus: orderMeta.paymentstatus,
+      totalamount: total,
+      discountamount: 0,
+      shippingfee: 0,
+      note: "Demo hóa đơn từ frontend",
+    },
+  ]);
 
-      const old = await supabase.from("stock").select("*").eq("branchid", item.branchid).eq("variantid", item.variantid).maybeSingle();
-      if (old.data) {
-        await supabase
-          .from("stock")
-          .update({ quantity: Number(old.data.quantity) - item.quantity })
-          .eq("branchid", item.branchid)
-          .eq("variantid", item.variantid);
-        await supabase.from("stock_history").insert([
+  if (orderError) throw orderError;
+
+  for (const item of cart) {
+    const { error: detailError } = await supabase.from("order_detail").insert([
+      {
+        orderid,
+        variantid: item.variantid,
+        quantity: item.quantity,
+        unitprice: item.unitprice,
+      },
+    ]);
+
+    if (detailError) throw detailError;
+
+    const old = await supabase
+      .from("stock")
+      .select("*")
+      .eq("branchid", item.branchid)
+      .eq("variantid", item.variantid)
+      .maybeSingle();
+
+    if (old.error) throw old.error;
+
+    if (old.data) {
+      const before = Number(old.data.quantity || 0);
+      const after = before - Number(item.quantity || 0);
+      const now = new Date().toISOString();
+
+      const { error: stockError } = await supabase
+        .from("stock")
+        .update({
+          quantity: after,
+          lastupdated: now,
+        })
+        .eq("branchid", item.branchid)
+        .eq("variantid", item.variantid);
+
+      if (stockError) throw stockError;
+
+      const { error: historyError } = await supabase
+        .from("stock_history")
+        .insert([
           {
             historyid: uuid(),
             branchid: item.branchid,
@@ -749,24 +793,26 @@ const channelid = orderMeta.channelid || (await getDefaultChannelId());
             transactiontype: "sales",
             referencetype: "ORDERS",
             referenceid: orderid,
-            quantitychange: -item.quantity,
-            quantitybefore: old.data.quantity,
-            quantityafter: Number(old.data.quantity) - item.quantity,
+            quantitychange: -Number(item.quantity || 0),
+            quantitybefore: before,
+            quantityafter: after,
             performedby: profile?.userid || null,
-            timestamp: new Date().toISOString(),
+            timestamp: now,
             note: "Bán hàng demo",
           },
         ]);
-      }
-    }
 
-    setCart([]);
-    show("Đã tạo hóa đơn và trừ kho");
-    await selectTable("orders");
+      if (historyError) throw historyError;
+    }
   }
 
+  setCart([]);
+  show("Đã tạo hóa đơn và trừ kho");
+  await selectTable("orders");
+}
+
 async function getDefaultChannelId() {
-  let { data, error } = await supabase
+  const { data, error } = await supabase
     .from("sales_channel")
     .select("channelid")
     .eq("channelname", "POS")
@@ -774,7 +820,9 @@ async function getDefaultChannelId() {
 
   if (error) throw error;
 
-  if (data?.channelid) return data.channelid;
+  if (data?.channelid) {
+    return data.channelid;
+  }
 
   const fallback = await supabase
     .from("sales_channel")
