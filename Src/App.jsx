@@ -137,19 +137,18 @@ export default function App() {
     alttext: "",
   });
   const [transferForm, setTransferForm] = useState({
-    frombranchid: "",
-    tobranchid: "",
-    productid: "",
-    variantid: "",
-    quantity: 1,
-  });
+  frombranchid: "",
+  tobranchid: "",
+  variantid: "",
+  quantity: 1,
+});
   const [adjustForm, setAdjustForm] = useState({
-    branchid: "",
-    productid: "",
-    variantid: "",
-    actualquantity: 0,
-    note: "",
-  });
+  branchid: "",
+  productid: "",
+  variantid: "",
+  actualquantity: 0,
+  note: "",
+});
   const [cart, setCart] = useState([]);
   const [cartItem, setCartItem] = useState({
     branchid: "",
@@ -267,7 +266,6 @@ export default function App() {
     roles: roles.data || [],
   });
 }
-
   async function loadProfile(email) {
     const { data, error } = await supabase.from("users").select("*, role(*)").eq("email", email).maybeSingle();
     if (error || !data) {
@@ -374,10 +372,22 @@ export default function App() {
   }
 
   async function transferStock() {
-    if (!guard("transfer")) return;
-    if (!transferForm.frombranchid || !transferForm.tobranchid || !transferForm.variantid) {
-      return show("Vui lòng chọn đủ chi nhánh gửi, chi nhánh nhận và SKU");
-    }
+  if (!guard("transfer")) return;
+
+  if (
+    !transferForm.frombranchid ||
+    !transferForm.tobranchid ||
+    !transferForm.variantid
+  ) {
+    return show("Vui lòng chọn đủ chi nhánh gửi, chi nhánh nhận và sản phẩm/SKU");
+  }
+
+  if (transferForm.frombranchid === transferForm.tobranchid) {
+    return show("Chi nhánh gửi và chi nhánh nhận không được trùng nhau");
+  }
+
+  const q = Number(transferForm.quantity);
+  if (q <= 0) return show("Số lượng chuyển phải lớn hơn 0");
 
     const q = Number(transferForm.quantity);
     const from = await supabase
@@ -1249,10 +1259,6 @@ function Stock({ run, selectTable, loadLowStock, rows }) {
 }
 
 function Transfer(p) {
-  const filteredVariants = p.options.variants.filter(
-    (item) => item.productid === p.transferForm.productid
-  );
-
   return (
     <Card title="Chuyển kho">
       <div className="sales-form-grid">
@@ -1261,7 +1267,10 @@ function Transfer(p) {
           <select
             value={p.transferForm.frombranchid}
             onChange={(e) =>
-              p.setTransferForm({ ...p.transferForm, frombranchid: e.target.value })
+              p.setTransferForm({
+                ...p.transferForm,
+                frombranchid: e.target.value,
+              })
             }
           >
             <option value="">Chọn chi nhánh gửi</option>
@@ -1278,7 +1287,10 @@ function Transfer(p) {
           <select
             value={p.transferForm.tobranchid}
             onChange={(e) =>
-              p.setTransferForm({ ...p.transferForm, tobranchid: e.target.value })
+              p.setTransferForm({
+                ...p.transferForm,
+                tobranchid: e.target.value,
+              })
             }
           >
             <option value="">Chọn chi nhánh nhận</option>
@@ -1291,42 +1303,21 @@ function Transfer(p) {
         </div>
 
         <div className="field">
-          <label>Sản phẩm</label>
+          <label>Sản phẩm / SKU / Size / Màu</label>
           <select
-            value={p.transferForm.productid}
+            value={p.transferForm.variantid}
             onChange={(e) =>
               p.setTransferForm({
                 ...p.transferForm,
-                productid: e.target.value,
-                variantid: "",
+                variantid: e.target.value,
               })
             }
           >
-            <option value="">Chọn sản phẩm</option>
-            {p.options.products.map((item) => (
-              <option key={item.productid} value={item.productid}>
-                {item.productname}
-                {item.brand ? ` - ${item.brand}` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label>Biến thể / SKU</label>
-          <select
-            value={p.transferForm.variantid}
-            disabled={!p.transferForm.productid}
-            onChange={(e) =>
-              p.setTransferForm({ ...p.transferForm, variantid: e.target.value })
-            }
-          >
-            <option value="">
-              {p.transferForm.productid ? "Chọn size/màu/SKU" : "Chọn sản phẩm trước"}
-            </option>
-            {filteredVariants.map((item) => (
+            <option value="">Chọn sản phẩm/SKU</option>
+            {p.options.variants.map((item) => (
               <option key={item.variantid} value={item.variantid}>
-                {item.sku}
+                {item.product?.productname || "Sản phẩm"}
+                {item.sku ? ` - ${item.sku}` : ""}
                 {item.size ? ` - Size ${item.size}` : ""}
                 {item.color ? ` - ${item.color}` : ""}
                 {item.barcode ? ` - ${item.barcode}` : ""}
@@ -1342,22 +1333,23 @@ function Transfer(p) {
             min="1"
             value={p.transferForm.quantity}
             onChange={(e) =>
-              p.setTransferForm({ ...p.transferForm, quantity: e.target.value })
+              p.setTransferForm({
+                ...p.transferForm,
+                quantity: e.target.value,
+              })
             }
           />
         </div>
       </div>
 
-      <button onClick={() => p.run(p.transferStock)}>Xác nhận chuyển kho</button>
+      <button onClick={() => p.run(p.transferStock)}>
+        Xác nhận chuyển kho
+      </button>
     </Card>
   );
 }
 
 function Adjustment(p) {
-  const filteredVariants = p.options.variants.filter(
-    (item) => item.productid === p.adjustForm.productid
-  );
-
   return (
     <Card title="Kiểm kho">
       <div className="sales-form-grid">
@@ -1366,7 +1358,10 @@ function Adjustment(p) {
           <select
             value={p.adjustForm.branchid}
             onChange={(e) =>
-              p.setAdjustForm({ ...p.adjustForm, branchid: e.target.value })
+              p.setAdjustForm({
+                ...p.adjustForm,
+                branchid: e.target.value,
+              })
             }
           >
             <option value="">Chọn chi nhánh</option>
@@ -1379,42 +1374,21 @@ function Adjustment(p) {
         </div>
 
         <div className="field">
-          <label>Sản phẩm</label>
+          <label>Sản phẩm / SKU / Size / Màu</label>
           <select
-            value={p.adjustForm.productid}
+            value={p.adjustForm.variantid}
             onChange={(e) =>
               p.setAdjustForm({
                 ...p.adjustForm,
-                productid: e.target.value,
-                variantid: "",
+                variantid: e.target.value,
               })
             }
           >
-            <option value="">Chọn sản phẩm</option>
-            {p.options.products.map((item) => (
-              <option key={item.productid} value={item.productid}>
-                {item.productname}
-                {item.brand ? ` - ${item.brand}` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label>Biến thể / SKU</label>
-          <select
-            value={p.adjustForm.variantid}
-            disabled={!p.adjustForm.productid}
-            onChange={(e) =>
-              p.setAdjustForm({ ...p.adjustForm, variantid: e.target.value })
-            }
-          >
-            <option value="">
-              {p.adjustForm.productid ? "Chọn size/màu/SKU" : "Chọn sản phẩm trước"}
-            </option>
-            {filteredVariants.map((item) => (
+            <option value="">Chọn sản phẩm/SKU</option>
+            {p.options.variants.map((item) => (
               <option key={item.variantid} value={item.variantid}>
-                {item.sku}
+                {item.product?.productname || "Sản phẩm"}
+                {item.sku ? ` - ${item.sku}` : ""}
                 {item.size ? ` - Size ${item.size}` : ""}
                 {item.color ? ` - ${item.color}` : ""}
                 {item.barcode ? ` - ${item.barcode}` : ""}
@@ -1430,7 +1404,10 @@ function Adjustment(p) {
             min="0"
             value={p.adjustForm.actualquantity}
             onChange={(e) =>
-              p.setAdjustForm({ ...p.adjustForm, actualquantity: e.target.value })
+              p.setAdjustForm({
+                ...p.adjustForm,
+                actualquantity: e.target.value,
+              })
             }
           />
         </div>
@@ -1441,13 +1418,18 @@ function Adjustment(p) {
             placeholder="Ví dụ: Lệch tồn sau kiểm kê"
             value={p.adjustForm.note}
             onChange={(e) =>
-              p.setAdjustForm({ ...p.adjustForm, note: e.target.value })
+              p.setAdjustForm({
+                ...p.adjustForm,
+                note: e.target.value,
+              })
             }
           />
         </div>
       </div>
 
-      <button onClick={() => p.run(p.adjustStock)}>Hoàn tất kiểm kho</button>
+      <button onClick={() => p.run(p.adjustStock)}>
+        Hoàn tất kiểm kho
+      </button>
     </Card>
   );
 }
