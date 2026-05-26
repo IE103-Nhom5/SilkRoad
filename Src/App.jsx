@@ -225,35 +225,48 @@ export default function App() {
   }
 
   async function loadOptions() {
-    const [products, variants, branches, roles] = await Promise.all([
-      supabase
-        .from("product")
-        .select("productid, productname, brand, defaultsellingprice")
-        .order("productname"),
+  const [products, variants, branches, roles] = await Promise.all([
+    supabase
+      .from("product")
+      .select("productid, productname, brand, defaultsellingprice")
+      .order("productname"),
 
-      supabase
-        .from("product_variant")
-        .select("variantid, productid, sku, barcode, size, color, sellingprice")
-        .order("sku"),
+    supabase
+      .from("product_variant")
+      .select(`
+        variantid,
+        productid,
+        sku,
+        barcode,
+        size,
+        color,
+        sellingprice,
+        product:productid (
+          productname,
+          brand,
+          defaultsellingprice
+        )
+      `)
+      .order("sku"),
 
-      supabase
-        .from("branch")
-        .select("branchid, branchname")
-        .order("branchname"),
+    supabase
+      .from("branch")
+      .select("branchid, branchname")
+      .order("branchname"),
 
-      supabase
-        .from("role")
-        .select("roleid, rolename")
-        .order("rolename"),
-    ]);
+    supabase
+      .from("role")
+      .select("roleid, rolename")
+      .order("rolename"),
+  ]);
 
-    setOptions({
-      products: products.data || [],
-      variants: variants.data || [],
-      branches: branches.data || [],
-      roles: roles.data || [],
-    });
-  }
+  setOptions({
+    products: products.data || [],
+    variants: variants.data || [],
+    branches: branches.data || [],
+    roles: roles.data || [],
+  });
+}
 
   async function loadProfile(email) {
     const { data, error } = await supabase.from("users").select("*, role(*)").eq("email", email).maybeSingle();
@@ -492,61 +505,57 @@ export default function App() {
   }
 
   function addCart() {
-    if (!cartItem.branchid) return show("Vui lòng chọn chi nhánh");
-    if (!cartItem.productid) return show("Vui lòng chọn sản phẩm");
-    if (!cartItem.variantid) return show("Vui lòng chọn biến thể/SKU");
+  if (!cartItem.branchid) return show("Vui lòng chọn chi nhánh");
+  if (!cartItem.variantid) return show("Vui lòng chọn sản phẩm/SKU");
 
-    const branch = options.branches.find(
-      (item) => item.branchid === cartItem.branchid
-    );
+  const branch = options.branches.find(
+    (item) => item.branchid === cartItem.branchid
+  );
 
-    const product = options.products.find(
-      (item) => item.productid === cartItem.productid
-    );
+  const variant = options.variants.find(
+    (item) => item.variantid === cartItem.variantid
+  );
 
-    const variant = options.variants.find(
-      (item) => item.variantid === cartItem.variantid
-    );
+  const quantity = Number(cartItem.quantity || 1);
 
-    const quantity = Number(cartItem.quantity || 1);
+  const unitprice = Number(
+    cartItem.unitprice ||
+      variant?.sellingprice ||
+      variant?.product?.defaultsellingprice ||
+      0
+  );
 
-    const unitprice = Number(
-      cartItem.unitprice ||
-        variant?.sellingprice ||
-        product?.defaultsellingprice ||
-        0
-    );
+  if (quantity <= 0) return show("Số lượng phải lớn hơn 0");
+  if (unitprice <= 0) return show("Đơn giá phải lớn hơn 0");
 
-    if (quantity <= 0) return show("Số lượng phải lớn hơn 0");
-    if (unitprice <= 0) return show("Đơn giá phải lớn hơn 0");
+  setCart([
+    ...cart,
+    {
+      branchid: cartItem.branchid,
+      branchname: branch?.branchname || "",
+      productid: variant?.productid || "",
+      productname: variant?.product?.productname || "",
+      variantid: cartItem.variantid,
+      sku: variant?.sku || "",
+      barcode: variant?.barcode || "",
+      size: variant?.size || "",
+      color: variant?.color || "",
+      quantity,
+      unitprice,
+      total: quantity * unitprice,
+    },
+  ]);
 
-    setCart([
-      ...cart,
-      {
-        branchid: cartItem.branchid,
-        branchname: branch?.branchname || "",
-        productid: cartItem.productid,
-        productname: product?.productname || "",
-        variantid: cartItem.variantid,
-        sku: variant?.sku || "",
-        barcode: variant?.barcode || "",
-        size: variant?.size || "",
-        color: variant?.color || "",
-        quantity,
-        unitprice,
-        total: quantity * unitprice,
-      },
-    ]);
+  setCartItem({
+    ...cartItem,
+    productid: "",
+    variantid: "",
+    quantity: 1,
+    unitprice: 0,
+  });
 
-    setCartItem({
-      ...cartItem,
-      variantid: "",
-      quantity: 1,
-      unitprice: 0,
-    });
-
-    show("Đã thêm sản phẩm vào giỏ");
-  }
+  show("Đã thêm sản phẩm vào giỏ");
+}
 
   async function createInvoice() {
     if (!guard("orders")) return;
