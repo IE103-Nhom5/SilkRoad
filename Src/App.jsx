@@ -65,6 +65,18 @@ function money(n) {
   return Number(n || 0).toLocaleString("vi-VN") + " đ";
 }
 
+function slugify(value) {
+  return trim(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 170);
+}
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -140,6 +152,30 @@ function productIdOf(item) {
 
 function branchIdOf(item) {
   return idStr(first(item, ["branchid", "branch_id", "branchId", "BranchID"], ""));
+}
+
+function categoryIdOf(item) {
+  return idStr(first(item, ["categoryid", "category_id", "CategoryID"], ""));
+}
+
+function categoryLabel(item) {
+  return first(item, ["categoryname", "category_name"], "Danh mục");
+}
+
+function attributeIdOf(item) {
+  return idStr(first(item, ["attributeid", "attribute_id", "AttributeID"], ""));
+}
+
+function attributeLabel(item) {
+  return first(item, ["displayvalue", "display_value", "value"], "Thuộc tính");
+}
+
+function supplierIdOf(item) {
+  return idStr(first(item, ["supplierid", "supplier_id", "SupplierID"], ""));
+}
+
+function supplierLabel(item) {
+  return first(item, ["suppliername", "supplier_name"], "Nhà cung cấp");
 }
 
 function variantIdOf(item) {
@@ -634,6 +670,9 @@ export default function App() {
     branches: [],
     roles: [],
     channels: [],
+    categories: [],
+    attributes: [],
+    suppliers: [],
     customers: [],
     channelPrices: [],
     allocations: [],
@@ -644,21 +683,57 @@ export default function App() {
   // Form state
   const [login, setLogin] = useState({ email: "", password: "" });
   const [productForm, setProductForm] = useState({
+    categoryid: "",
     productname: "",
     brand: "",
     gender: "unisex",
     status: "active",
     defaultsellingprice: 0,
+    description: "",
+    collectionname: "",
   });
   const [variantForm, setVariantForm] = useState({
     productid: "",
     sku: "",
     barcode: "",
-    size: "M",
-    color: "Black",
+    sizeattributeid: "",
+    colorattributeid: "",
     costprice: 0,
     sellingprice: 0,
     status: "active",
+  });
+  const [categoryForm, setCategoryForm] = useState({
+    categoryname: "",
+    parentcategoryid: "",
+    displayorder: 0,
+    status: "active",
+  });
+  const [attributeForm, setAttributeForm] = useState({
+    attributetype: "size",
+    value: "",
+    displayvalue: "",
+    hexcode: "",
+    sortorder: 0,
+    status: "active",
+  });
+  const [supplierForm, setSupplierForm] = useState({
+    suppliername: "",
+    taxcode: "",
+    phonenumber: "",
+    email: "",
+    address: "",
+    paymenttermdays: 0,
+    status: "active",
+  });
+  const [supplierProductForm, setSupplierProductForm] = useState({
+    supplierid: "",
+    productid: "",
+    variantid: "",
+    suppliersku: "",
+    contractprice: 0,
+    leadtimedays: 0,
+    minorderquantity: 1,
+    ispreferred: false,
   });
   const [imageForm, setImageForm] = useState({
     productid: "",
@@ -668,11 +743,13 @@ export default function App() {
   });
   const [purchaseForm, setPurchaseForm] = useState({
     purchaseorderid: "",
+    supplierid: "",
     branchid: "",
     productid: "",
     variantid: "",
     quantity: 1,
     unitcost: 0,
+    expecteddate: todayISO(),
     note: "",
   });
   const [stockFilter, setStockFilter] = useState({
@@ -738,6 +815,22 @@ export default function App() {
     externalproductid: "",
     branchid: "",
     allocatedquantity: 0,
+  });
+  const [branchForm, setBranchForm] = useState({
+    branchname: "",
+    branchtype: "retail_store",
+    address: "",
+    province: "",
+    phonenumber: "",
+    email: "",
+    opentime: "",
+    closetime: "",
+    status: "active",
+  });
+  const [salesChannelForm, setSalesChannelForm] = useState({
+    channelname: "",
+    channeltype: "pos",
+    status: "active",
   });
   const [returnForm, setReturnForm] = useState({
     orderid: "",
@@ -994,12 +1087,15 @@ export default function App() {
       return supabase.from(table).select("*").limit(limit);
     }
 
-    const [products, variants, branches, roles, channels, customers, channelPrices, allocations, images, stock] = await Promise.all([
+    const [products, variants, branches, roles, channels, categories, attributes, suppliers, customers, channelPrices, allocations, images, stock] = await Promise.all([
       readAll("product"),
       readAll("product_variant"),
       readAll("branch"),
       readAll("role"),
       readFirstExisting(["sales_channel", "order_channel", "channel", "saleschannel"]),
+      readAll("product_category"),
+      readAll("attribute"),
+      readAll("supplier"),
       readAll("customer"),
       readAll("channel_price"),
       readAll("inventory_allocation"),
@@ -1012,6 +1108,7 @@ export default function App() {
     if (branches.error) show("Lỗi tải chi nhánh: " + branches.error.message);
 
     const imageRows = images.data || [];
+    const attributeRows = (attributes.data || []).slice().sort((a, b) => Number(first(a, ["sortorder", "sort_order"], 0)) - Number(first(b, ["sortorder", "sort_order"], 0)));
     const productRows = (products.data || [])
       .slice()
       .sort((a, b) => productLabel(a).localeCompare(productLabel(b), "vi"))
@@ -1028,9 +1125,15 @@ export default function App() {
       .map((variant) => {
         const product = productRows.find((item) => sameId(productIdOf(item), productIdOf(variant))) || null;
         const primaryImage = primaryVariantImage(variant, imageRows);
+        const sizeAttribute = attributeRows.find((item) => sameId(attributeIdOf(item), first(variant, ["sizeattributeid", "size_attribute_id"], "")));
+        const colorAttribute = attributeRows.find((item) => sameId(attributeIdOf(item), first(variant, ["colorattributeid", "color_attribute_id"], "")));
         return {
           ...variant,
           product,
+          size: attributeLabel(sizeAttribute),
+          color: attributeLabel(colorAttribute),
+          sizeAttribute,
+          colorAttribute,
           imageurl: imageUrlOf(primaryImage),
           imagealt: imageAltOf(primaryImage),
         };
@@ -1052,6 +1155,9 @@ export default function App() {
       branches: branches.data || [],
       roles: roles.data || [],
       channels: channelRows,
+      categories: categories.data || [],
+      attributes: attributeRows,
+      suppliers: suppliers.data || [],
       customers: customers.data || [],
       channelPrices: channelPrices.data || [],
       allocations: allocations.data || [],
@@ -1145,16 +1251,25 @@ export default function App() {
   async function addProduct() {
     if (!guard("products")) return;
     if (!productForm.productname.trim()) return show("Vui lòng nhập tên sản phẩm");
+    if (!productForm.categoryid) return show("Vui lòng chọn danh mục sản phẩm");
+    const slug = slugify(productForm.productname);
     const payload = {
-      ...productForm,
       productid: uuid(),
+      categoryid: productForm.categoryid,
+      productname: trim(productForm.productname),
+      slug: `${slug}-${Date.now().toString(36)}`,
+      brand: trim(productForm.brand) || null,
+      gender: productForm.gender || null,
+      description: trim(productForm.description) || null,
       defaultsellingprice: Number(productForm.defaultsellingprice || 0),
+      collectionname: trim(productForm.collectionname) || null,
+      status: productForm.status,
       createdat: new Date().toISOString(),
     };
     const { error } = await supabase.from("product").insert([payload]);
     if (error) throw error;
     show("Đã thêm sản phẩm");
-    setProductForm({ productname: "", brand: "", gender: "unisex", status: "active", defaultsellingprice: 0 });
+    setProductForm({ categoryid: productForm.categoryid, productname: "", brand: "", gender: "unisex", status: "active", defaultsellingprice: 0, description: "", collectionname: "" });
     await loadOptions();
     await selectTable("product");
   }
@@ -1162,20 +1277,113 @@ export default function App() {
   async function addVariant() {
     if (!guard("products")) return;
     if (!variantForm.productid) return show("Vui lòng chọn sản phẩm");
-    if (!variantForm.sku.trim() && !variantForm.barcode.trim()) return show("Vui lòng nhập mã biến thể hoặc barcode");
+    if (!variantForm.sizeattributeid && !variantForm.colorattributeid) return show("Vui lòng chọn ít nhất size hoặc màu cho biến thể");
+    const generatedSku = `SR-${Date.now().toString(36).toUpperCase()}`;
     const payload = {
-      ...variantForm,
       variantid: uuid(),
+      productid: variantForm.productid,
+      sizeattributeid: variantForm.sizeattributeid || null,
+      colorattributeid: variantForm.colorattributeid || null,
+      sku: trim(variantForm.sku) || generatedSku,
+      barcode: trim(variantForm.barcode) || null,
       costprice: Number(variantForm.costprice || 0),
       sellingprice: Number(variantForm.sellingprice || 0),
+      status: variantForm.status,
       createdat: new Date().toISOString(),
     };
     const { error } = await supabase.from("product_variant").insert([payload]);
     if (error) throw error;
     show("Đã thêm biến thể cho sản phẩm");
-    setVariantForm({ productid: variantForm.productid, sku: "", barcode: "", size: "M", color: "Black", costprice: 0, sellingprice: 0, status: "active" });
+    setVariantForm({ productid: variantForm.productid, sku: "", barcode: "", sizeattributeid: "", colorattributeid: "", costprice: 0, sellingprice: 0, status: "active" });
     await loadOptions();
     await selectTable("product_variant");
+  }
+
+  async function addCategory() {
+    if (!guard("products")) return;
+    if (!trim(categoryForm.categoryname)) return show("Vui lòng nhập tên danh mục");
+    const categoryid = uuid();
+    const { error } = await supabase.from("product_category").insert([
+      {
+        categoryid,
+        parentcategoryid: categoryForm.parentcategoryid || null,
+        categoryname: trim(categoryForm.categoryname),
+        slug: `${slugify(categoryForm.categoryname)}-${Date.now().toString(36)}`,
+        displayorder: Number(categoryForm.displayorder || 0),
+        status: categoryForm.status,
+      },
+    ]);
+    if (error) throw error;
+    show("Đã thêm danh mục");
+    setCategoryForm({ categoryname: "", parentcategoryid: "", displayorder: 0, status: "active" });
+    await loadOptions();
+    await selectTable("product_category");
+  }
+
+  async function addAttribute() {
+    if (!guard("products")) return;
+    if (!trim(attributeForm.value)) return show("Vui lòng nhập giá trị thuộc tính");
+    const { error } = await supabase.from("attribute").insert([
+      {
+        attributeid: uuid(),
+        attributetype: attributeForm.attributetype,
+        value: trim(attributeForm.value),
+        displayvalue: trim(attributeForm.displayvalue) || trim(attributeForm.value),
+        hexcode: attributeForm.attributetype === "color" && trim(attributeForm.hexcode) ? trim(attributeForm.hexcode) : null,
+        sortorder: Number(attributeForm.sortorder || 0),
+        status: attributeForm.status,
+      },
+    ]);
+    if (error) throw error;
+    show("Đã thêm thuộc tính");
+    setAttributeForm({ attributetype: attributeForm.attributetype, value: "", displayvalue: "", hexcode: "", sortorder: 0, status: "active" });
+    await loadOptions();
+    await selectTable("attribute");
+  }
+
+  async function addSupplier() {
+    if (!guard("products")) return;
+    if (!trim(supplierForm.suppliername)) return show("Vui lòng nhập tên nhà cung cấp");
+    const { error } = await supabase.from("supplier").insert([
+      {
+        supplierid: uuid(),
+        suppliername: trim(supplierForm.suppliername),
+        taxcode: trim(supplierForm.taxcode) || null,
+        phonenumber: trim(supplierForm.phonenumber) || null,
+        email: trim(supplierForm.email) || null,
+        address: trim(supplierForm.address) || null,
+        paymenttermdays: Number(supplierForm.paymenttermdays || 0),
+        status: supplierForm.status,
+      },
+    ]);
+    if (error) throw error;
+    show("Đã thêm nhà cung cấp");
+    setSupplierForm({ suppliername: "", taxcode: "", phonenumber: "", email: "", address: "", paymenttermdays: 0, status: "active" });
+    await loadOptions();
+    await selectTable("supplier");
+  }
+
+  async function saveSupplierProduct() {
+    if (!guard("products")) return;
+    if (!supplierProductForm.supplierid || !supplierProductForm.variantid) return show("Vui lòng chọn nhà cung cấp và biến thể");
+    const { error } = await supabase.from("supplier_product").upsert(
+      [
+        {
+          supplierid: supplierProductForm.supplierid,
+          variantid: supplierProductForm.variantid,
+          suppliersku: trim(supplierProductForm.suppliersku) || null,
+          contractprice: Number(supplierProductForm.contractprice || 0),
+          leadtimedays: Number(supplierProductForm.leadtimedays || 0),
+          minorderquantity: Number(supplierProductForm.minorderquantity || 1),
+          ispreferred: Boolean(supplierProductForm.ispreferred),
+          updatedat: new Date().toISOString(),
+        },
+      ],
+      { onConflict: "supplierid,variantid" }
+    );
+    if (error) throw error;
+    show("Đã lưu liên kết nhà cung cấp - biến thể");
+    await selectTable("supplier_product");
   }
 
   async function addImage() {
@@ -1205,18 +1413,109 @@ export default function App() {
     setRows(productViewRows(loadedOptions.products, loadedOptions.variants, loadedOptions.images));
   }
 
+  async function receivePurchaseOrderLocally(purchaseorderid) {
+    const order = await supabase.from("purchase_order").select("*").eq("purchaseorderid", purchaseorderid).maybeSingle();
+    if (order.error) throw order.error;
+    if (!order.data) throw new Error("Không tìm thấy phiếu nhập");
+
+    const details = await supabase.from("purchase_order_detail").select("*").eq("purchaseorderid", purchaseorderid);
+    if (details.error) throw details.error;
+
+    const now = new Date().toISOString();
+    for (const detail of details.data || []) {
+      const receivedQuantity = Number(first(detail, ["receivedquantity", "received_quantity"], 0));
+      if (receivedQuantity <= 0) continue;
+      const variantid = variantIdOf(detail);
+      const old = await supabase.from("stock").select("*").eq("branchid", order.data.branchid).eq("variantid", variantid).maybeSingle();
+      if (old.error) throw old.error;
+
+      const before = Number(old.data?.quantity || 0);
+      const after = before + receivedQuantity;
+      const stockResult = old.data
+        ? await supabase.from("stock").update({ quantity: after, lastupdated: now }).eq("branchid", order.data.branchid).eq("variantid", variantid)
+        : await supabase.from("stock").insert([{ branchid: order.data.branchid, variantid, quantity: after, reservedquantity: 0, minstocklevel: 0, lastupdated: now }]);
+      if (stockResult.error) throw stockResult.error;
+
+      const history = await supabase.from("stock_history").insert([
+        {
+          historyid: uuid(),
+          branchid: order.data.branchid,
+          variantid,
+          transactiontype: "purchase",
+          referencetype: "PURCHASE_ORDER",
+          referenceid: purchaseorderid,
+          quantitychange: receivedQuantity,
+          quantitybefore: before,
+          quantityafter: after,
+          performedby: order.data.createdby || profile?.userid || null,
+          timestamp: now,
+          note: "Nhận hàng phiếu nhập từ app",
+        },
+      ]);
+      if (history.error) throw history.error;
+    }
+
+    const update = await supabase.from("purchase_order").update({ status: "received", arrivaldate: now }).eq("purchaseorderid", purchaseorderid);
+    if (update.error) throw update.error;
+  }
+
+  async function confirmPurchaseOrderById(purchaseorderid) {
+    const rpc = await supabase.rpc("sp_confirm_purchase_order", { p_purchase_order_id: purchaseorderid });
+    if (!rpc.error) return;
+    await receivePurchaseOrderLocally(purchaseorderid);
+  }
+
   async function confirmPurchaseOrder() {
     if (!guard("purchase")) return;
     if (!purchaseForm.purchaseorderid.trim()) return show("Vui lòng nhập mã phiếu nhập");
 
-    const { error } = await supabase.rpc("sp_confirm_purchase_order", {
-      p_purchase_order_id: purchaseForm.purchaseorderid.trim(),
-    });
-    if (error) throw error;
+    await confirmPurchaseOrderById(purchaseForm.purchaseorderid.trim());
 
     show("Đã xác nhận phiếu nhập và cập nhật tồn kho");
     setPurchaseForm({ ...purchaseForm, purchaseorderid: "" });
     await selectTable("purchase_order");
+  }
+
+  async function createPurchaseOrder() {
+    if (!guard("purchase")) return;
+    if (!purchaseForm.supplierid || !purchaseForm.branchid || !purchaseForm.variantid) return show("Vui lòng chọn nhà cung cấp, chi nhánh và biến thể");
+    if (!profile?.userid) return show("Không tìm thấy user hiện tại để tạo phiếu nhập");
+    const quantity = Number(purchaseForm.quantity);
+    const unitcost = Number(purchaseForm.unitcost || 0);
+    if (!Number.isFinite(quantity) || quantity <= 0) return show("Số lượng nhập phải lớn hơn 0");
+    if (!Number.isFinite(unitcost) || unitcost < 0) return show("Giá vốn không hợp lệ");
+
+    const purchaseorderid = uuid();
+    const { error: orderError } = await supabase.from("purchase_order").insert([
+      {
+        purchaseorderid,
+        supplierid: purchaseForm.supplierid,
+        branchid: purchaseForm.branchid,
+        createdby: profile.userid,
+        expecteddate: purchaseForm.expecteddate || todayISO(),
+        status: "approved",
+        totalamount: quantity * unitcost,
+        note: purchaseForm.note || "Phiếu nhập tạo từ app",
+      },
+    ]);
+    if (orderError) throw orderError;
+
+    const { error: detailError } = await supabase.from("purchase_order_detail").insert([
+      {
+        purchaseorderid,
+        variantid: purchaseForm.variantid,
+        requestedquantity: quantity,
+        receivedquantity: quantity,
+        unitprice: unitcost,
+      },
+    ]);
+    if (detailError) throw detailError;
+
+    await confirmPurchaseOrderById(purchaseorderid);
+
+    show("Đã tạo phiếu nhập, nhận hàng và cập nhật tồn kho");
+    setPurchaseForm({ ...purchaseForm, purchaseorderid, productid: "", variantid: "", quantity: 1, unitcost: 0, note: "" });
+    await loadStockFriendly();
   }
 
   async function receiveStockManual() {
@@ -1740,6 +2039,51 @@ export default function App() {
     await loadChannelPricesFriendly();
   }
 
+  async function addBranch() {
+    if (!guard("channels")) return;
+    if (!trim(branchForm.branchname) || !trim(branchForm.address) || !trim(branchForm.province)) {
+      return show("Vui lòng nhập tên chi nhánh, địa chỉ và tỉnh/thành");
+    }
+    const { error } = await supabase.from("branch").insert([
+      {
+        branchid: uuid(),
+        branchname: trim(branchForm.branchname),
+        branchtype: branchForm.branchtype,
+        address: trim(branchForm.address),
+        province: trim(branchForm.province),
+        phonenumber: trim(branchForm.phonenumber) || null,
+        email: trim(branchForm.email) || null,
+        opentime: branchForm.opentime || null,
+        closetime: branchForm.closetime || null,
+        status: branchForm.status,
+      },
+    ]);
+    if (error) throw error;
+    show("Đã thêm chi nhánh");
+    setBranchForm({ branchname: "", branchtype: "retail_store", address: "", province: "", phonenumber: "", email: "", opentime: "", closetime: "", status: "active" });
+    await loadOptions();
+    await selectTable("branch");
+  }
+
+  async function addSalesChannel() {
+    if (!guard("channels")) return;
+    if (!trim(salesChannelForm.channelname)) return show("Vui lòng nhập tên kênh bán");
+    const { error } = await supabase.from("sales_channel").insert([
+      {
+        channelid: uuid(),
+        channelname: trim(salesChannelForm.channelname),
+        channeltype: salesChannelForm.channeltype,
+        status: salesChannelForm.status,
+        channelconfig: { source: "frontend" },
+      },
+    ]);
+    if (error) throw error;
+    show("Đã thêm kênh bán");
+    setSalesChannelForm({ channelname: "", channeltype: "pos", status: "active" });
+    await loadOptions();
+    await selectTable("sales_channel");
+  }
+
   async function saveInventoryAllocation() {
     if (!guard("channels")) return;
     if (!channelForm.branchid || !channelForm.channelid || !channelForm.variantid) return show("Vui lòng chọn chi nhánh, kênh bán và biến thể");
@@ -2230,6 +2574,18 @@ export default function App() {
                 variantForm={variantForm}
                 setVariantForm={setVariantForm}
                 addVariant={addVariant}
+                categoryForm={categoryForm}
+                setCategoryForm={setCategoryForm}
+                addCategory={addCategory}
+                attributeForm={attributeForm}
+                setAttributeForm={setAttributeForm}
+                addAttribute={addAttribute}
+                supplierForm={supplierForm}
+                setSupplierForm={setSupplierForm}
+                addSupplier={addSupplier}
+                supplierProductForm={supplierProductForm}
+                setSupplierProductForm={setSupplierProductForm}
+                saveSupplierProduct={saveSupplierProduct}
                 imageForm={imageForm}
                 setImageForm={setImageForm}
                 addImage={addImage}
@@ -2245,6 +2601,7 @@ export default function App() {
                 run={run}
                 purchaseForm={purchaseForm}
                 setPurchaseForm={setPurchaseForm}
+                createPurchaseOrder={createPurchaseOrder}
                 confirmPurchaseOrder={confirmPurchaseOrder}
                 receiveStockManual={receiveStockManual}
                 selectTable={selectTable}
@@ -2322,6 +2679,12 @@ export default function App() {
                 run={run}
                 channelForm={channelForm}
                 setChannelForm={setChannelForm}
+                branchForm={branchForm}
+                setBranchForm={setBranchForm}
+                addBranch={addBranch}
+                salesChannelForm={salesChannelForm}
+                setSalesChannelForm={setSalesChannelForm}
+                addSalesChannel={addSalesChannel}
                 saveChannelPrice={saveChannelPrice}
                 saveInventoryAllocation={saveInventoryAllocation}
                 loadChannelPricesFriendly={loadChannelPricesFriendly}
@@ -2891,11 +3254,23 @@ function ProductPreview({ product, variant, variants, stockRows, branchid }) {
 
 function Products(p) {
   const imageVariants = p.imageForm.productid ? p.options.variants.filter((item) => sameId(productIdOf(item), p.imageForm.productid)) : [];
+  const sizeAttributes = (p.options.attributes || []).filter((item) => first(item, ["attributetype", "attribute_type"], "") === "size");
+  const colorAttributes = (p.options.attributes || []).filter((item) => first(item, ["attributetype", "attribute_type"], "") === "color");
 
   return (
     <>
       <Card title="Hàng hóa - sản phẩm">
         <div className="sales-form-grid">
+          <Field label="Danh mục">
+            <select value={p.productForm.categoryid} onChange={(e) => p.setProductForm({ ...p.productForm, categoryid: e.target.value })}>
+              <option value="">Chọn danh mục</option>
+              {p.options.categories.map((item) => (
+                <option key={categoryIdOf(item)} value={categoryIdOf(item)}>
+                  {categoryLabel(item)}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="Tên sản phẩm">
             <input value={p.productForm.productname} placeholder="Ví dụ: Áo linen nam" onChange={(e) => p.setProductForm({ ...p.productForm, productname: e.target.value })} />
           </Field>
@@ -2907,6 +3282,7 @@ function Products(p) {
               <option value="unisex">Unisex</option>
               <option value="male">Nam</option>
               <option value="female">Nữ</option>
+              <option value="kids">Trẻ em</option>
             </select>
           </Field>
           <Field label="Giá bán mặc định">
@@ -2916,7 +3292,14 @@ function Products(p) {
             <select value={p.productForm.status} onChange={(e) => p.setProductForm({ ...p.productForm, status: e.target.value })}>
               <option value="active">Đang bán</option>
               <option value="inactive">Ngưng bán</option>
+              <option value="discontinued">Ngừng sản xuất</option>
             </select>
+          </Field>
+          <Field label="Bộ sưu tập">
+            <input value={p.productForm.collectionname} placeholder="Summer 2026" onChange={(e) => p.setProductForm({ ...p.productForm, collectionname: e.target.value })} />
+          </Field>
+          <Field label="Mô tả">
+            <input value={p.productForm.description} placeholder="Mô tả ngắn" onChange={(e) => p.setProductForm({ ...p.productForm, description: e.target.value })} />
           </Field>
         </div>
         <ActionRow>
@@ -2946,10 +3329,24 @@ function Products(p) {
             <input value={p.variantForm.barcode} placeholder="Barcode" onChange={(e) => p.setVariantForm({ ...p.variantForm, barcode: e.target.value })} />
           </Field>
           <Field label="Size">
-            <input value={p.variantForm.size} placeholder="Size" onChange={(e) => p.setVariantForm({ ...p.variantForm, size: e.target.value })} />
+            <select value={p.variantForm.sizeattributeid} onChange={(e) => p.setVariantForm({ ...p.variantForm, sizeattributeid: e.target.value })}>
+              <option value="">Không chọn</option>
+              {sizeAttributes.map((item) => (
+                <option key={attributeIdOf(item)} value={attributeIdOf(item)}>
+                  {attributeLabel(item)}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Màu">
-            <input value={p.variantForm.color} placeholder="Color" onChange={(e) => p.setVariantForm({ ...p.variantForm, color: e.target.value })} />
+            <select value={p.variantForm.colorattributeid} onChange={(e) => p.setVariantForm({ ...p.variantForm, colorattributeid: e.target.value })}>
+              <option value="">Không chọn</option>
+              {colorAttributes.map((item) => (
+                <option key={attributeIdOf(item)} value={attributeIdOf(item)}>
+                  {attributeLabel(item)}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Giá vốn">
             <input type="number" min="0" value={p.variantForm.costprice} onChange={(e) => p.setVariantForm({ ...p.variantForm, costprice: e.target.value })} />
@@ -2961,12 +3358,126 @@ function Products(p) {
             <select value={p.variantForm.status} onChange={(e) => p.setVariantForm({ ...p.variantForm, status: e.target.value })}>
               <option value="active">Đang bán</option>
               <option value="inactive">Ngưng bán</option>
+              <option value="out_of_production">Ngừng sản xuất</option>
             </select>
           </Field>
         </div>
         <ActionRow>
           <button onClick={() => p.run(p.addVariant)}>Thêm biến thể</button>
           <button onClick={() => p.run(() => p.selectTable("product_variant"))}>Tải biến thể</button>
+        </ActionRow>
+      </Card>
+
+      <Card title="Danh mục / thuộc tính">
+        <div className="sales-form-grid">
+          <Field label="Tên danh mục">
+            <input value={p.categoryForm.categoryname} placeholder="Ví dụ: Áo khoác" onChange={(e) => p.setCategoryForm({ ...p.categoryForm, categoryname: e.target.value })} />
+          </Field>
+          <Field label="Danh mục cha">
+            <select value={p.categoryForm.parentcategoryid} onChange={(e) => p.setCategoryForm({ ...p.categoryForm, parentcategoryid: e.target.value })}>
+              <option value="">Không có</option>
+              {p.options.categories.map((item) => (
+                <option key={categoryIdOf(item)} value={categoryIdOf(item)}>
+                  {categoryLabel(item)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Thứ tự">
+            <input type="number" value={p.categoryForm.displayorder} onChange={(e) => p.setCategoryForm({ ...p.categoryForm, displayorder: e.target.value })} />
+          </Field>
+          <Field label="Loại thuộc tính">
+            <select value={p.attributeForm.attributetype} onChange={(e) => p.setAttributeForm({ ...p.attributeForm, attributetype: e.target.value })}>
+              <option value="size">Size</option>
+              <option value="color">Màu</option>
+            </select>
+          </Field>
+          <Field label="Giá trị thuộc tính">
+            <input value={p.attributeForm.value} placeholder="M, XL, BLACK..." onChange={(e) => p.setAttributeForm({ ...p.attributeForm, value: e.target.value })} />
+          </Field>
+          <Field label="Tên hiển thị">
+            <input value={p.attributeForm.displayvalue} placeholder="Để trống sẽ dùng giá trị" onChange={(e) => p.setAttributeForm({ ...p.attributeForm, displayvalue: e.target.value })} />
+          </Field>
+          <Field label="Mã màu">
+            <input value={p.attributeForm.hexcode} placeholder="#000000" onChange={(e) => p.setAttributeForm({ ...p.attributeForm, hexcode: e.target.value })} />
+          </Field>
+          <Field label="Thứ tự thuộc tính">
+            <input type="number" value={p.attributeForm.sortorder} onChange={(e) => p.setAttributeForm({ ...p.attributeForm, sortorder: e.target.value })} />
+          </Field>
+        </div>
+        <ActionRow>
+          <button onClick={() => p.run(p.addCategory)}>Thêm danh mục</button>
+          <button onClick={() => p.run(p.addAttribute)}>Thêm thuộc tính</button>
+          <button onClick={() => p.run(() => p.selectTable("product_category"))}>Tải danh mục</button>
+          <button onClick={() => p.run(() => p.selectTable("attribute"))}>Tải thuộc tính</button>
+        </ActionRow>
+      </Card>
+
+      <Card title="Nhà cung cấp / giá nhập">
+        <div className="sales-form-grid">
+          <Field label="Tên nhà cung cấp">
+            <input value={p.supplierForm.suppliername} placeholder="Routine Việt Nam" onChange={(e) => p.setSupplierForm({ ...p.supplierForm, suppliername: e.target.value })} />
+          </Field>
+          <Field label="Mã số thuế / mã NCC">
+            <input value={p.supplierForm.taxcode} placeholder="NCC001" onChange={(e) => p.setSupplierForm({ ...p.supplierForm, taxcode: e.target.value })} />
+          </Field>
+          <Field label="SĐT">
+            <input value={p.supplierForm.phonenumber} onChange={(e) => p.setSupplierForm({ ...p.supplierForm, phonenumber: e.target.value })} />
+          </Field>
+          <Field label="Email">
+            <input value={p.supplierForm.email} onChange={(e) => p.setSupplierForm({ ...p.supplierForm, email: e.target.value })} />
+          </Field>
+          <Field label="Địa chỉ">
+            <input value={p.supplierForm.address} onChange={(e) => p.setSupplierForm({ ...p.supplierForm, address: e.target.value })} />
+          </Field>
+          <Field label="Công nợ ngày">
+            <input type="number" min="0" value={p.supplierForm.paymenttermdays} onChange={(e) => p.setSupplierForm({ ...p.supplierForm, paymenttermdays: e.target.value })} />
+          </Field>
+          <Field label="NCC cho biến thể">
+            <select value={p.supplierProductForm.supplierid} onChange={(e) => p.setSupplierProductForm({ ...p.supplierProductForm, supplierid: e.target.value })}>
+              <option value="">Chọn NCC</option>
+              {p.options.suppliers.map((item) => (
+                <option key={supplierIdOf(item)} value={supplierIdOf(item)}>{supplierLabel(item)}</option>
+              ))}
+            </select>
+          </Field>
+          <ProductVariantSelector
+            products={p.options.products}
+            variants={p.options.variants}
+            productId={p.supplierProductForm.productid}
+            variantId={p.supplierProductForm.variantid}
+            onProductChange={(product) => p.setSupplierProductForm({ ...p.supplierProductForm, productid: productIdOf(product), variantid: "" })}
+            onVariantChange={(variant) =>
+              p.setSupplierProductForm({
+                ...p.supplierProductForm,
+                productid: variant ? productIdOf(variant) : p.supplierProductForm.productid,
+                variantid: variantIdOf(variant),
+                contractprice: variant?.costprice || p.supplierProductForm.contractprice,
+              })
+            }
+          />
+          <Field label="SKU nhà cung cấp">
+            <input value={p.supplierProductForm.suppliersku} onChange={(e) => p.setSupplierProductForm({ ...p.supplierProductForm, suppliersku: e.target.value })} />
+          </Field>
+          <Field label="Giá hợp đồng">
+            <input type="number" min="0" value={p.supplierProductForm.contractprice} onChange={(e) => p.setSupplierProductForm({ ...p.supplierProductForm, contractprice: e.target.value })} />
+          </Field>
+          <Field label="Lead time ngày">
+            <input type="number" min="0" value={p.supplierProductForm.leadtimedays} onChange={(e) => p.setSupplierProductForm({ ...p.supplierProductForm, leadtimedays: e.target.value })} />
+          </Field>
+          <Field label="MOQ">
+            <input type="number" min="1" value={p.supplierProductForm.minorderquantity} onChange={(e) => p.setSupplierProductForm({ ...p.supplierProductForm, minorderquantity: e.target.value })} />
+          </Field>
+        </div>
+        <label className="inline-check">
+          <input type="checkbox" checked={p.supplierProductForm.ispreferred} onChange={(e) => p.setSupplierProductForm({ ...p.supplierProductForm, ispreferred: e.target.checked })} />
+          Nhà cung cấp ưu tiên
+        </label>
+        <ActionRow>
+          <button onClick={() => p.run(p.addSupplier)}>Thêm nhà cung cấp</button>
+          <button onClick={() => p.run(p.saveSupplierProduct)}>Lưu giá nhập theo NCC</button>
+          <button onClick={() => p.run(() => p.selectTable("supplier"))}>Tải NCC</button>
+          <button onClick={() => p.run(() => p.selectTable("supplier_product"))}>Tải bảng giá nhập</button>
         </ActionRow>
       </Card>
 
@@ -3020,6 +3531,16 @@ function Purchase(p) {
     <>
       <Card title="Nhập kho thủ công">
         <div className="sales-form-grid">
+          <Field label="Nhà cung cấp">
+            <select value={p.purchaseForm.supplierid} onChange={(e) => p.setPurchaseForm({ ...p.purchaseForm, supplierid: e.target.value })}>
+              <option value="">Chọn nhà cung cấp</option>
+              {p.options.suppliers.map((item) => (
+                <option key={supplierIdOf(item)} value={supplierIdOf(item)}>
+                  {supplierLabel(item)}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="Chi nhánh nhập">
             <select value={p.purchaseForm.branchid} onChange={(e) => p.setPurchaseForm({ ...p.purchaseForm, branchid: e.target.value })}>
               <option value="">Chọn chi nhánh</option>
@@ -3051,6 +3572,9 @@ function Purchase(p) {
           <Field label="Giá vốn tham khảo">
             <input type="number" min="0" value={p.purchaseForm.unitcost} onChange={(e) => p.setPurchaseForm({ ...p.purchaseForm, unitcost: e.target.value })} />
           </Field>
+          <Field label="Ngày dự kiến">
+            <input type="date" value={p.purchaseForm.expecteddate} onChange={(e) => p.setPurchaseForm({ ...p.purchaseForm, expecteddate: e.target.value })} />
+          </Field>
           <Field label="Mã phiếu nhập">
             <input
               value={p.purchaseForm.purchaseorderid}
@@ -3063,6 +3587,7 @@ function Purchase(p) {
           </Field>
         </div>
         <ActionRow>
+          <button onClick={() => p.run(p.createPurchaseOrder)}>Tạo phiếu nhập chuẩn</button>
           <button onClick={() => p.run(p.receiveStockManual)}>Nhập kho ngay</button>
           <button onClick={() => p.run(p.confirmPurchaseOrder)}>Xác nhận phiếu nhập có sẵn</button>
           <button onClick={() => p.run(() => p.selectTable("purchase_order"))}>Tải phiếu nhập</button>
@@ -3567,6 +4092,58 @@ function Returns(p) {
 function Channels(p) {
   return (
     <>
+      <Card title="Chi nhánh / kênh bán">
+        <div className="sales-form-grid">
+          <Field label="Tên chi nhánh">
+            <input value={p.branchForm.branchname} placeholder="Chi nhánh Quận 3" onChange={(e) => p.setBranchForm({ ...p.branchForm, branchname: e.target.value })} />
+          </Field>
+          <Field label="Loại chi nhánh">
+            <select value={p.branchForm.branchtype} onChange={(e) => p.setBranchForm({ ...p.branchForm, branchtype: e.target.value })}>
+              <option value="retail_store">Cửa hàng bán lẻ</option>
+              <option value="central_warehouse">Kho trung tâm</option>
+              <option value="sub_warehouse">Kho phụ</option>
+            </select>
+          </Field>
+          <Field label="Địa chỉ">
+            <input value={p.branchForm.address} placeholder="Số nhà, đường..." onChange={(e) => p.setBranchForm({ ...p.branchForm, address: e.target.value })} />
+          </Field>
+          <Field label="Tỉnh/thành">
+            <input value={p.branchForm.province} placeholder="TP. Hồ Chí Minh" onChange={(e) => p.setBranchForm({ ...p.branchForm, province: e.target.value })} />
+          </Field>
+          <Field label="SĐT chi nhánh">
+            <input value={p.branchForm.phonenumber} onChange={(e) => p.setBranchForm({ ...p.branchForm, phonenumber: e.target.value })} />
+          </Field>
+          <Field label="Email chi nhánh">
+            <input value={p.branchForm.email} onChange={(e) => p.setBranchForm({ ...p.branchForm, email: e.target.value })} />
+          </Field>
+          <Field label="Giờ mở">
+            <input type="time" value={p.branchForm.opentime} onChange={(e) => p.setBranchForm({ ...p.branchForm, opentime: e.target.value })} />
+          </Field>
+          <Field label="Giờ đóng">
+            <input type="time" value={p.branchForm.closetime} onChange={(e) => p.setBranchForm({ ...p.branchForm, closetime: e.target.value })} />
+          </Field>
+          <Field label="Tên kênh bán">
+            <input value={p.salesChannelForm.channelname} placeholder="POS, Website, Shopee..." onChange={(e) => p.setSalesChannelForm({ ...p.salesChannelForm, channelname: e.target.value })} />
+          </Field>
+          <Field label="Loại kênh">
+            <select value={p.salesChannelForm.channeltype} onChange={(e) => p.setSalesChannelForm({ ...p.salesChannelForm, channeltype: e.target.value })}>
+              <option value="pos">POS</option>
+              <option value="website">Website</option>
+              <option value="shopee">Shopee</option>
+              <option value="tiktok">TikTok</option>
+              <option value="facebook">Facebook</option>
+              <option value="lazada">Lazada</option>
+            </select>
+          </Field>
+        </div>
+        <ActionRow>
+          <button onClick={() => p.run(p.addBranch)}>Thêm chi nhánh</button>
+          <button onClick={() => p.run(p.addSalesChannel)}>Thêm kênh bán</button>
+          <button onClick={() => p.run(() => p.selectTable("branch"))}>Tải chi nhánh</button>
+          <button onClick={() => p.run(() => p.selectTable("sales_channel"))}>Tải kênh</button>
+        </ActionRow>
+      </Card>
+
       <Card title="Kênh bán / giá / phân bổ tồn">
         <div className="sales-form-grid">
           <Field label="Kênh bán">

@@ -4800,6 +4800,85 @@ body.dark .topbar .account-trigger {
   color: #fff1ba;
 }
 
+/* ===== Dense professional forms for expanded database modules ===== */
+.sales-form-grid {
+  align-items: end;
+}
+
+.sales-form-grid .product-variant-picker {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.field {
+  min-width: 0;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  margin-right: 0;
+}
+
+.inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  margin: 6px 0 12px;
+  padding: 8px 12px;
+  border: 1px solid rgba(194, 161, 92, 0.52);
+  border-radius: 12px;
+  background: rgba(255, 253, 247, 0.75);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.inline-check input {
+  width: 18px !important;
+  min-height: 18px !important;
+  margin: 0 !important;
+  accent-color: #075849;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.action-row button {
+  margin: 0 !important;
+  white-space: nowrap;
+}
+
+body.dark .inline-check {
+  background: rgba(12, 40, 35, 0.88);
+  border-color: rgba(214, 181, 109, 0.32);
+  color: #fff1ba;
+}
+
+@media (max-width: 900px) {
+  .sales-form-grid .product-variant-picker {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .sales-form-grid .product-variant-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .action-row button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* ===== Sidebar closed rail and dashboard chart placement fix ===== */
 .topbar-logo {
   display: none;
