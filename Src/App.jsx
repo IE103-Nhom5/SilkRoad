@@ -1233,7 +1233,7 @@ function Stock({ run, selectTable, loadLowStock, rows }) {
       <DataTable rows={rows} />
     </>
   );
-}) {
+} {
   return (
     <>
       <Card title="Kho hàng">
