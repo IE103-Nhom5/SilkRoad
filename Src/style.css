@@ -3802,3 +3802,650 @@ body.dark .pos-checkout .action-row button:first-child {
     transition: transform 0.22s ease;
   }
 }
+
+/* ===== Final UI polish and adaptive layout pass ===== */
+:root {
+  --surface: #fffaf0;
+  --surface-strong: #fffdf7;
+  --surface-soft: #f7edd6;
+  --ink: #033d33;
+  --muted: #746343;
+  --focus: rgba(5, 88, 74, 0.18);
+  --soft-border: rgba(194, 161, 92, 0.52);
+}
+
+html {
+  background: #ebe2d2;
+}
+
+body {
+  background:
+    linear-gradient(135deg, rgba(255, 253, 246, 0.72) 0%, rgba(235, 226, 210, 0.74) 46%, rgba(229, 219, 198, 0.84) 100%),
+    repeating-linear-gradient(90deg, rgba(112, 91, 48, 0.018) 0 1px, transparent 1px 16px);
+  color: var(--ink);
+}
+
+::selection {
+  background: rgba(214, 181, 109, 0.42);
+}
+
+.main {
+  background: transparent;
+}
+
+.content {
+  padding: clamp(14px, 1.7vw, 28px);
+}
+
+.topbar {
+  min-height: 72px;
+  background: rgba(255, 248, 235, 0.92);
+  backdrop-filter: blur(14px);
+  border-bottom-color: rgba(194, 161, 92, 0.46);
+  box-shadow: 0 12px 32px rgba(58, 43, 16, 0.08);
+}
+
+.topbar > b {
+  font-size: clamp(15px, 1.1vw, 18px);
+  color: var(--ink);
+}
+
+button,
+.card button,
+.topbar button,
+.account-dropdown button,
+.sidebar button {
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+
+button:hover,
+.card button:hover,
+.topbar button:hover,
+.account-dropdown button:hover {
+  transform: translateY(-1px);
+}
+
+button:active,
+.card button:active,
+.topbar button:active {
+  transform: translateY(0);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.card {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(255, 248, 235, 0.98));
+  border-color: var(--soft-border);
+  border-radius: 18px;
+  box-shadow: 0 18px 44px rgba(55, 39, 12, 0.11);
+}
+
+.card h2 {
+  color: var(--ink);
+  letter-spacing: 0;
+}
+
+.card h3,
+.card label,
+.field label {
+  color: var(--ink);
+}
+
+.card input,
+.card select,
+.card textarea {
+  width: auto;
+  max-width: 100%;
+  background: rgba(255, 253, 248, 0.96);
+  border-color: rgba(187, 155, 91, 0.58);
+  border-radius: 12px;
+  color: #092f29;
+}
+
+.card input:hover,
+.card select:hover,
+.card textarea:hover {
+  border-color: rgba(8, 83, 70, 0.45);
+}
+
+.card button,
+.topbar button {
+  border-color: rgba(187, 155, 91, 0.62);
+  box-shadow: 0 8px 20px rgba(52, 37, 10, 0.06);
+}
+
+.card button:hover,
+.topbar button:hover {
+  background: #f5e8ca;
+  border-color: rgba(6, 71, 60, 0.45);
+  box-shadow: 0 10px 24px rgba(52, 37, 10, 0.1);
+}
+
+.table-wrap {
+  border: 1px solid rgba(194, 161, 92, 0.52);
+  border-radius: 14px;
+  background: var(--surface-strong);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64);
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #064c3f;
+  color: #fff1ba;
+}
+
+tbody tr {
+  transition: background-color 0.14s ease;
+}
+
+tbody tr:hover {
+  background: rgba(239, 226, 197, 0.52);
+}
+
+.account-menu {
+  top: 24px;
+  right: 26px;
+  align-items: flex-start;
+}
+
+.account-trigger {
+  height: 46px;
+  min-width: 78px;
+  border-radius: 14px !important;
+  background: rgba(255, 250, 240, 0.96) !important;
+}
+
+.account-dropdown {
+  width: min(280px, calc(100vw - 24px));
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(255, 250, 240, 0.98);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 22px 52px rgba(39, 29, 10, 0.2);
+}
+
+.account-dropdown button {
+  min-height: 48px;
+  border: 1px solid rgba(194, 161, 92, 0.48) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 253, 248, 0.75);
+  color: var(--ink);
+}
+
+.account-dropdown button:hover {
+  background: #f5e7c7;
+  border-color: rgba(6, 71, 60, 0.38) !important;
+}
+
+.account-dropdown button.danger {
+  color: #84231d;
+}
+
+.account-profile-card,
+.account-form input,
+.account-form select,
+.account-info-grid,
+.account-action-grid button {
+  border-radius: 12px;
+}
+
+.sidebar {
+  background-color: #01352c;
+  background-blend-mode: soft-light, normal;
+}
+
+.sidebar button {
+  border-radius: 14px !important;
+}
+
+.sidebar button:hover {
+  transform: translateX(2px);
+}
+
+.sidebar button.active {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.sales-form-grid,
+.pos-context-grid,
+.pos-sale-fields,
+.product-variant-picker {
+  align-items: end;
+}
+
+.pos-workspace {
+  gap: clamp(12px, 1.3vw, 18px);
+}
+
+.pos-product-panel,
+.pos-checkout {
+  border-color: rgba(194, 161, 92, 0.52);
+  background: rgba(255, 250, 240, 0.88);
+  border-radius: 16px;
+}
+
+.product-filter-row {
+  gap: 10px;
+}
+
+.product-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  padding: 12px 4px 4px;
+  scrollbar-gutter: stable;
+  align-content: start;
+}
+
+.product-grid::-webkit-scrollbar,
+.table-wrap::-webkit-scrollbar,
+.sidebar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.product-grid::-webkit-scrollbar-thumb,
+.table-wrap::-webkit-scrollbar-thumb,
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(122, 96, 42, 0.38);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+.product-tile {
+  grid-template-rows: clamp(108px, 11vw, 142px) minmax(44px, auto) minmax(20px, auto) minmax(28px, auto);
+  gap: 8px;
+  padding: 10px !important;
+  border-radius: 12px;
+  background: rgba(255, 253, 247, 0.98);
+  box-shadow: 0 10px 24px rgba(62, 45, 14, 0.06);
+  contain: layout paint;
+}
+
+.product-tile:hover,
+.product-tile.active {
+  transform: translateY(-2px);
+  border-color: #075849;
+  background: #fff8e9;
+  box-shadow:
+    0 12px 28px rgba(38, 28, 8, 0.11),
+    0 0 0 2px rgba(8, 84, 70, 0.08);
+}
+
+.product-tile.active {
+  outline: 2px solid rgba(7, 88, 73, 0.28);
+  outline-offset: -4px;
+}
+
+.product-thumb,
+.product-preview-image,
+.cart-product-thumb,
+.product-image-empty {
+  border-radius: 10px;
+}
+
+.product-image-empty {
+  background:
+    linear-gradient(135deg, rgba(255, 250, 236, 0.78), rgba(235, 221, 187, 0.92));
+}
+
+.product-tile-name {
+  min-height: 44px;
+  font-size: 14px;
+  line-height: 1.26;
+  color: var(--ink);
+}
+
+.product-tile-meta {
+  color: var(--muted);
+}
+
+.product-stock-pill {
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.product-branch-hint {
+  border-radius: 12px;
+}
+
+.product-preview {
+  border-radius: 14px;
+  background: rgba(255, 253, 247, 0.98);
+}
+
+.variant-option {
+  border-radius: 12px !important;
+}
+
+.qty-stepper button {
+  min-width: 34px;
+  justify-content: center;
+}
+
+.cart-total,
+.pos-total-box,
+.payment-summary {
+  border-radius: 14px;
+}
+
+.modal {
+  border-radius: 18px;
+  box-shadow: 0 28px 70px rgba(24, 17, 5, 0.22);
+}
+
+.modal input,
+.modal select,
+.modal textarea {
+  width: 100%;
+}
+
+@media (min-width: 901px) {
+  .app-shell.sidebar-open .main {
+    margin-left: var(--sidebar-open-w);
+  }
+
+  .app-shell.sidebar-open .topbar > button:first-child,
+  .app-shell.sidebar-closed .topbar > button:first-child {
+    top: 24px;
+    border-radius: 50% !important;
+  }
+
+  .app-shell.sidebar-open .topbar > button:first-child {
+    left: calc(var(--sidebar-open-w) - 62px);
+  }
+
+  .app-shell.sidebar-closed .topbar > button:first-child {
+    left: 24px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    min-height: 62px;
+    padding-right: 90px;
+  }
+
+  .account-menu {
+    top: 11px;
+    right: 12px;
+  }
+
+  .account-trigger {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 !important;
+  }
+
+  .account-trigger span {
+    display: none;
+  }
+
+  .content {
+    padding: 12px;
+  }
+
+  .card {
+    border-radius: 16px;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    max-height: none;
+  }
+
+  .product-tile {
+    grid-template-rows: 112px minmax(40px, auto) minmax(18px, auto) minmax(28px, auto);
+    padding: 9px !important;
+  }
+
+  .product-tile:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 680px) {
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding-right: 68px;
+  }
+
+  .topbar > button:not(.menu-toggle):not(.account-trigger),
+  .topbar > span {
+    display: none;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .card h2 {
+    font-size: 20px;
+  }
+
+  .pos-product-panel,
+  .pos-checkout {
+    border-radius: 14px;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .product-tile {
+    grid-template-rows: 104px minmax(40px, auto) minmax(18px, auto) minmax(28px, auto);
+  }
+
+  .product-tile-name {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 10px;
+  }
+
+  .topbar {
+    padding-left: 10px;
+  }
+
+  .menu-toggle {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+  }
+
+  .account-menu {
+    top: 10px;
+    right: 10px;
+  }
+
+  .account-dropdown {
+    right: -2px;
+    width: min(286px, calc(100vw - 20px));
+  }
+
+  .product-filter-row,
+  .pos-sale-fields,
+  .pos-context-grid {
+    gap: 8px;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .product-tile {
+    grid-template-rows: 96px minmax(38px, auto) minmax(18px, auto) minmax(28px, auto);
+    padding: 8px !important;
+  }
+
+  .product-tile-meta {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+
+  .product-stock-pill {
+    min-height: 28px;
+    padding-inline: 6px;
+  }
+}
+
+@media (max-width: 360px) {
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .product-tile {
+    grid-template-columns: 92px minmax(0, 1fr);
+    grid-template-rows: minmax(32px, auto) minmax(20px, auto) minmax(28px, auto);
+    align-items: center !important;
+  }
+
+  .product-thumb,
+  .product-image-empty {
+    grid-row: 1 / 4;
+    height: 92px;
+  }
+}
+
+body.dark {
+  background:
+    linear-gradient(135deg, rgba(11, 31, 29, 0.96) 0%, rgba(18, 43, 39, 0.94) 52%, rgba(30, 25, 17, 0.96) 100%),
+    repeating-linear-gradient(90deg, rgba(255, 236, 186, 0.035) 0 1px, transparent 1px 18px);
+  color: #f3e8c8;
+}
+
+body.dark .topbar,
+body.dark .card,
+body.dark .modal,
+body.dark .account-dropdown,
+body.dark .pos-product-panel,
+body.dark .pos-checkout,
+body.dark .product-tile,
+body.dark .product-preview,
+body.dark .table-wrap,
+body.dark .variant-option,
+body.dark .account-profile-card {
+  background: rgba(12, 40, 35, 0.94);
+  border-color: rgba(214, 181, 109, 0.32);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+}
+
+body.dark .topbar button,
+body.dark .card button,
+body.dark .account-trigger,
+body.dark .account-dropdown button {
+  background: rgba(20, 55, 48, 0.96) !important;
+  border-color: rgba(214, 181, 109, 0.38) !important;
+  color: #fff1ba;
+}
+
+body.dark .topbar button:hover,
+body.dark .card button:hover,
+body.dark .account-dropdown button:hover,
+body.dark .product-tile:hover,
+body.dark .product-tile.active,
+body.dark .variant-option:hover,
+body.dark .variant-option.active {
+  background: rgba(24, 72, 62, 0.98) !important;
+  border-color: rgba(242, 212, 138, 0.62) !important;
+}
+
+body.dark .card h2,
+body.dark .card h3,
+body.dark .card label,
+body.dark .field label,
+body.dark .topbar > b,
+body.dark .product-tile-name,
+body.dark .product-preview h3,
+body.dark .variant-option-body b,
+body.dark .qty-stepper span {
+  color: #fff1ba;
+}
+
+body.dark .card input,
+body.dark .card select,
+body.dark .card textarea,
+body.dark .modal input,
+body.dark .modal select,
+body.dark .modal textarea {
+  background: rgba(7, 28, 25, 0.9);
+  border-color: rgba(214, 181, 109, 0.32);
+  color: #f6ebc9;
+}
+
+body.dark .product-tile-meta,
+body.dark .product-preview-kicker,
+body.dark .product-image-empty,
+body.dark .product-grid-empty,
+body.dark .variant-option-body small,
+body.dark .account-profile-card span,
+body.dark .account-info-grid span {
+  color: #d8c491;
+}
+
+body.dark .product-image-empty {
+  background:
+    linear-gradient(135deg, rgba(18, 49, 43, 0.92), rgba(49, 42, 25, 0.92));
+  border-color: rgba(214, 181, 109, 0.34);
+}
+
+body.dark .product-stock-pill,
+body.dark .product-branch-hint {
+  background: rgba(38, 78, 52, 0.7);
+  border-color: rgba(155, 190, 122, 0.42);
+  color: #daf0bd;
+}
+
+body.dark .product-stock-pill.pending {
+  background: rgba(82, 65, 31, 0.8);
+  border-color: rgba(214, 181, 109, 0.38);
+  color: #f4d990;
+}
+
+body.dark .product-stock-pill.empty {
+  background: rgba(84, 36, 28, 0.82);
+  border-color: rgba(224, 132, 101, 0.42);
+  color: #ffc7b5;
+}
+
+body.dark tbody tr:hover {
+  background: rgba(255, 236, 186, 0.07);
+}
