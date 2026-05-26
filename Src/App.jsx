@@ -139,11 +139,13 @@ export default function App() {
   const [transferForm, setTransferForm] = useState({
     frombranchid: "",
     tobranchid: "",
+    productid: "",
     variantid: "",
     quantity: 1,
   });
   const [adjustForm, setAdjustForm] = useState({
     branchid: "",
+    productid: "",
     variantid: "",
     actualquantity: 0,
     note: "",
@@ -151,6 +153,7 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [cartItem, setCartItem] = useState({
     branchid: "",
+    productid: "",
     variantid: "",
     quantity: 1,
     unitprice: 0,
@@ -223,10 +226,25 @@ export default function App() {
 
   async function loadOptions() {
     const [products, variants, branches, roles] = await Promise.all([
-      supabase.from("product").select("productid, productname").order("productname"),
-      supabase.from("product_variant").select("variantid, sku, barcode, sellingprice, productid").order("sku"),
-      supabase.from("branch").select("branchid, branchname").order("branchname"),
-      supabase.from("role").select("roleid, rolename").order("rolename"),
+      supabase
+        .from("product")
+        .select("productid, productname, brand, defaultsellingprice")
+        .order("productname"),
+
+      supabase
+        .from("product_variant")
+        .select("variantid, productid, sku, barcode, size, color, sellingprice")
+        .order("sku"),
+
+      supabase
+        .from("branch")
+        .select("branchid, branchname")
+        .order("branchname"),
+
+      supabase
+        .from("role")
+        .select("roleid, rolename")
+        .order("rolename"),
     ]);
 
     setOptions({
@@ -474,17 +492,60 @@ export default function App() {
   }
 
   function addCart() {
-    if (!cartItem.branchid || !cartItem.variantid) return show("Vui lòng chọn chi nhánh và SKU");
-    const variant = options.variants.find((v) => v.variantid === cartItem.variantid);
+    if (!cartItem.branchid) return show("Vui lòng chọn chi nhánh");
+    if (!cartItem.productid) return show("Vui lòng chọn sản phẩm");
+    if (!cartItem.variantid) return show("Vui lòng chọn biến thể/SKU");
+
+    const branch = options.branches.find(
+      (item) => item.branchid === cartItem.branchid
+    );
+
+    const product = options.products.find(
+      (item) => item.productid === cartItem.productid
+    );
+
+    const variant = options.variants.find(
+      (item) => item.variantid === cartItem.variantid
+    );
+
+    const quantity = Number(cartItem.quantity || 1);
+
+    const unitprice = Number(
+      cartItem.unitprice ||
+        variant?.sellingprice ||
+        product?.defaultsellingprice ||
+        0
+    );
+
+    if (quantity <= 0) return show("Số lượng phải lớn hơn 0");
+    if (unitprice <= 0) return show("Đơn giá phải lớn hơn 0");
+
     setCart([
       ...cart,
       {
-        ...cartItem,
+        branchid: cartItem.branchid,
+        branchname: branch?.branchname || "",
+        productid: cartItem.productid,
+        productname: product?.productname || "",
+        variantid: cartItem.variantid,
         sku: variant?.sku || "",
-        quantity: Number(cartItem.quantity),
-        unitprice: Number(cartItem.unitprice),
+        barcode: variant?.barcode || "",
+        size: variant?.size || "",
+        color: variant?.color || "",
+        quantity,
+        unitprice,
+        total: quantity * unitprice,
       },
     ]);
+
+    setCartItem({
+      ...cartItem,
+      variantid: "",
+      quantity: 1,
+      unitprice: 0,
+    });
+
+    show("Đã thêm sản phẩm vào giỏ");
   }
 
   async function createInvoice() {
@@ -887,54 +948,264 @@ function Dashboard({ run, dashboardData, rows }) {
 }
 
 function Products(p) {
+  const variantListForImage = p.options.variants.filter(
+    (item) => item.productid === p.imageForm.productid
+  );
+
   return (
     <>
-      <Card title="Hàng hóa - sản phẩm">
-        <input placeholder="Tên sản phẩm" onChange={(e) => p.setProductForm({ ...p.productForm, productname: e.target.value })} />
-        <input placeholder="Brand" onChange={(e) => p.setProductForm({ ...p.productForm, brand: e.target.value })} />
-        <input type="number" placeholder="Giá bán" onChange={(e) => p.setProductForm({ ...p.productForm, defaultsellingprice: e.target.value })} />
-        <button onClick={() => p.run(p.addProduct)}>Thêm sản phẩm</button>
-        <button onClick={() => p.run(() => p.selectTable("product"))}>Tải sản phẩm</button>
+      <Card title="Hàng hóa - thêm sản phẩm mới">
+        <div className="sales-form-grid">
+          <div className="field">
+            <label>Tên sản phẩm</label>
+            <input
+              placeholder="Ví dụ: Áo sơ mi linen"
+              value={p.productForm.productname}
+              onChange={(e) =>
+                p.setProductForm({ ...p.productForm, productname: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Thương hiệu</label>
+            <input
+              placeholder="Ví dụ: SilkRoad"
+              value={p.productForm.brand}
+              onChange={(e) =>
+                p.setProductForm({ ...p.productForm, brand: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Giới tính</label>
+            <select
+              value={p.productForm.gender}
+              onChange={(e) =>
+                p.setProductForm({ ...p.productForm, gender: e.target.value })
+              }
+            >
+              <option value="unisex">Unisex</option>
+              <option value="male">Nam</option>
+              <option value="female">Nữ</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Giá bán mặc định</label>
+            <input
+              type="number"
+              min="0"
+              placeholder="Ví dụ: 350000"
+              value={p.productForm.defaultsellingprice}
+              onChange={(e) =>
+                p.setProductForm({
+                  ...p.productForm,
+                  defaultsellingprice: e.target.value,
+                })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Trạng thái</label>
+            <select
+              value={p.productForm.status}
+              onChange={(e) =>
+                p.setProductForm({ ...p.productForm, status: e.target.value })
+              }
+            >
+              <option value="active">Đang bán</option>
+              <option value="inactive">Ngưng bán</option>
+            </select>
+          </div>
+        </div>
+
+        <button onClick={() => p.run(p.addProduct)}>
+          <Plus /> Thêm sản phẩm
+        </button>
+        <button onClick={() => p.run(() => p.selectTable("product"))}>
+          Tải danh sách sản phẩm
+        </button>
       </Card>
 
-      <Card title="Biến thể size/color + SKU/barcode">
-        <select onChange={(e) => p.setVariantForm({ ...p.variantForm, productid: e.target.value })}>
-          <option value="">Chọn sản phẩm</option>
-          {p.options.products.map((item) => (
-            <option key={item.productid} value={item.productid}>
-              {item.productname}
-            </option>
-          ))}
-        </select>
-        <input placeholder="SKU" onChange={(e) => p.setVariantForm({ ...p.variantForm, sku: e.target.value })} />
-        <input placeholder="Barcode" onChange={(e) => p.setVariantForm({ ...p.variantForm, barcode: e.target.value })} />
-        <input placeholder="Size" onChange={(e) => p.setVariantForm({ ...p.variantForm, size: e.target.value })} />
-        <input placeholder="Color" onChange={(e) => p.setVariantForm({ ...p.variantForm, color: e.target.value })} />
-        <button onClick={() => p.run(p.addVariant)}>Thêm biến thể</button>
-        <button onClick={() => p.run(() => p.selectTable("product_variant"))}>Tải biến thể</button>
+      <Card title="Biến thể sản phẩm - size / màu / SKU / barcode">
+        <div className="sales-form-grid">
+          <div className="field">
+            <label>Sản phẩm cha</label>
+            <select
+              value={p.variantForm.productid}
+              onChange={(e) =>
+                p.setVariantForm({ ...p.variantForm, productid: e.target.value })
+              }
+            >
+              <option value="">Chọn sản phẩm</option>
+              {p.options.products.map((item) => (
+                <option key={item.productid} value={item.productid}>
+                  {item.productname}
+                  {item.brand ? ` - ${item.brand}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label>SKU</label>
+            <input
+              placeholder="Ví dụ: ASM-LINEN-M-BLK"
+              value={p.variantForm.sku}
+              onChange={(e) =>
+                p.setVariantForm({ ...p.variantForm, sku: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Barcode</label>
+            <input
+              placeholder="Ví dụ: 893..."
+              value={p.variantForm.barcode}
+              onChange={(e) =>
+                p.setVariantForm({ ...p.variantForm, barcode: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Size</label>
+            <select
+              value={p.variantForm.size}
+              onChange={(e) =>
+                p.setVariantForm({ ...p.variantForm, size: e.target.value })
+              }
+            >
+              <option value="XS">XS</option>
+              <option value="S">S</option>
+              <option value="M">M</option>
+              <option value="L">L</option>
+              <option value="XL">XL</option>
+              <option value="XXL">XXL</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Màu</label>
+            <input
+              placeholder="Ví dụ: Đen"
+              value={p.variantForm.color}
+              onChange={(e) =>
+                p.setVariantForm({ ...p.variantForm, color: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Giá nhập</label>
+            <input
+              type="number"
+              min="0"
+              value={p.variantForm.costprice}
+              onChange={(e) =>
+                p.setVariantForm({ ...p.variantForm, costprice: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Giá bán</label>
+            <input
+              type="number"
+              min="0"
+              value={p.variantForm.sellingprice}
+              onChange={(e) =>
+                p.setVariantForm({ ...p.variantForm, sellingprice: e.target.value })
+              }
+            />
+          </div>
+        </div>
+
+        <button onClick={() => p.run(p.addVariant)}>
+          <Plus /> Thêm biến thể
+        </button>
+        <button onClick={() => p.run(() => p.selectTable("product_variant"))}>
+          Tải danh sách biến thể
+        </button>
       </Card>
 
-      <Card title="Upload ảnh bằng URL">
-        <Upload />
-        <select onChange={(e) => p.setImageForm({ ...p.imageForm, productid: e.target.value })}>
-          <option value="">Chọn sản phẩm</option>
-          {p.options.products.map((item) => (
-            <option key={item.productid} value={item.productid}>
-              {item.productname}
-            </option>
-          ))}
-        </select>
-        <select onChange={(e) => p.setImageForm({ ...p.imageForm, variantid: e.target.value })}>
-          <option value="">Ảnh chung sản phẩm</option>
-          {p.options.variants.map((item) => (
-            <option key={item.variantid} value={item.variantid}>
-              {item.sku} - {item.barcode}
-            </option>
-          ))}
-        </select>
-        <input placeholder="Image URL" onChange={(e) => p.setImageForm({ ...p.imageForm, imageurl: e.target.value })} />
-        <button onClick={() => p.run(p.addImage)}>Lưu ảnh</button>
-        <button onClick={() => p.run(() => p.selectTable("product_image"))}>Tải ảnh</button>
+      <Card title="Ảnh sản phẩm">
+        <div className="sales-form-grid">
+          <div className="field">
+            <label>Sản phẩm</label>
+            <select
+              value={p.imageForm.productid}
+              onChange={(e) =>
+                p.setImageForm({
+                  ...p.imageForm,
+                  productid: e.target.value,
+                  variantid: "",
+                })
+              }
+            >
+              <option value="">Chọn sản phẩm</option>
+              {p.options.products.map((item) => (
+                <option key={item.productid} value={item.productid}>
+                  {item.productname}
+                  {item.brand ? ` - ${item.brand}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Biến thể áp dụng</label>
+            <select
+              value={p.imageForm.variantid}
+              disabled={!p.imageForm.productid}
+              onChange={(e) =>
+                p.setImageForm({ ...p.imageForm, variantid: e.target.value })
+              }
+            >
+              <option value="">Ảnh chung cho sản phẩm</option>
+              {variantListForImage.map((item) => (
+                <option key={item.variantid} value={item.variantid}>
+                  {item.sku}
+                  {item.size ? ` - Size ${item.size}` : ""}
+                  {item.color ? ` - ${item.color}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Link ảnh</label>
+            <input
+              placeholder="Dán URL ảnh"
+              value={p.imageForm.imageurl}
+              onChange={(e) =>
+                p.setImageForm({ ...p.imageForm, imageurl: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Mô tả ảnh</label>
+            <input
+              placeholder="Ví dụ: Ảnh mặt trước"
+              value={p.imageForm.alttext}
+              onChange={(e) =>
+                p.setImageForm({ ...p.imageForm, alttext: e.target.value })
+              }
+            />
+          </div>
+        </div>
+
+        <button onClick={() => p.run(p.addImage)}>
+          <Upload /> Lưu ảnh
+        </button>
+        <button onClick={() => p.run(() => p.selectTable("product_image"))}>
+          Tải danh sách ảnh
+        </button>
       </Card>
 
       <DataTable rows={p.rows} />
@@ -943,6 +1214,26 @@ function Products(p) {
 }
 
 function Stock({ run, selectTable, loadLowStock, rows }) {
+  return (
+    <>
+      <Card title="Kho hàng">
+        <p className="muted">
+          Chọn chức năng cần xem. Dữ liệu tồn kho sẽ hiển thị ở bảng bên dưới.
+        </p>
+        <button onClick={() => run(() => selectTable("stock"))}>
+          Xem tồn kho hiện tại
+        </button>
+        <button onClick={() => run(() => selectTable("stock_history"))}>
+          Lịch sử nhập / xuất / kiểm kho
+        </button>
+        <button onClick={() => run(loadLowStock)}>
+          <AlertTriangle /> Cảnh báo sắp hết hàng
+        </button>
+      </Card>
+      <DataTable rows={rows} />
+    </>
+  );
+}) {
   return (
     <>
       <Card title="Kho hàng">
@@ -958,101 +1249,381 @@ function Stock({ run, selectTable, loadLowStock, rows }) {
 }
 
 function Transfer(p) {
+  const filteredVariants = p.options.variants.filter(
+    (item) => item.productid === p.transferForm.productid
+  );
+
   return (
     <Card title="Chuyển kho">
-      <select onChange={(e) => p.setTransferForm({ ...p.transferForm, frombranchid: e.target.value })}>
-        <option value="">Chi nhánh gửi</option>
-        {p.options.branches.map((item) => (
-          <option key={item.branchid} value={item.branchid}>
-            {item.branchname}
-          </option>
-        ))}
-      </select>
-      <select onChange={(e) => p.setTransferForm({ ...p.transferForm, tobranchid: e.target.value })}>
-        <option value="">Chi nhánh nhận</option>
-        {p.options.branches.map((item) => (
-          <option key={item.branchid} value={item.branchid}>
-            {item.branchname}
-          </option>
-        ))}
-      </select>
-      <select onChange={(e) => p.setTransferForm({ ...p.transferForm, variantid: e.target.value })}>
-        <option value="">Chọn SKU</option>
-        {p.options.variants.map((item) => (
-          <option key={item.variantid} value={item.variantid}>
-            {item.sku} - {item.barcode}
-          </option>
-        ))}
-      </select>
-      <input type="number" placeholder="Số lượng" onChange={(e) => p.setTransferForm({ ...p.transferForm, quantity: e.target.value })} />
+      <div className="sales-form-grid">
+        <div className="field">
+          <label>Chi nhánh gửi</label>
+          <select
+            value={p.transferForm.frombranchid}
+            onChange={(e) =>
+              p.setTransferForm({ ...p.transferForm, frombranchid: e.target.value })
+            }
+          >
+            <option value="">Chọn chi nhánh gửi</option>
+            {p.options.branches.map((item) => (
+              <option key={item.branchid} value={item.branchid}>
+                {item.branchname}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label>Chi nhánh nhận</label>
+          <select
+            value={p.transferForm.tobranchid}
+            onChange={(e) =>
+              p.setTransferForm({ ...p.transferForm, tobranchid: e.target.value })
+            }
+          >
+            <option value="">Chọn chi nhánh nhận</option>
+            {p.options.branches.map((item) => (
+              <option key={item.branchid} value={item.branchid}>
+                {item.branchname}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label>Sản phẩm</label>
+          <select
+            value={p.transferForm.productid}
+            onChange={(e) =>
+              p.setTransferForm({
+                ...p.transferForm,
+                productid: e.target.value,
+                variantid: "",
+              })
+            }
+          >
+            <option value="">Chọn sản phẩm</option>
+            {p.options.products.map((item) => (
+              <option key={item.productid} value={item.productid}>
+                {item.productname}
+                {item.brand ? ` - ${item.brand}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label>Biến thể / SKU</label>
+          <select
+            value={p.transferForm.variantid}
+            disabled={!p.transferForm.productid}
+            onChange={(e) =>
+              p.setTransferForm({ ...p.transferForm, variantid: e.target.value })
+            }
+          >
+            <option value="">
+              {p.transferForm.productid ? "Chọn size/màu/SKU" : "Chọn sản phẩm trước"}
+            </option>
+            {filteredVariants.map((item) => (
+              <option key={item.variantid} value={item.variantid}>
+                {item.sku}
+                {item.size ? ` - Size ${item.size}` : ""}
+                {item.color ? ` - ${item.color}` : ""}
+                {item.barcode ? ` - ${item.barcode}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label>Số lượng chuyển</label>
+          <input
+            type="number"
+            min="1"
+            value={p.transferForm.quantity}
+            onChange={(e) =>
+              p.setTransferForm({ ...p.transferForm, quantity: e.target.value })
+            }
+          />
+        </div>
+      </div>
+
       <button onClick={() => p.run(p.transferStock)}>Xác nhận chuyển kho</button>
     </Card>
   );
 }
 
 function Adjustment(p) {
+  const filteredVariants = p.options.variants.filter(
+    (item) => item.productid === p.adjustForm.productid
+  );
+
   return (
     <Card title="Kiểm kho">
-      <select onChange={(e) => p.setAdjustForm({ ...p.adjustForm, branchid: e.target.value })}>
-        <option value="">Chọn chi nhánh</option>
-        {p.options.branches.map((item) => (
-          <option key={item.branchid} value={item.branchid}>
-            {item.branchname}
-          </option>
-        ))}
-      </select>
-      <select onChange={(e) => p.setAdjustForm({ ...p.adjustForm, variantid: e.target.value })}>
-        <option value="">Chọn SKU</option>
-        {p.options.variants.map((item) => (
-          <option key={item.variantid} value={item.variantid}>
-            {item.sku} - {item.barcode}
-          </option>
-        ))}
-      </select>
-      <input type="number" placeholder="Số lượng thực tế" onChange={(e) => p.setAdjustForm({ ...p.adjustForm, actualquantity: e.target.value })} />
-      <input placeholder="Ghi chú" onChange={(e) => p.setAdjustForm({ ...p.adjustForm, note: e.target.value })} />
+      <div className="sales-form-grid">
+        <div className="field">
+          <label>Chi nhánh kiểm kho</label>
+          <select
+            value={p.adjustForm.branchid}
+            onChange={(e) =>
+              p.setAdjustForm({ ...p.adjustForm, branchid: e.target.value })
+            }
+          >
+            <option value="">Chọn chi nhánh</option>
+            {p.options.branches.map((item) => (
+              <option key={item.branchid} value={item.branchid}>
+                {item.branchname}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label>Sản phẩm</label>
+          <select
+            value={p.adjustForm.productid}
+            onChange={(e) =>
+              p.setAdjustForm({
+                ...p.adjustForm,
+                productid: e.target.value,
+                variantid: "",
+              })
+            }
+          >
+            <option value="">Chọn sản phẩm</option>
+            {p.options.products.map((item) => (
+              <option key={item.productid} value={item.productid}>
+                {item.productname}
+                {item.brand ? ` - ${item.brand}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label>Biến thể / SKU</label>
+          <select
+            value={p.adjustForm.variantid}
+            disabled={!p.adjustForm.productid}
+            onChange={(e) =>
+              p.setAdjustForm({ ...p.adjustForm, variantid: e.target.value })
+            }
+          >
+            <option value="">
+              {p.adjustForm.productid ? "Chọn size/màu/SKU" : "Chọn sản phẩm trước"}
+            </option>
+            {filteredVariants.map((item) => (
+              <option key={item.variantid} value={item.variantid}>
+                {item.sku}
+                {item.size ? ` - Size ${item.size}` : ""}
+                {item.color ? ` - ${item.color}` : ""}
+                {item.barcode ? ` - ${item.barcode}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label>Số lượng thực tế</label>
+          <input
+            type="number"
+            min="0"
+            value={p.adjustForm.actualquantity}
+            onChange={(e) =>
+              p.setAdjustForm({ ...p.adjustForm, actualquantity: e.target.value })
+            }
+          />
+        </div>
+
+        <div className="field">
+          <label>Ghi chú kiểm kho</label>
+          <input
+            placeholder="Ví dụ: Lệch tồn sau kiểm kê"
+            value={p.adjustForm.note}
+            onChange={(e) =>
+              p.setAdjustForm({ ...p.adjustForm, note: e.target.value })
+            }
+          />
+        </div>
+      </div>
+
       <button onClick={() => p.run(p.adjustStock)}>Hoàn tất kiểm kho</button>
     </Card>
   );
 }
 
 function Orders(p) {
+  const filteredVariants = p.options.variants.filter(
+    (item) => item.productid === p.cartItem.productid
+  );
+
+  const selectedProduct = p.options.products.find(
+    (item) => item.productid === p.cartItem.productid
+  );
+
+  const cartTotal = p.cart.reduce(
+    (sum, item) => sum + Number(item.total || item.quantity * item.unitprice || 0),
+    0
+  );
+
   return (
     <>
-      <Card title="Bán hàng - giỏ hàng đa chi nhánh">
-        <select onChange={(e) => p.setCartItem({ ...p.cartItem, branchid: e.target.value })}>
-          <option value="">Chọn chi nhánh</option>
-          {p.options.branches.map((item) => (
-            <option key={item.branchid} value={item.branchid}>
-              {item.branchname}
-            </option>
-          ))}
-        </select>
-        <select
-          onChange={(e) => {
-            const selected = p.options.variants.find((item) => item.variantid === e.target.value);
-            p.setCartItem({ ...p.cartItem, variantid: e.target.value, unitprice: selected?.sellingprice || p.cartItem.unitprice });
-          }}
-        >
-          <option value="">Chọn SKU</option>
-          {p.options.variants.map((item) => (
-            <option key={item.variantid} value={item.variantid}>
-              {item.sku} - {item.barcode}
-            </option>
-          ))}
-        </select>
-        <input type="number" placeholder="SL" value={p.cartItem.quantity} onChange={(e) => p.setCartItem({ ...p.cartItem, quantity: e.target.value })} />
-        <input type="number" placeholder="Đơn giá" value={p.cartItem.unitprice} onChange={(e) => p.setCartItem({ ...p.cartItem, unitprice: e.target.value })} />
+      <Card title="Bán hàng - chọn sản phẩm">
+        <div className="sales-form-grid">
+          <div className="field">
+            <label>Chi nhánh bán</label>
+            <select
+              value={p.cartItem.branchid}
+              onChange={(e) =>
+                p.setCartItem({ ...p.cartItem, branchid: e.target.value })
+              }
+            >
+              <option value="">Chọn chi nhánh</option>
+              {p.options.branches.map((item) => (
+                <option key={item.branchid} value={item.branchid}>
+                  {item.branchname}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Sản phẩm</label>
+            <select
+              value={p.cartItem.productid}
+              onChange={(e) =>
+                p.setCartItem({
+                  ...p.cartItem,
+                  productid: e.target.value,
+                  variantid: "",
+                  unitprice: 0,
+                })
+              }
+            >
+              <option value="">Chọn sản phẩm</option>
+              {p.options.products.map((item) => (
+                <option key={item.productid} value={item.productid}>
+                  {item.productname}
+                  {item.brand ? ` - ${item.brand}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Biến thể / SKU</label>
+            <select
+              value={p.cartItem.variantid}
+              disabled={!p.cartItem.productid}
+              onChange={(e) => {
+                const selectedVariant = p.options.variants.find(
+                  (item) => item.variantid === e.target.value
+                );
+
+                p.setCartItem({
+                  ...p.cartItem,
+                  variantid: e.target.value,
+                  unitprice:
+                    selectedVariant?.sellingprice ||
+                    selectedProduct?.defaultsellingprice ||
+                    0,
+                });
+              }}
+            >
+              <option value="">
+                {p.cartItem.productid ? "Chọn size/màu/SKU" : "Chọn sản phẩm trước"}
+              </option>
+              {filteredVariants.map((item) => (
+                <option key={item.variantid} value={item.variantid}>
+                  {item.sku}
+                  {item.size ? ` - Size ${item.size}` : ""}
+                  {item.color ? ` - ${item.color}` : ""}
+                  {item.barcode ? ` - ${item.barcode}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Số lượng</label>
+            <input
+              type="number"
+              min="1"
+              value={p.cartItem.quantity}
+              onChange={(e) =>
+                p.setCartItem({ ...p.cartItem, quantity: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Đơn giá</label>
+            <input
+              type="number"
+              min="0"
+              value={p.cartItem.unitprice}
+              onChange={(e) =>
+                p.setCartItem({ ...p.cartItem, unitprice: e.target.value })
+              }
+            />
+          </div>
+        </div>
+
         <button onClick={p.addCart}>
-          <Plus /> Thêm giỏ
+          <Plus /> Thêm vào giỏ
         </button>
         <button onClick={() => p.run(p.createInvoice)}>Tạo hóa đơn</button>
         <button onClick={() => p.setCart([])}>Xóa giỏ</button>
-        <DataTable rows={p.cart} />
+      </Card>
+
+      <Card title="Giỏ hàng">
+        {p.cart.length === 0 ? (
+          <p className="muted">Chưa có sản phẩm trong giỏ</p>
+        ) : (
+          <>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Chi nhánh</th>
+                    <th>Sản phẩm</th>
+                    <th>SKU</th>
+                    <th>Barcode</th>
+                    <th>Size</th>
+                    <th>Màu</th>
+                    <th>SL</th>
+                    <th>Đơn giá</th>
+                    <th>Thành tiền</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {p.cart.map((item, index) => (
+                    <tr key={index}>
+                      <td>{item.branchname}</td>
+                      <td>{item.productname}</td>
+                      <td>{item.sku}</td>
+                      <td>{item.barcode}</td>
+                      <td>{item.size}</td>
+                      <td>{item.color}</td>
+                      <td>{item.quantity}</td>
+                      <td>{money(item.unitprice)}</td>
+                      <td>{money(item.total || item.quantity * item.unitprice)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="cart-total">
+              Tổng tiền: <b>{money(cartTotal)}</b>
+            </div>
+          </>
+        )}
       </Card>
 
       <Card title="Đơn hàng / trạng thái">
-        <button onClick={() => p.run(() => p.selectTable("orders"))}>Tải đơn hàng</button>
+        <button onClick={() => p.run(() => p.selectTable("orders"))}>
+          Tải đơn hàng
+        </button>
         <DataTable rows={p.rows} />
       </Card>
     </>
@@ -1062,19 +1633,79 @@ function Orders(p) {
 function UsersPage(p) {
   return (
     <>
-      <Card title="RBAC - tạo/cập nhật nhân viên">
-        <input placeholder="Họ tên" onChange={(e) => p.setUserForm({ ...p.userForm, fullname: e.target.value })} />
-        <input placeholder="username" onChange={(e) => p.setUserForm({ ...p.userForm, username: e.target.value })} />
-        <input placeholder="email Auth" onChange={(e) => p.setUserForm({ ...p.userForm, email: e.target.value })} />
-        <select onChange={(e) => p.setUserForm({ ...p.userForm, rolename: e.target.value })}>
-          <option>sales_staff</option>
-          <option>warehouse_staff</option>
-          <option>branch_manager</option>
-          <option>admin</option>
-        </select>
-        <button onClick={() => p.run(p.createOrUpdateUser)}>Lưu role</button>
-        <button onClick={() => p.run(() => p.selectTable("users"))}>Xem users</button>
-        <button onClick={() => p.run(() => p.selectTable("role"))}>Xem role</button>
+      <Card title="RBAC - phân quyền nhân viên">
+        <div className="sales-form-grid">
+          <div className="field">
+            <label>Họ tên nhân viên</label>
+            <input
+              placeholder="Ví dụ: Trần Đức Mạnh"
+              value={p.userForm.fullname}
+              onChange={(e) =>
+                p.setUserForm({ ...p.userForm, fullname: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Tên đăng nhập</label>
+            <input
+              placeholder="Ví dụ: tranducmanh"
+              value={p.userForm.username}
+              onChange={(e) =>
+                p.setUserForm({ ...p.userForm, username: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Email Auth</label>
+            <input
+              placeholder="Email đã tạo trong Supabase Auth"
+              value={p.userForm.email}
+              onChange={(e) =>
+                p.setUserForm({ ...p.userForm, email: e.target.value })
+              }
+            />
+          </div>
+
+          <div className="field">
+            <label>Vai trò</label>
+            <select
+              value={p.userForm.rolename}
+              onChange={(e) =>
+                p.setUserForm({ ...p.userForm, rolename: e.target.value })
+              }
+            >
+              <option value="sales_staff">Nhân viên bán hàng</option>
+              <option value="warehouse_staff">Nhân viên kho</option>
+              <option value="branch_manager">Quản lý chi nhánh</option>
+              <option value="admin">Quản trị viên</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Trạng thái</label>
+            <select
+              value={p.userForm.status}
+              onChange={(e) =>
+                p.setUserForm({ ...p.userForm, status: e.target.value })
+              }
+            >
+              <option value="active">Đang hoạt động</option>
+              <option value="inactive">Ngưng hoạt động</option>
+            </select>
+          </div>
+        </div>
+
+        <button onClick={() => p.run(p.createOrUpdateUser)}>
+          Lưu nhân viên và phân quyền
+        </button>
+        <button onClick={() => p.run(() => p.selectTable("users"))}>
+          Xem danh sách nhân viên
+        </button>
+        <button onClick={() => p.run(() => p.selectTable("role"))}>
+          Xem danh sách vai trò
+        </button>
       </Card>
       <DataTable rows={p.rows} />
     </>

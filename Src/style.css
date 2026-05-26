@@ -2077,3 +2077,61 @@ table {
   }
 }
 
+
+/* =========================
+   USER FRIENDLY FORMS
+   Chọn tên sản phẩm / chi nhánh / SKU thay vì nhập ID
+========================= */
+
+.sales-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-weight: 800;
+  color: #073d31;
+  font-size: 13px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+}
+
+.cart-total {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: #f4e8c8;
+  border: 1px solid #d7bd7c;
+  border-radius: 12px;
+  color: #073d31;
+  font-size: 18px;
+  text-align: right;
+}
+
+.cart-total b {
+  font-size: 22px;
+}
+
+body.dark .cart-total {
+  background: #172520;
+  border-color: #35594e;
+  color: #f7dc91;
+}
+
+@media (max-width: 900px) {
+  .sales-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
