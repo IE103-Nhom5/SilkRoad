@@ -633,6 +633,26 @@ export default function App() {
   }, [dark]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    let lastIsDesktop = window.innerWidth > 960;
+
+    function syncSidebarForViewport() {
+      const isDesktop = window.innerWidth > 960;
+      if (isDesktop !== lastIsDesktop) {
+        lastIsDesktop = isDesktop;
+        setSidebar(isDesktop);
+      }
+    }
+
+    window.addEventListener("resize", syncSidebarForViewport);
+    window.addEventListener("orientationchange", syncSidebarForViewport);
+    return () => {
+      window.removeEventListener("resize", syncSidebarForViewport);
+      window.removeEventListener("orientationchange", syncSidebarForViewport);
+    };
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem("silkroad-held-carts", JSON.stringify(heldCarts.slice(0, 10)));
   }, [heldCarts]);
 

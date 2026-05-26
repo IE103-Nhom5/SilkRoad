@@ -3223,6 +3223,10 @@ body.dark .pos-checkout .action-row button:first-child {
     padding: 10px 14px;
   }
 
+  .topbar > span {
+    display: none;
+  }
+
   .topbar > b {
     min-width: 0;
     overflow: hidden;
@@ -3246,7 +3250,14 @@ body.dark .pos-checkout .action-row button:first-child {
   .product-grid,
   .variant-list,
   .pos-checkout .table-wrap {
-    max-height: none;
+    max-height: 46vh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pos-checkout {
+    padding: 10px;
+    gap: 10px;
   }
 
   .table-wrap {
@@ -3274,7 +3285,8 @@ body.dark .pos-checkout .action-row button:first-child {
   }
 
   .topbar {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    min-height: 56px;
   }
 
   .topbar button {
@@ -3289,6 +3301,7 @@ body.dark .pos-checkout .action-row button:first-child {
 
   .product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 44vh;
     gap: 8px;
   }
 
@@ -3345,6 +3358,18 @@ body.dark .pos-checkout .action-row button:first-child {
   .pos-checkout .cart-total {
     font-size: 13px;
   }
+
+  .pos-product-panel {
+    padding: 10px;
+  }
+
+  .product-filter-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .product-filter-row button {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 480px) {
@@ -3372,13 +3397,13 @@ body.dark .pos-checkout .action-row button:first-child {
 
   .action-row,
   .payment-tabs,
-  .product-filter-row,
-  .pos-checkout .action-row {
+  .product-filter-row {
     grid-template-columns: 1fr;
   }
 
   .product-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 42vh;
   }
 
   .product-preview {
@@ -3405,5 +3430,32 @@ body.dark .pos-checkout .action-row button:first-child {
 
   table {
     min-width: 620px;
+  }
+}
+
+@media (max-width: 380px) {
+  .content {
+    padding: 8px;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  .topbar {
+    padding: 8px;
+  }
+
+  .topbar button {
+    padding: 7px 8px;
+  }
+
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .product-tile {
+    min-height: 160px;
+    grid-template-rows: 78px auto auto 26px;
   }
 }
