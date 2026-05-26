@@ -520,7 +520,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [page, setPage] = useState("dashboard");
   const [dark, setDark] = useState(localStorage.getItem("dark") === "1");
-  const [sidebar, setSidebar] = useState(true);
+  const [sidebar, setSidebar] = useState(() => (typeof window === "undefined" ? true : window.innerWidth > 960));
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(null);
@@ -1493,13 +1493,21 @@ export default function App() {
             <small>{roleName()}</small>
           </div>
           {MENU.filter(([key]) => can(key)).map(([key, label, Icon]) => (
-            <button key={key} className={page === key ? "active" : ""} onClick={() => setPage(key)}>
+            <button
+              key={key}
+              className={page === key ? "active" : ""}
+              onClick={() => {
+                setPage(key);
+                if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebar(false);
+              }}
+            >
               <Icon size={18} />
               {label}
             </button>
           ))}
         </aside>
       )}
+      {sidebar && <button type="button" className="app-scrim" aria-label="Đóng menu" onClick={() => setSidebar(false)} />}
 
       <main className="main">
         <header className="topbar">

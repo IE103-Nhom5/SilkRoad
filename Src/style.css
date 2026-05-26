@@ -3151,3 +3151,259 @@ body.dark .pos-checkout .action-row button:first-child {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Unified responsive overrides ===== */
+.app-scrim {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .content {
+    padding: 18px;
+  }
+
+  .card {
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  .card h2 {
+    font-size: 22px;
+    margin-bottom: 16px;
+  }
+
+  .topbar {
+    height: auto;
+    min-height: 68px;
+    padding: 12px 18px;
+    gap: 10px;
+  }
+
+  .sales-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --sidebar-w: 0px;
+  }
+
+  .main,
+  .app-shell.sidebar-closed .main,
+  .app-shell.sidebar-open .main {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .sidebar {
+    width: min(82vw, 320px) !important;
+    min-width: min(82vw, 320px) !important;
+    max-width: min(82vw, 320px) !important;
+    z-index: 80;
+    overflow-y: auto !important;
+    box-shadow: 18px 0 40px rgba(0, 0, 0, 0.28);
+  }
+
+  .app-shell.sidebar-open .app-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    border: 0;
+    background: rgba(8, 20, 16, 0.45);
+  }
+
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    padding: 10px 14px;
+  }
+
+  .topbar > b {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
+  }
+
+  .content {
+    padding: 14px;
+  }
+
+  .sales-form-grid,
+  .product-variant-picker,
+  .pos-workspace,
+  .pos-context-grid,
+  .pos-sale-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .product-grid,
+  .variant-list,
+  .pos-checkout .table-wrap {
+    max-height: none;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 680px;
+  }
+}
+
+@media (max-width: 640px) {
+  .content {
+    padding: 12px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .card h2 {
+    font-size: 20px;
+  }
+
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .topbar button {
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+
+  .topbar button:last-child span,
+  .topbar button:last-child svg + * {
+    display: none;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .product-tile {
+    min-height: 176px;
+    grid-template-rows: 88px auto auto 26px;
+    padding: 8px;
+  }
+
+  .product-tile-name {
+    min-height: 34px;
+    font-size: 13px;
+  }
+
+  .product-tile-meta,
+  .product-stock-pill,
+  .variant-option-body small,
+  .picker-help {
+    font-size: 11px;
+  }
+
+  .product-preview {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .product-preview-image {
+    min-height: 76px;
+  }
+
+  .product-preview h3 {
+    font-size: 14px;
+  }
+
+  .variant-option {
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+    min-height: 58px !important;
+    padding: 7px !important;
+  }
+
+  .variant-option-thumb {
+    width: 46px;
+    height: 46px;
+  }
+
+  .held-cart-item {
+    grid-template-columns: 1fr 62px 62px;
+  }
+
+  .qty-stepper {
+    grid-template-columns: 26px minmax(24px, auto) 26px;
+  }
+
+  .pos-checkout .cart-total {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 88vw !important;
+    min-width: 88vw !important;
+    max-width: 88vw !important;
+  }
+
+  .topbar {
+    gap: 8px;
+  }
+
+  .topbar > b {
+    font-size: 14px;
+  }
+
+  .card input,
+  .card select,
+  .card textarea,
+  .card button {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .action-row,
+  .payment-tabs,
+  .product-filter-row,
+  .pos-checkout .action-row {
+    grid-template-columns: 1fr;
+  }
+
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .product-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .held-cart-item {
+    grid-template-columns: 1fr;
+  }
+
+  .held-cart-item button {
+    width: 100%;
+  }
+
+  .cart-product-cell {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .cart-product-thumb {
+    width: 36px;
+    height: 36px;
+  }
+
+  table {
+    min-width: 620px;
+  }
+}
