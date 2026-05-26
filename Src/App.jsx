@@ -151,7 +151,7 @@ function primaryVariantImage(variant, images = []) {
   const variantId = variantIdOf(variant);
   const productId = productIdOf(variant);
   return (
-    sortImages(images).find((image) => variantIdOf(image) === variantId && imageUrlOf(image)) ||
+    sortImages(images).find((image) => sameId(variantIdOf(image), variantId) && imageUrlOf(image)) ||
     primaryProductImage({ productid: productId }, images) ||
     null
   );
@@ -183,8 +183,8 @@ function stockViewRows(stockRows, options, onlyLowStock = false) {
       return quantity <= min;
     })
     .map((stockItem) => {
-      const branch = options.branches.find((item) => branchIdOf(item) === branchIdOf(stockItem));
-      const variant = options.variants.find((item) => variantIdOf(item) === variantIdOf(stockItem));
+      const branch = options.branches.find((item) => sameId(branchIdOf(item), branchIdOf(stockItem)));
+      const variant = options.variants.find((item) => sameId(variantIdOf(item), variantIdOf(stockItem)));
       const quantity = Number(stockItem.quantity || 0);
       const reserved = Number(stockItem.reservedquantity || stockItem.reserved_quantity || 0);
 
@@ -205,8 +205,8 @@ function stockViewRows(stockRows, options, onlyLowStock = false) {
 function productViewRows(products, variants, images = []) {
   return (products || []).map((product) => {
     const productId = productIdOf(product);
-    const productVariants = variants.filter((variant) => productIdOf(variant) === productId);
-    const productImages = images.filter((image) => productIdOf(image) === productId);
+    const productVariants = variants.filter((variant) => sameId(productIdOf(variant), productId));
+    const productImages = images.filter((image) => sameId(productIdOf(image), productId));
 
     return {
       "Sản phẩm": productLabel(product),
@@ -225,7 +225,7 @@ function orderViewRows(orders, branches) {
     .slice()
     .sort((a, b) => str(b.orderdate || b.order_date || b.createdat || b.created_at).localeCompare(str(a.orderdate || a.order_date || a.createdat || a.created_at)))
     .map((order) => {
-      const branch = branches.find((item) => branchIdOf(item) === branchIdOf(order));
+      const branch = branches.find((item) => sameId(branchIdOf(item), branchIdOf(order)));
       const total = first(order, ["finalamount", "final_amount", "totalamount", "total_amount"], 0);
 
       return {
@@ -244,8 +244,8 @@ function stockHistoryViewRows(historyRows, options) {
     .slice()
     .sort((a, b) => str(b.timestamp || b.createdat || b.created_at).localeCompare(str(a.timestamp || a.createdat || a.created_at)))
     .map((item) => {
-      const branch = options.branches.find((branch) => branchIdOf(branch) === branchIdOf(item));
-      const variant = options.variants.find((variant) => variantIdOf(variant) === variantIdOf(item));
+      const branch = options.branches.find((branch) => sameId(branchIdOf(branch), branchIdOf(item)));
+      const variant = options.variants.find((variant) => sameId(variantIdOf(variant), variantIdOf(item)));
 
       return {
         "Thời gian": str(item.timestamp || item.createdat || item.created_at).slice(0, 19).replace("T", " "),
@@ -909,10 +909,10 @@ export default function App() {
     const { data, error } = await supabase.from("stock").select("*").order("lastupdated", { ascending: false });
     if (error) throw error;
     const filteredStock = (data || []).filter((stockItem) => {
-      const variant = loadedOptions.variants.find((item) => variantIdOf(item) === variantIdOf(stockItem));
+      const variant = loadedOptions.variants.find((item) => sameId(variantIdOf(item), variantIdOf(stockItem)));
       const keyword = stockFilter.keyword.trim().toLowerCase();
-      const matchesBranch = !stockFilter.branchid || branchIdOf(stockItem) === stockFilter.branchid;
-      const matchesProduct = !stockFilter.productid || productIdOf(variant) === stockFilter.productid;
+      const matchesBranch = !stockFilter.branchid || sameId(branchIdOf(stockItem), stockFilter.branchid);
+      const matchesProduct = !stockFilter.productid || sameId(productIdOf(variant), stockFilter.productid);
       const text = [productLabel(variant?.product), variantLabel(variant), variant?.sku, variant?.barcode].join(" ").toLowerCase();
       const matchesKeyword = !keyword || text.includes(keyword);
       return matchesBranch && matchesProduct && matchesKeyword;
@@ -942,7 +942,7 @@ export default function App() {
     if (!transferForm.frombranchid || !transferForm.tobranchid || !transferForm.variantid) {
       return show("Vui lòng chọn đủ chi nhánh gửi, chi nhánh nhận, sản phẩm và biến thể");
     }
-    if (transferForm.frombranchid === transferForm.tobranchid) {
+    if (sameId(transferForm.frombranchid, transferForm.tobranchid)) {
       return show("Chi nhánh gửi và nhận không được trùng nhau");
     }
 
@@ -1097,10 +1097,10 @@ export default function App() {
       return show("Một hóa đơn chỉ tạo cho một chi nhánh. Hãy xóa giỏ hoặc chọn cùng chi nhánh.");
     }
 
-    const variant = options.variants.find((v) => variantIdOf(v) === cartItem.variantid);
-    const product = options.products.find((item) => productIdOf(item) === cartItem.productid) || variant?.product;
-    const branch = options.branches.find((item) => branchIdOf(item) === cartItem.branchid);
-    const existingIndex = cart.findIndex((item) => item.branchid === cartItem.branchid && item.variantid === cartItem.variantid);
+    const variant = options.variants.find((v) => sameId(variantIdOf(v), cartItem.variantid));
+    const product = options.products.find((item) => sameId(productIdOf(item), cartItem.productid)) || variant?.product;
+    const branch = options.branches.find((item) => sameId(branchIdOf(item), cartItem.branchid));
+    const existingIndex = cart.findIndex((item) => sameId(item.branchid, cartItem.branchid) && sameId(item.variantid, cartItem.variantid));
 
     if (existingIndex >= 0) {
       const nextCart = cart.map((item, index) => {
@@ -1273,7 +1273,7 @@ export default function App() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([variantid, quantity], index) => {
-        const variant = loadedOptions.variants.find((item) => variantIdOf(item) === variantid);
+        const variant = loadedOptions.variants.find((item) => sameId(variantIdOf(item), variantid));
         return {
           "Nhóm": "Top bán",
           "Chỉ số": `${index + 1}. ${productLabel(variant?.product)}`,
@@ -1712,7 +1712,7 @@ function ProductVariantSelector({
   variantLabelText = "Biến thể",
   optionalVariant = false,
 }) {
-  const filteredVariants = productId ? variants.filter((item) => productIdOf(item) === productId) : [];
+  const filteredVariants = productId ? variants.filter((item) => sameId(productIdOf(item), productId)) : [];
 
   return (
     <div className="product-variant-picker">
@@ -1720,7 +1720,7 @@ function ProductVariantSelector({
         <select
           value={productId}
           onChange={(e) => {
-            const selectedProduct = products.find((item) => productIdOf(item) === e.target.value) || null;
+            const selectedProduct = products.find((item) => sameId(productIdOf(item), e.target.value)) || null;
             onProductChange(selectedProduct);
           }}
         >
@@ -1741,7 +1741,7 @@ function ProductVariantSelector({
           value={variantId}
           disabled={!productId}
           onChange={(e) => {
-            const selectedVariant = filteredVariants.find((item) => variantIdOf(item) === e.target.value) || null;
+            const selectedVariant = filteredVariants.find((item) => sameId(variantIdOf(item), e.target.value)) || null;
             onVariantChange(selectedVariant);
           }}
         >
@@ -1777,7 +1777,7 @@ function ProductPickerGrid({ products, variants, stockRows, branchid, selectedPr
   const filteredProducts = activeProducts.filter((product) => {
     if (!keyword) return true;
     const productId = productIdOf(product);
-    const productVariants = variants.filter((variant) => productIdOf(variant) === productId);
+    const productVariants = variants.filter((variant) => sameId(productIdOf(variant), productId));
     const searchable = [
       productLabel(product),
       first(product, ["brand"], ""),
@@ -1803,7 +1803,7 @@ function ProductPickerGrid({ products, variants, stockRows, branchid, selectedPr
       <div className="product-grid">
         {filteredProducts.slice(0, 48).map((product) => {
           const productId = productIdOf(product);
-          const productVariants = variants.filter((variant) => productIdOf(variant) === productId);
+          const productVariants = variants.filter((variant) => sameId(productIdOf(variant), productId));
           const stockValue = productAvailableStock(stockRows, variants, branchid, productId);
           const defaultPrice = Number(first(product, ["defaultsellingprice", "default_selling_price"], 0));
 
@@ -1831,7 +1831,7 @@ function ProductPickerGrid({ products, variants, stockRows, branchid, selectedPr
 }
 
 function ProductPreview({ product, variant, variants, stockRows, branchid }) {
-  const productVariants = product ? variants.filter((item) => productIdOf(item) === productIdOf(product)) : [];
+  const productVariants = product ? variants.filter((item) => sameId(productIdOf(item), productIdOf(product))) : [];
   const previewImage = imageUrlOf(variant) || imageUrlOf(product);
   const previewAlt = imageAltOf(variant) || imageAltOf(product) || productLabel(product);
   const stockValue = variant
@@ -1863,7 +1863,7 @@ function ProductPreview({ product, variant, variants, stockRows, branchid }) {
 }
 
 function Products(p) {
-  const imageVariants = p.imageForm.productid ? p.options.variants.filter((item) => productIdOf(item) === p.imageForm.productid) : [];
+  const imageVariants = p.imageForm.productid ? p.options.variants.filter((item) => sameId(productIdOf(item), p.imageForm.productid)) : [];
 
   return (
     <>
@@ -2180,8 +2180,8 @@ function Adjustment(p) {
 function Orders(p) {
   const [productSearch, setProductSearch] = useState("");
   const cartTotal = p.cart.reduce((sum, item) => sum + Number(item.total || item.quantity * item.unitprice || 0), 0);
-  const selectedProduct = p.options.products.find((item) => productIdOf(item) === p.cartItem.productid) || null;
-  const selectedVariant = p.options.variants.find((item) => variantIdOf(item) === p.cartItem.variantid) || null;
+    const selectedProduct = p.options.products.find((item) => sameId(productIdOf(item), p.cartItem.productid)) || null;
+    const selectedVariant = p.options.variants.find((item) => sameId(variantIdOf(item), p.cartItem.variantid)) || null;
 
   function selectProduct(product) {
     p.setCartItem({
