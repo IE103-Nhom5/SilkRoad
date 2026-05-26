@@ -2124,6 +2124,20 @@ table {
   font-size: 22px;
 }
 
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.table-action {
+  min-height: 34px !important;
+  padding: 6px 10px !important;
+  margin: 0 !important;
+  white-space: nowrap;
+}
+
 body.dark .cart-total {
   background: #172520;
   border-color: #35594e;

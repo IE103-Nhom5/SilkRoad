@@ -139,6 +139,85 @@ function stockViewRows(stockRows, options, onlyLowStock = false) {
     });
 }
 
+function productViewRows(products, variants, images = []) {
+  return (products || []).map((product) => {
+    const productId = productIdOf(product);
+    const productVariants = variants.filter((variant) => productIdOf(variant) === productId);
+    const productImages = images.filter((image) => productIdOf(image) === productId);
+
+    return {
+      "Sản phẩm": productLabel(product),
+      "Thương hiệu": product.brand || "",
+      "Giới tính": product.gender || "",
+      "Giá mặc định": money(first(product, ["defaultsellingprice", "default_selling_price"], 0)),
+      "Trạng thái": product.status || "",
+      "Số biến thể": productVariants.length,
+      "Số ảnh": productImages.length,
+    };
+  });
+}
+
+function orderViewRows(orders, branches) {
+  return (orders || [])
+    .slice()
+    .sort((a, b) => str(b.orderdate || b.order_date || b.createdat || b.created_at).localeCompare(str(a.orderdate || a.order_date || a.createdat || a.created_at)))
+    .map((order) => {
+      const branch = branches.find((item) => branchIdOf(item) === branchIdOf(order));
+      const total = first(order, ["finalamount", "final_amount", "totalamount", "total_amount"], 0);
+
+      return {
+        "Ngày": str(order.orderdate || order.order_date || order.createdat || order.created_at).slice(0, 19).replace("T", " "),
+        "Chi nhánh": branch ? branchLabel(branch) : "Chưa xác định",
+        "Trạng thái đơn": first(order, ["orderstatus", "order_status", "status"], ""),
+        "Thanh toán": first(order, ["paymentstatus", "payment_status"], ""),
+        "Tổng tiền": money(total),
+        "Ghi chú": order.note || "",
+      };
+    });
+}
+
+function stockHistoryViewRows(historyRows, options) {
+  return (historyRows || [])
+    .slice()
+    .sort((a, b) => str(b.timestamp || b.createdat || b.created_at).localeCompare(str(a.timestamp || a.createdat || a.created_at)))
+    .map((item) => {
+      const branch = options.branches.find((branch) => branchIdOf(branch) === branchIdOf(item));
+      const variant = options.variants.find((variant) => variantIdOf(variant) === variantIdOf(item));
+
+      return {
+        "Thời gian": str(item.timestamp || item.createdat || item.created_at).slice(0, 19).replace("T", " "),
+        "Chi nhánh": branch ? branchLabel(branch) : "Chưa xác định",
+        "Sản phẩm": productLabel(variant?.product),
+        "Biến thể": variantLabel(variant),
+        "Loại giao dịch": first(item, ["transactiontype", "transaction_type"], ""),
+        "Thay đổi": first(item, ["quantitychange", "quantity_change"], 0),
+        "Trước": first(item, ["quantitybefore", "quantity_before"], ""),
+        "Sau": first(item, ["quantityafter", "quantity_after"], ""),
+        "Ghi chú": item.note || "",
+      };
+    });
+}
+
+function csvEscape(value) {
+  return `"${str(value).replace(/"/g, '""')}"`;
+}
+
+function downloadRowsAsCsv(rows, filename) {
+  if (!rows?.length) return false;
+  const keys = Object.keys(rows[0]);
+  const csv = [keys.map(csvEscape).join(","), ...rows.map((row) => keys.map((key) => csvEscape(row[key])).join(","))].join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  return true;
+}
+
 function IconBase({ size = 24, children, ...props }) {
   return (
     <svg
@@ -374,6 +453,17 @@ export default function App() {
   });
   const [purchaseForm, setPurchaseForm] = useState({
     purchaseorderid: "",
+    branchid: "",
+    productid: "",
+    variantid: "",
+    quantity: 1,
+    unitcost: 0,
+    note: "",
+  });
+  const [stockFilter, setStockFilter] = useState({
+    branchid: "",
+    productid: "",
+    keyword: "",
   });
   const [transferForm, setTransferForm] = useState({
     frombranchid: "",
@@ -545,6 +635,11 @@ export default function App() {
     setRows(data || []);
   }
 
+  function exportRows(label = page) {
+    const exported = downloadRowsAsCsv(rows, `silkroad-${label}-${todayISO()}.csv`);
+    show(exported ? "Đã xuất CSV" : "Không có dữ liệu để xuất");
+  }
+
   async function dashboardData() {
     const [p, s, o, h] = await Promise.all([
       supabase.from("product").select("*", { count: "exact", head: true }),
@@ -625,6 +720,14 @@ export default function App() {
     await selectTable("product_image");
   }
 
+  async function loadProductCatalog() {
+    if (!guard("products")) return;
+    const loadedOptions = await loadOptions();
+    const images = await supabase.from("product_image").select("productid, variantid, imageurl").limit(1000);
+    setRows(productViewRows(loadedOptions.products, loadedOptions.variants, images.data || []));
+    if (images.error) show("Không tải được ảnh sản phẩm: " + images.error.message);
+  }
+
   async function confirmPurchaseOrder() {
     if (!guard("purchase")) return;
     if (!purchaseForm.purchaseorderid.trim()) return show("Vui lòng nhập mã phiếu nhập");
@@ -635,8 +738,59 @@ export default function App() {
     if (error) throw error;
 
     show("Đã xác nhận phiếu nhập và cập nhật tồn kho");
-    setPurchaseForm({ purchaseorderid: "" });
+    setPurchaseForm({ ...purchaseForm, purchaseorderid: "" });
     await selectTable("purchase_order");
+  }
+
+  async function receiveStockManual() {
+    if (!guard("purchase")) return;
+    if (!purchaseForm.branchid || !purchaseForm.variantid) return show("Vui lòng chọn chi nhánh, sản phẩm và biến thể");
+
+    const quantity = Number(purchaseForm.quantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) return show("Số lượng nhập phải lớn hơn 0");
+
+    const old = await supabase.from("stock").select("*").eq("branchid", purchaseForm.branchid).eq("variantid", purchaseForm.variantid).maybeSingle();
+    if (old.error) throw old.error;
+
+    const before = Number(old.data?.quantity || 0);
+    const after = before + quantity;
+    const now = new Date().toISOString();
+
+    const stockPayload = {
+      branchid: purchaseForm.branchid,
+      variantid: purchaseForm.variantid,
+      quantity: after,
+      lastupdated: now,
+    };
+
+    const stockResult = old.data
+      ? await supabase.from("stock").update(stockPayload).eq("branchid", purchaseForm.branchid).eq("variantid", purchaseForm.variantid)
+      : await supabase.from("stock").insert([{ ...stockPayload, reservedquantity: 0, minstocklevel: 0 }]);
+
+    if (stockResult.error) throw stockResult.error;
+
+    const referenceId = purchaseForm.purchaseorderid.trim() || uuid();
+    const { error: historyError } = await supabase.from("stock_history").insert([
+      {
+        historyid: uuid(),
+        branchid: purchaseForm.branchid,
+        variantid: purchaseForm.variantid,
+        transactiontype: "purchase_in",
+        referencetype: purchaseForm.purchaseorderid.trim() ? "PURCHASE_ORDER" : "MANUAL_RECEIVE",
+        referenceid: referenceId,
+        quantitychange: quantity,
+        quantitybefore: before,
+        quantityafter: after,
+        performedby: profile?.userid || null,
+        timestamp: now,
+        note: purchaseForm.note || "Nhập kho thủ công từ frontend",
+      },
+    ]);
+    if (historyError) throw historyError;
+
+    show("Đã nhập kho và ghi lịch sử tồn");
+    setPurchaseForm({ ...purchaseForm, productid: "", variantid: "", quantity: 1, unitcost: 0, note: "" });
+    await loadStockFriendly();
   }
 
   async function loadStockFriendly() {
@@ -644,7 +798,16 @@ export default function App() {
     const loadedOptions = await loadOptions();
     const { data, error } = await supabase.from("stock").select("*").order("lastupdated", { ascending: false });
     if (error) throw error;
-    setRows(stockViewRows(data || [], loadedOptions));
+    const filteredStock = (data || []).filter((stockItem) => {
+      const variant = loadedOptions.variants.find((item) => variantIdOf(item) === variantIdOf(stockItem));
+      const keyword = stockFilter.keyword.trim().toLowerCase();
+      const matchesBranch = !stockFilter.branchid || branchIdOf(stockItem) === stockFilter.branchid;
+      const matchesProduct = !stockFilter.productid || productIdOf(variant) === stockFilter.productid;
+      const text = [productLabel(variant?.product), variantLabel(variant), variant?.sku, variant?.barcode].join(" ").toLowerCase();
+      const matchesKeyword = !keyword || text.includes(keyword);
+      return matchesBranch && matchesProduct && matchesKeyword;
+    });
+    setRows(stockViewRows(filteredStock, loadedOptions));
   }
 
   async function loadLowStock() {
@@ -654,6 +817,14 @@ export default function App() {
     if (error) throw error;
     setRows(stockViewRows(data || [], loadedOptions, true));
     show("Đã lọc cảnh báo sắp hết hàng");
+  }
+
+  async function loadStockHistoryFriendly() {
+    if (!guard("stock")) return;
+    const loadedOptions = await loadOptions();
+    const { data, error } = await supabase.from("stock_history").select("*").limit(300);
+    if (error) throw error;
+    setRows(stockHistoryViewRows(data || [], loadedOptions));
   }
 
   async function transferStock() {
@@ -816,9 +987,21 @@ export default function App() {
       return show("Một hóa đơn chỉ tạo cho một chi nhánh. Hãy xóa giỏ hoặc chọn cùng chi nhánh.");
     }
 
-    const variant = options.variants.find((v) => v.variantid === cartItem.variantid);
+    const variant = options.variants.find((v) => variantIdOf(v) === cartItem.variantid);
     const product = options.products.find((item) => productIdOf(item) === cartItem.productid) || variant?.product;
     const branch = options.branches.find((item) => branchIdOf(item) === cartItem.branchid);
+    const existingIndex = cart.findIndex((item) => item.branchid === cartItem.branchid && item.variantid === cartItem.variantid);
+
+    if (existingIndex >= 0) {
+      const nextCart = cart.map((item, index) => {
+        if (index !== existingIndex) return item;
+        const nextQuantity = Number(item.quantity) + quantity;
+        return { ...item, quantity: nextQuantity, unitprice, total: nextQuantity * unitprice };
+      });
+      setCart(nextCart);
+      setCartItem({ ...cartItem, productid: "", variantid: "", quantity: 1, unitprice: 0 });
+      return;
+    }
 
     setCart([
       ...cart,
@@ -838,6 +1021,10 @@ export default function App() {
     setCartItem({ ...cartItem, productid: "", variantid: "", quantity: 1, unitprice: 0 });
   }
 
+  function removeCartItem(index) {
+    setCart(cart.filter((_, itemIndex) => itemIndex !== index));
+  }
+
   async function createInvoice() {
     if (!guard("orders")) return;
     if (!cart.length) return show("Giỏ hàng trống");
@@ -849,6 +1036,20 @@ export default function App() {
 
     const orderid = uuid();
     const total = cart.reduce((sum, item) => sum + item.quantity * item.unitprice, 0);
+    const stockChecks = await Promise.all(
+      cart.map(async (item) => {
+        const result = await supabase.from("stock").select("*").eq("branchid", item.branchid).eq("variantid", item.variantid).maybeSingle();
+        return { item, result };
+      })
+    );
+
+    for (const { item, result } of stockChecks) {
+      if (result.error) throw result.error;
+      if (!result.data) throw new Error(`Chưa có tồn kho cho ${item.productname || item.sku}`);
+      if (Number(result.data.quantity || 0) < item.quantity) {
+        throw new Error(`Không đủ tồn cho ${item.productname || item.sku}`);
+      }
+    }
 
     const { error: orderError } = await supabase.from("orders").insert([
       {
@@ -868,7 +1069,7 @@ export default function App() {
     ]);
     if (orderError) throw orderError;
 
-    for (const item of cart) {
+    for (const { item, result: old } of stockChecks) {
       const { error: detailError } = await supabase.from("order_detail").insert([
         {
           orderid,
@@ -879,13 +1080,7 @@ export default function App() {
       ]);
       if (detailError) throw detailError;
 
-      const old = await supabase.from("stock").select("*").eq("branchid", item.branchid).eq("variantid", item.variantid).maybeSingle();
-      if (old.error) throw old.error;
       if (old.data) {
-        if (Number(old.data.quantity || 0) < item.quantity) {
-          throw new Error(`Không đủ tồn cho ${item.productname || item.sku}`);
-        }
-
         const { error: stockError } = await supabase
           .from("stock")
           .update({ quantity: Number(old.data.quantity) - item.quantity, lastupdated: new Date().toISOString() })
@@ -915,7 +1110,71 @@ export default function App() {
 
     setCart([]);
     show("Đã tạo hóa đơn và trừ kho");
-    await selectTable("orders");
+    await loadOrdersFriendly();
+  }
+
+  async function loadOrdersFriendly() {
+    if (!guard("orders")) return;
+    const loadedOptions = await loadOptions();
+    const { data, error } = await supabase.from("orders").select("*").limit(200);
+    if (error) throw error;
+    setRows(orderViewRows(data || [], loadedOptions.branches));
+  }
+
+  async function buildReports() {
+    if (!guard("reports")) return;
+    const loadedOptions = await loadOptions();
+    const [stock, orders, details, history] = await Promise.all([
+      supabase.from("stock").select("*").limit(2000),
+      supabase.from("orders").select("*").limit(1000),
+      supabase.from("order_detail").select("*").limit(2000),
+      supabase.from("stock_history").select("*").limit(1000),
+    ]);
+
+    if (stock.error) throw stock.error;
+    if (orders.error) throw orders.error;
+    if (details.error) throw details.error;
+    if (history.error) throw history.error;
+
+    const stockRows = stock.data || [];
+    const orderRows = orders.data || [];
+    const detailRows = details.data || [];
+    const historyRows = history.data || [];
+    const revenue = orderRows.reduce((sum, order) => sum + Number(first(order, ["finalamount", "final_amount", "totalamount", "total_amount"], 0)), 0);
+    const totalStock = stockRows.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const lowStock = stockRows.filter((item) => Number(item.quantity || 0) <= Number(item.minstocklevel || item.min_stock_level || 5)).length;
+    const soldUnits = detailRows.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const topByVariant = new Map();
+
+    for (const detail of detailRows) {
+      const key = variantIdOf(detail);
+      topByVariant.set(key, (topByVariant.get(key) || 0) + Number(detail.quantity || 0));
+    }
+
+    const topRows = [...topByVariant.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([variantid, quantity], index) => {
+        const variant = loadedOptions.variants.find((item) => variantIdOf(item) === variantid);
+        return {
+          "Nhóm": "Top bán",
+          "Chỉ số": `${index + 1}. ${productLabel(variant?.product)}`,
+          "Giá trị": `${quantity} sản phẩm`,
+          "Chi tiết": variantLabel(variant),
+        };
+      });
+
+    setRows([
+      { "Nhóm": "Tổng quan", "Chỉ số": "Số sản phẩm gốc", "Giá trị": loadedOptions.products.length, "Chi tiết": "" },
+      { "Nhóm": "Tổng quan", "Chỉ số": "Số biến thể", "Giá trị": loadedOptions.variants.length, "Chi tiết": "" },
+      { "Nhóm": "Kho", "Chỉ số": "Tổng tồn kho", "Giá trị": totalStock, "Chi tiết": "" },
+      { "Nhóm": "Kho", "Chỉ số": "Sắp hết hàng", "Giá trị": lowStock, "Chi tiết": "" },
+      { "Nhóm": "Bán hàng", "Chỉ số": "Số đơn hàng", "Giá trị": orderRows.length, "Chi tiết": "" },
+      { "Nhóm": "Bán hàng", "Chỉ số": "Số lượng đã bán", "Giá trị": soldUnits, "Chi tiết": "" },
+      { "Nhóm": "Bán hàng", "Chỉ số": "Doanh thu", "Giá trị": money(revenue), "Chi tiết": "" },
+      { "Nhóm": "Kho", "Chỉ số": "Số log nhập/xuất", "Giá trị": historyRows.length, "Chi tiết": "" },
+      ...topRows,
+    ]);
   }
 
   async function createOrUpdateUser() {
@@ -1011,21 +1270,38 @@ export default function App() {
                 imageForm={imageForm}
                 setImageForm={setImageForm}
                 addImage={addImage}
+                loadProductCatalog={loadProductCatalog}
+                exportRows={exportRows}
                 selectTable={selectTable}
                 rows={rows}
               />
             )}
             {page === "purchase" && (
               <Purchase
+                options={options}
                 run={run}
                 purchaseForm={purchaseForm}
                 setPurchaseForm={setPurchaseForm}
                 confirmPurchaseOrder={confirmPurchaseOrder}
+                receiveStockManual={receiveStockManual}
                 selectTable={selectTable}
                 rows={rows}
               />
             )}
-            {page === "stock" && <Stock run={run} loadStockFriendly={loadStockFriendly} selectTable={selectTable} loadLowStock={loadLowStock} rows={rows} />}
+            {page === "stock" && (
+              <Stock
+                options={options}
+                run={run}
+                loadStockFriendly={loadStockFriendly}
+                loadStockHistoryFriendly={loadStockHistoryFriendly}
+                selectTable={selectTable}
+                loadLowStock={loadLowStock}
+                stockFilter={stockFilter}
+                setStockFilter={setStockFilter}
+                exportRows={exportRows}
+                rows={rows}
+              />
+            )}
             {page === "transfer" && <Transfer options={options} run={run} transferForm={transferForm} setTransferForm={setTransferForm} transferStock={transferStock} />}
             {page === "adjustment" && <Adjustment options={options} run={run} adjustForm={adjustForm} setAdjustForm={setAdjustForm} adjustStock={adjustStock} />}
             {page === "orders" && (
@@ -1035,16 +1311,19 @@ export default function App() {
                 cartItem={cartItem}
                 setCartItem={setCartItem}
                 addCart={addCart}
+                removeCartItem={removeCartItem}
                 cart={cart}
                 setCart={setCart}
                 createInvoice={createInvoice}
+                loadOrdersFriendly={loadOrdersFriendly}
+                exportRows={exportRows}
                 selectTable={selectTable}
                 rows={rows}
               />
             )}
             {page === "users" && <UsersPage run={run} userForm={userForm} setUserForm={setUserForm} createOrUpdateUser={createOrUpdateUser} selectTable={selectTable} rows={rows} />}
-            {page === "reports" && <Reports run={run} selectTable={selectTable} rows={rows} />}
-            {page === "query" && <Query run={run} queryTable={queryTable} setQueryTable={setQueryTable} selectTable={selectTable} rows={rows} />}
+            {page === "reports" && <Reports run={run} buildReports={buildReports} selectTable={selectTable} exportRows={exportRows} rows={rows} />}
+            {page === "query" && <Query run={run} queryTable={queryTable} setQueryTable={setQueryTable} selectTable={selectTable} exportRows={exportRows} rows={rows} />}
           </div>
         )}
       </main>
@@ -1298,6 +1577,10 @@ function Field({ label, children, help }) {
   );
 }
 
+function ActionRow({ children }) {
+  return <div className="action-row">{children}</div>;
+}
+
 function ProductVariantSelector({
   products,
   variants,
@@ -1384,8 +1667,12 @@ function Products(p) {
             </select>
           </Field>
         </div>
-        <button onClick={() => p.run(p.addProduct)}>Thêm sản phẩm</button>
-        <button onClick={() => p.run(() => p.selectTable("product"))}>Tải sản phẩm</button>
+        <ActionRow>
+          <button onClick={() => p.run(p.addProduct)}>Thêm sản phẩm</button>
+          <button onClick={() => p.run(p.loadProductCatalog)}>Tải danh mục dễ đọc</button>
+          <button onClick={() => p.run(() => p.selectTable("product"))}>Tải bảng sản phẩm</button>
+          <button onClick={() => p.exportRows("products")}>Xuất CSV</button>
+        </ActionRow>
       </Card>
 
       <Card title="Biến thể theo sản phẩm">
@@ -1425,8 +1712,10 @@ function Products(p) {
             </select>
           </Field>
         </div>
-        <button onClick={() => p.run(p.addVariant)}>Thêm biến thể</button>
-        <button onClick={() => p.run(() => p.selectTable("product_variant"))}>Tải biến thể</button>
+        <ActionRow>
+          <button onClick={() => p.run(p.addVariant)}>Thêm biến thể</button>
+          <button onClick={() => p.run(() => p.selectTable("product_variant"))}>Tải biến thể</button>
+        </ActionRow>
       </Card>
 
       <Card title="Upload ảnh bằng URL">
@@ -1463,8 +1752,10 @@ function Products(p) {
             <input value={p.imageForm.alttext} placeholder="Mô tả ảnh" onChange={(e) => p.setImageForm({ ...p.imageForm, alttext: e.target.value })} />
           </Field>
         </div>
-        <button onClick={() => p.run(p.addImage)}>Lưu ảnh</button>
-        <button onClick={() => p.run(() => p.selectTable("product_image"))}>Tải ảnh</button>
+        <ActionRow>
+          <button onClick={() => p.run(p.addImage)}>Lưu ảnh</button>
+          <button onClick={() => p.run(() => p.selectTable("product_image"))}>Tải ảnh</button>
+        </ActionRow>
       </Card>
 
       <DataTable rows={p.rows} />
@@ -1475,33 +1766,99 @@ function Products(p) {
 function Purchase(p) {
   return (
     <>
-      <Card title="Nhập hàng">
+      <Card title="Nhập kho thủ công">
         <div className="sales-form-grid">
+          <Field label="Chi nhánh nhập">
+            <select value={p.purchaseForm.branchid} onChange={(e) => p.setPurchaseForm({ ...p.purchaseForm, branchid: e.target.value })}>
+              <option value="">Chọn chi nhánh</option>
+              {p.options.branches.map((item) => (
+                <option key={branchIdOf(item)} value={branchIdOf(item)}>
+                  {branchLabel(item)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <ProductVariantSelector
+            products={p.options.products}
+            variants={p.options.variants}
+            productId={p.purchaseForm.productid}
+            variantId={p.purchaseForm.variantid}
+            onProductChange={(product) => p.setPurchaseForm({ ...p.purchaseForm, productid: productIdOf(product), variantid: "" })}
+            onVariantChange={(variant) =>
+              p.setPurchaseForm({
+                ...p.purchaseForm,
+                productid: variant ? productIdOf(variant) : p.purchaseForm.productid,
+                variantid: variantIdOf(variant),
+                unitcost: variant?.costprice || p.purchaseForm.unitcost,
+              })
+            }
+          />
+          <Field label="Số lượng nhập">
+            <input type="number" min="1" value={p.purchaseForm.quantity} onChange={(e) => p.setPurchaseForm({ ...p.purchaseForm, quantity: e.target.value })} />
+          </Field>
+          <Field label="Giá vốn tham khảo">
+            <input type="number" min="0" value={p.purchaseForm.unitcost} onChange={(e) => p.setPurchaseForm({ ...p.purchaseForm, unitcost: e.target.value })} />
+          </Field>
           <Field label="Mã phiếu nhập">
             <input
               value={p.purchaseForm.purchaseorderid}
-              placeholder="PurchaseOrderID"
+              placeholder="Có thể bỏ trống khi nhập thủ công"
               onChange={(e) => p.setPurchaseForm({ ...p.purchaseForm, purchaseorderid: e.target.value })}
             />
           </Field>
+          <Field label="Ghi chú">
+            <input value={p.purchaseForm.note} placeholder="Ví dụ: Nhập bổ sung đầu ngày" onChange={(e) => p.setPurchaseForm({ ...p.purchaseForm, note: e.target.value })} />
+          </Field>
         </div>
-        <button onClick={() => p.run(p.confirmPurchaseOrder)}>Xác nhận nhập hàng</button>
-        <button onClick={() => p.run(() => p.selectTable("purchase_order"))}>Tải phiếu nhập</button>
+        <ActionRow>
+          <button onClick={() => p.run(p.receiveStockManual)}>Nhập kho ngay</button>
+          <button onClick={() => p.run(p.confirmPurchaseOrder)}>Xác nhận phiếu nhập có sẵn</button>
+          <button onClick={() => p.run(() => p.selectTable("purchase_order"))}>Tải phiếu nhập</button>
+        </ActionRow>
       </Card>
       <DataTable rows={p.rows} />
     </>
   );
 }
 
-function Stock({ run, loadStockFriendly, selectTable, loadLowStock, rows }) {
+function Stock({ options, run, loadStockFriendly, loadStockHistoryFriendly, selectTable, loadLowStock, stockFilter, setStockFilter, exportRows, rows }) {
   return (
     <>
       <Card title="Kho hàng">
-        <button onClick={() => run(loadStockFriendly)}>Xem tồn kho theo sản phẩm</button>
-        <button onClick={() => run(() => selectTable("stock_history"))}>Lịch sử tồn kho</button>
-        <button onClick={() => run(loadLowStock)}>
-          <AlertTriangle /> Cảnh báo sắp hết hàng
-        </button>
+        <div className="sales-form-grid">
+          <Field label="Lọc chi nhánh">
+            <select value={stockFilter.branchid} onChange={(e) => setStockFilter({ ...stockFilter, branchid: e.target.value })}>
+              <option value="">Tất cả chi nhánh</option>
+              {options.branches.map((item) => (
+                <option key={branchIdOf(item)} value={branchIdOf(item)}>
+                  {branchLabel(item)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Lọc sản phẩm">
+            <select value={stockFilter.productid} onChange={(e) => setStockFilter({ ...stockFilter, productid: e.target.value })}>
+              <option value="">Tất cả sản phẩm</option>
+              {options.products.map((item) => (
+                <option key={productIdOf(item)} value={productIdOf(item)}>
+                  {productLabel(item)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Tìm nhanh">
+            <input value={stockFilter.keyword} placeholder="Tên sản phẩm, màu, barcode..." onChange={(e) => setStockFilter({ ...stockFilter, keyword: e.target.value })} />
+          </Field>
+        </div>
+        <ActionRow>
+          <button onClick={() => run(loadStockFriendly)}>Xem tồn kho theo sản phẩm</button>
+          <button onClick={() => run(loadStockHistoryFriendly)}>Lịch sử tồn kho dễ đọc</button>
+          <button onClick={() => run(() => selectTable("stock_history"))}>Bảng log gốc</button>
+          <button onClick={() => run(loadLowStock)}>
+            <AlertTriangle /> Cảnh báo sắp hết hàng
+          </button>
+          <button onClick={() => exportRows("stock")}>Xuất CSV</button>
+        </ActionRow>
       </Card>
       <DataTable rows={rows} />
     </>
@@ -1643,12 +2000,14 @@ function Orders(p) {
             <input type="number" min="0" value={p.cartItem.unitprice} onChange={(e) => p.setCartItem({ ...p.cartItem, unitprice: e.target.value })} />
           </Field>
         </div>
-        <button onClick={p.addCart}>
-          <Plus /> Thêm giỏ
-        </button>
-        <button onClick={() => p.run(p.createInvoice)}>Tạo hóa đơn</button>
-        <button onClick={() => p.setCart([])}>Xóa giỏ</button>
-        <DataTable rows={p.cart} />
+        <ActionRow>
+          <button onClick={p.addCart}>
+            <Plus /> Thêm giỏ
+          </button>
+          <button onClick={() => p.run(p.createInvoice)}>Tạo hóa đơn</button>
+          <button onClick={() => p.setCart([])}>Xóa giỏ</button>
+        </ActionRow>
+        <CartTable rows={p.cart} onRemove={p.removeCartItem} />
         {p.cart.length > 0 && (
           <div className="cart-total">
             Tổng tiền: <b>{money(cartTotal)}</b>
@@ -1657,10 +2016,53 @@ function Orders(p) {
       </Card>
 
       <Card title="Đơn hàng / trạng thái">
-        <button onClick={() => p.run(() => p.selectTable("orders"))}>Tải đơn hàng</button>
+        <ActionRow>
+          <button onClick={() => p.run(p.loadOrdersFriendly)}>Tải đơn hàng dễ đọc</button>
+          <button onClick={() => p.run(() => p.selectTable("orders"))}>Tải bảng đơn gốc</button>
+          <button onClick={() => p.exportRows("orders")}>Xuất CSV</button>
+        </ActionRow>
         <DataTable rows={p.rows} />
       </Card>
     </>
+  );
+}
+
+function CartTable({ rows, onRemove }) {
+  if (!rows?.length) return <p className="muted">Giỏ hàng trống</p>;
+
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Chi nhánh</th>
+            <th>Sản phẩm</th>
+            <th>Biến thể</th>
+            <th>SL</th>
+            <th>Đơn giá</th>
+            <th>Thành tiền</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((item, index) => (
+            <tr key={`${item.variantid}-${index}`}>
+              <td>{item.branchname}</td>
+              <td>{item.productname}</td>
+              <td>{[item.size ? `Size ${item.size}` : "", item.color ? `Màu ${item.color}` : "", item.barcode ? `Barcode ${item.barcode}` : ""].filter(Boolean).join(" - ")}</td>
+              <td>{item.quantity}</td>
+              <td>{money(item.unitprice)}</td>
+              <td>{money(item.total || item.quantity * item.unitprice)}</td>
+              <td>
+                <button className="table-action" onClick={() => onRemove(index)}>
+                  Xóa
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -1702,13 +2104,17 @@ function UsersPage(p) {
   );
 }
 
-function Reports({ run, selectTable, rows }) {
+function Reports({ run, buildReports, selectTable, exportRows, rows }) {
   return (
     <>
       <Card title="Báo cáo">
-        <button onClick={() => run(() => selectTable("stock"))}>Báo cáo tồn kho</button>
-        <button onClick={() => run(() => selectTable("orders"))}>Báo cáo đơn hàng</button>
-        <button onClick={() => run(() => selectTable("stock_history"))}>Báo cáo nhập/xuất kho</button>
+        <ActionRow>
+          <button onClick={() => run(buildReports)}>Báo cáo tổng hợp</button>
+          <button onClick={() => run(() => selectTable("stock"))}>Bảng tồn kho gốc</button>
+          <button onClick={() => run(() => selectTable("orders"))}>Bảng đơn hàng gốc</button>
+          <button onClick={() => run(() => selectTable("stock_history"))}>Bảng nhập/xuất kho gốc</button>
+          <button onClick={() => exportRows("reports")}>Xuất CSV</button>
+        </ActionRow>
       </Card>
       <DataTable rows={rows} />
     </>
@@ -1716,11 +2122,26 @@ function Reports({ run, selectTable, rows }) {
 }
 
 function Query({ run, queryTable, setQueryTable, selectTable, rows }) {
+  const allowedTables = ["product", "product_variant", "product_image", "branch", "stock", "stock_history", "purchase_order", "orders", "order_detail", "users", "role"];
+
   return (
     <>
       <Card title="Tra cứu bảng bất kỳ">
-        <input value={queryTable} onChange={(e) => setQueryTable(e.target.value)} />
-        <button onClick={() => run(() => selectTable(queryTable))}>Tải</button>
+        <div className="sales-form-grid">
+          <Field label="Bảng dữ liệu">
+            <select value={queryTable} onChange={(e) => setQueryTable(e.target.value)}>
+              {allowedTables.map((table) => (
+                <option key={table} value={table}>
+                  {table}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <ActionRow>
+          <button onClick={() => run(() => selectTable(queryTable))}>Tải</button>
+          <button onClick={() => downloadRowsAsCsv(rows, `silkroad-${queryTable}-${todayISO()}.csv`)}>Xuất CSV</button>
+        </ActionRow>
       </Card>
       <DataTable rows={rows} />
     </>
