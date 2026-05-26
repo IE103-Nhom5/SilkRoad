@@ -85,10 +85,10 @@ function productLabel(product) {
 function variantLabel(variant) {
   if (!variant) return "Chưa chọn biến thể";
   return [
-    variant.sku ? `SKU ${variant.sku}` : "Chưa có SKU",
-    variant.barcode ? `Barcode ${variant.barcode}` : "",
     variant.size ? `Size ${variant.size}` : "",
     variant.color ? `Màu ${variant.color}` : "",
+    variant.barcode ? `Barcode ${variant.barcode}` : "",
+    variant.sku ? `Mã ${variant.sku}` : "",
     Number(variant.sellingprice || 0) > 0 ? money(variant.sellingprice) : "",
   ]
     .filter(Boolean)
@@ -589,7 +589,7 @@ export default function App() {
   async function addVariant() {
     if (!guard("products")) return;
     if (!variantForm.productid) return show("Vui lòng chọn sản phẩm");
-    if (!variantForm.sku.trim() && !variantForm.barcode.trim()) return show("Vui lòng nhập SKU hoặc barcode");
+    if (!variantForm.sku.trim() && !variantForm.barcode.trim()) return show("Vui lòng nhập mã biến thể hoặc barcode");
     const payload = {
       ...variantForm,
       variantid: uuid(),
@@ -599,7 +599,7 @@ export default function App() {
     };
     const { error } = await supabase.from("product_variant").insert([payload]);
     if (error) throw error;
-    show("Đã thêm SKU / barcode / size-color");
+    show("Đã thêm biến thể cho sản phẩm");
     setVariantForm({ productid: variantForm.productid, sku: "", barcode: "", size: "M", color: "Black", costprice: 0, sellingprice: 0, status: "active" });
     await loadOptions();
     await selectTable("product_variant");
@@ -1388,7 +1388,7 @@ function Products(p) {
         <button onClick={() => p.run(() => p.selectTable("product"))}>Tải sản phẩm</button>
       </Card>
 
-      <Card title="Biến thể size/color + SKU/barcode">
+      <Card title="Biến thể theo sản phẩm">
         <div className="sales-form-grid">
           <Field label="Sản phẩm gốc">
             <select value={p.variantForm.productid} onChange={(e) => p.setVariantForm({ ...p.variantForm, productid: e.target.value })}>
@@ -1400,8 +1400,8 @@ function Products(p) {
               ))}
             </select>
           </Field>
-          <Field label="SKU">
-            <input value={p.variantForm.sku} placeholder="SKU" onChange={(e) => p.setVariantForm({ ...p.variantForm, sku: e.target.value })} />
+          <Field label="Mã biến thể">
+            <input value={p.variantForm.sku} placeholder="Ví dụ: AO-LINEN-M-DEN" onChange={(e) => p.setVariantForm({ ...p.variantForm, sku: e.target.value })} />
           </Field>
           <Field label="Barcode">
             <input value={p.variantForm.barcode} placeholder="Barcode" onChange={(e) => p.setVariantForm({ ...p.variantForm, barcode: e.target.value })} />
