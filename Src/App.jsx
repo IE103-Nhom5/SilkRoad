@@ -68,6 +68,14 @@ function str(v) {
   return v === null || v === undefined ? "" : String(v);
 }
 
+function idStr(v) {
+  return str(v).trim();
+}
+
+function sameId(a, b) {
+  return idStr(a).toLowerCase() === idStr(b).toLowerCase();
+}
+
 function first(obj, keys, fallback = "") {
   for (const k of keys) {
     if (obj?.[k] !== undefined) return obj[k];
@@ -97,15 +105,16 @@ function variantLabel(variant) {
 }
 
 function productIdOf(item) {
-  return str(first(item, ["productid", "product_id"], ""));
+  const directId = first(item, ["productid", "product_id", "productId", "ProductID"], "");
+  return idStr(directId || first(item?.product, ["productid", "product_id", "productId", "ProductID"], ""));
 }
 
 function branchIdOf(item) {
-  return str(first(item, ["branchid", "branch_id"], ""));
+  return idStr(first(item, ["branchid", "branch_id", "branchId", "BranchID"], ""));
 }
 
 function variantIdOf(item) {
-  return str(first(item, ["variantid", "variant_id"], ""));
+  return idStr(first(item, ["variantid", "variant_id", "variantId", "VariantID"], ""));
 }
 
 function branchLabel(branch) {
@@ -134,7 +143,7 @@ function sortImages(images = []) {
 
 function primaryProductImage(product, images = []) {
   const productId = productIdOf(product);
-  const productImages = sortImages(images.filter((image) => productIdOf(image) === productId));
+  const productImages = sortImages(images.filter((image) => sameId(productIdOf(image), productId)));
   return productImages.find((image) => !variantIdOf(image) && imageUrlOf(image)) || productImages.find((image) => imageUrlOf(image)) || null;
 }
 
@@ -150,7 +159,7 @@ function primaryVariantImage(variant, images = []) {
 
 function availableStock(stockRows = [], branchid, variantid) {
   if (!branchid || !variantid) return null;
-  const stock = stockRows.find((item) => branchIdOf(item) === branchid && variantIdOf(item) === variantid);
+  const stock = stockRows.find((item) => sameId(branchIdOf(item), branchid) && sameId(variantIdOf(item), variantid));
   if (!stock) return null;
   return Number(stock.quantity || 0) - Number(first(stock, ["reservedquantity", "reserved_quantity"], 0) || 0);
 }
@@ -158,7 +167,7 @@ function availableStock(stockRows = [], branchid, variantid) {
 function productAvailableStock(stockRows = [], variants = [], branchid, productid) {
   if (!branchid || !productid) return null;
   return variants
-    .filter((variant) => productIdOf(variant) === productid)
+    .filter((variant) => sameId(productIdOf(variant), productid))
     .reduce((sum, variant) => {
       const value = availableStock(stockRows, branchid, variantIdOf(variant));
       return sum + Number(value || 0);
@@ -633,29 +642,18 @@ export default function App() {
       return { data: [], error: null };
     }
 
+    async function readAll(table, limit = 2000) {
+      return supabase.from(table).select("*").limit(limit);
+    }
+
     const [products, variants, branches, roles, channels, images, stock] = await Promise.all([
-      read("product", "productid, productname, brand, gender, status, defaultsellingprice", "productid, productname", "productname"),
-      read(
-        "product_variant",
-        "variantid, productid, variantname, sku, barcode, size, color, costprice, sellingprice, status",
-        "variantid, productid, sku, barcode, size, color, sellingprice",
-        "sku"
-      ),
-      read("branch", "branchid, branchname", null, "branchname"),
-      read("role", "roleid, rolename", null, "rolename"),
+      readAll("product"),
+      readAll("product_variant"),
+      readAll("branch"),
+      readAll("role"),
       readFirstExisting(["sales_channel", "order_channel", "channel", "saleschannel"]),
-      read(
-        "product_image",
-        "imageid, productid, variantid, imageurl, alttext, sortorder",
-        "productid, variantid, imageurl",
-        null
-      ),
-      read(
-        "stock",
-        "branchid, variantid, quantity, reservedquantity, minstocklevel, lastupdated",
-        "branchid, variantid, quantity, reservedquantity",
-        null
-      ),
+      readAll("product_image"),
+      readAll("stock"),
     ]);
 
     if (products.error) show("Lỗi tải sản phẩm: " + products.error.message);
@@ -663,21 +661,30 @@ export default function App() {
     if (branches.error) show("Lỗi tải chi nhánh: " + branches.error.message);
 
     const imageRows = images.data || [];
-    const productRows = (products.data || []).map((product) => {
+    const productRows = (products.data || [])
+      .slice()
+      .sort((a, b) => productLabel(a).localeCompare(productLabel(b), "vi"))
+      .map((product) => {
       const primaryImage = primaryProductImage(product, imageRows);
       return {
         ...product,
-        images: sortImages(imageRows.filter((image) => productIdOf(image) === productIdOf(product))),
+        images: sortImages(imageRows.filter((image) => sameId(productIdOf(image), productIdOf(product)))),
         imageurl: imageUrlOf(primaryImage),
         imagealt: imageAltOf(primaryImage),
       };
     });
-    const variantRows = (variants.data || []).map((variant) => ({
-      ...variant,
-      product: productRows.find((product) => productIdOf(product) === productIdOf(variant)) || null,
-      imageurl: imageUrlOf(primaryVariantImage(variant, imageRows)),
-      imagealt: imageAltOf(primaryVariantImage(variant, imageRows)),
-    }));
+    const variantRows = (variants.data || [])
+      .map((variant) => {
+        const product = productRows.find((item) => sameId(productIdOf(item), productIdOf(variant))) || null;
+        const primaryImage = primaryVariantImage(variant, imageRows);
+        return {
+          ...variant,
+          product,
+          imageurl: imageUrlOf(primaryImage),
+          imagealt: imageAltOf(primaryImage),
+        };
+      })
+      .sort((a, b) => variantLabel(a).localeCompare(variantLabel(b), "vi"));
     let channelRows = channels.data || [];
 
     if (!channelRows.length) {
