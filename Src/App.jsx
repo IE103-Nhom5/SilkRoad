@@ -224,58 +224,59 @@ export default function App() {
   }
 
   async function loadOptions() {
-    const [products, variants, branches, roles] = await Promise.all([
-      supabase
-        .from("product")
-        .select("productid, productname, brand, defaultsellingprice")
-        .order("productname"),
+  const [productsRes, variantsRes, branchesRes, rolesRes] = await Promise.all([
+    supabase
+      .from("product")
+      .select("productid, productname, brand, defaultsellingprice")
+      .order("productname"),
 
-      supabase
-        .from("product_variant")
-        .select("variantid, productid, sku, barcode, size, color, sellingprice")
-        .order("sku"),
+    supabase
+      .from("product_variant")
+      .select("variantid, productid, sku, barcode, size, color, sellingprice")
+      .order("sku"),
 
-      supabase
-        .from("branch")
-        .select("branchid, branchname")
-        .order("branchname"),
+    supabase
+      .from("branch")
+      .select("branchid, branchname")
+      .order("branchname"),
 
-      supabase
-        .from("role")
-        .select("roleid, rolename")
-        .order("rolename"),
-    ]);
+    supabase
+      .from("role")
+      .select("roleid, rolename")
+      .order("rolename"),
+  ]);
 
-    if (products.error) throw products.error;
-    if (variants.error) throw variants.error;
-    if (branches.error) throw branches.error;
-    if (roles.error) throw roles.error;
-
-    const productList = products.data || [];
-    const variantList = (variants.data || []).map((variant) => {
-      const product = productList.find(
-        (item) => item.productid === variant.productid
-      );
-
-      return {
-        ...variant,
-        product: product
-          ? {
-              productname: product.productname,
-              brand: product.brand,
-              defaultsellingprice: product.defaultsellingprice,
-            }
-          : null,
-      };
-    });
-
-    setOptions({
-      products: productList,
-      variants: variantList,
-      branches: branches.data || [],
-      roles: roles.data || [],
-    });
+  if (productsRes.error) {
+    console.error("products error:", productsRes.error);
+    show("Không tải được sản phẩm: " + productsRes.error.message);
   }
+
+  if (variantsRes.error) {
+    console.error("variants error:", variantsRes.error);
+    show("Không tải được SKU: " + variantsRes.error.message);
+  }
+
+  if (branchesRes.error) {
+    console.error("branches error:", branchesRes.error);
+    show("Không tải được chi nhánh: " + branchesRes.error.message);
+  }
+
+  const products = productsRes.data || [];
+
+  const variants = (variantsRes.data || []).map((variant) => ({
+    ...variant,
+    product:
+      products.find((product) => product.productid === variant.productid) ||
+      null,
+  }));
+
+  setOptions({
+    products,
+    variants,
+    branches: branchesRes.data || [],
+    roles: rolesRes.data || [],
+  });
+}
   async function loadProfile(email) {
   const { data, error } = await supabase
     .from("users")
