@@ -2135,3 +2135,15 @@ body.dark .cart-total {
     grid-template-columns: 1fr;
   }
 }
+/* Smart product picker - dán vào cuối Src/style.css */
+.smart-picker { position: relative; z-index: 20; }
+.smart-picker-button { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border: 1px solid #d8c6a1; border-radius: 12px; background: #fffdf7; color: #073d31; font-weight: 700; text-align: left; }
+.smart-picker-button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.smart-picker-panel { position: absolute; left: 0; right: 0; top: calc(100% + 8px); background: #fffdf7; border: 1px solid #d8c6a1; border-radius: 16px; box-shadow: 0 18px 45px rgba(0,0,0,.18); padding: 10px; z-index: 999; }
+.smart-picker-search { width: 100%; min-height: 42px; border: 1px solid #d8c6a1; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+.smart-picker-list { max-height: 300px; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.smart-picker-item { width: 100%; display: grid; grid-template-columns: 1.4fr .9fr .9fr; gap: 8px; align-items: center; text-align: left; border: 1px solid #eadbbd; border-radius: 12px; background: #fbf5e8; padding: 10px; color: #073d31; }
+.smart-picker-item:hover { background: #efe2c5; }
+.smart-picker-item strong, .smart-picker-item span, .smart-picker-item small { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.smart-picker-empty { padding: 14px; color: #866f42; }
+@media (max-width: 900px) { .smart-picker-item { grid-template-columns: 1fr; } }
