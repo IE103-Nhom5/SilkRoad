@@ -232,7 +232,7 @@ export default function App() {
 
     supabase
       .from("product_variant")
-      .select("variantid, productid, sku, barcode, size, color, sellingprice")
+      .select("variantid, productid, sku, barcode, sellingprice")
       .order("sku"),
 
     supabase
@@ -246,20 +246,14 @@ export default function App() {
       .order("rolename"),
   ]);
 
-  if (productsRes.error) {
-    console.error("products error:", productsRes.error);
-    show("Không tải được sản phẩm: " + productsRes.error.message);
-  }
+  console.log("productsRes", productsRes);
+  console.log("variantsRes", variantsRes);
+  console.log("branchesRes", branchesRes);
+  console.log("rolesRes", rolesRes);
 
-  if (variantsRes.error) {
-    console.error("variants error:", variantsRes.error);
-    show("Không tải được SKU: " + variantsRes.error.message);
-  }
-
-  if (branchesRes.error) {
-    console.error("branches error:", branchesRes.error);
-    show("Không tải được chi nhánh: " + branchesRes.error.message);
-  }
+  if (productsRes.error) show("Lỗi product: " + productsRes.error.message);
+  if (variantsRes.error) show("Lỗi product_variant: " + variantsRes.error.message);
+  if (branchesRes.error) show("Lỗi branch: " + branchesRes.error.message);
 
   const products = productsRes.data || [];
 
@@ -276,6 +270,12 @@ export default function App() {
     branches: branchesRes.data || [],
     roles: rolesRes.data || [],
   });
+
+  show(
+    `Đã tải: ${branchesRes.data?.length || 0} chi nhánh, ${
+      variantsRes.data?.length || 0
+    } SKU`
+  );
 }
   async function loadProfile(email) {
   const { data, error } = await supabase
