@@ -2310,3 +2310,192 @@ body.dark .smart-picker-item:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== SilkRoad smart picker + friendly forms addon ===== */
+.sales-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.field label {
+  font-weight: 800;
+  color: #073d31;
+  font-size: 13px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+}
+
+.cart-total {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: #f4e8c8;
+  border: 1px solid #d7bd7c;
+  border-radius: 12px;
+  color: #073d31;
+  font-size: 18px;
+  text-align: right;
+}
+
+.cart-total b {
+  font-size: 22px;
+}
+
+.smart-picker {
+  z-index: 20;
+}
+
+.smart-picker-trigger {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #d6c39a;
+  background: #fffdf7;
+  border-radius: 12px;
+  padding: 0 12px;
+  color: #073d31;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  text-align: left;
+}
+
+.smart-picker-trigger span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smart-picker-trigger.has-value {
+  border-color: #0b5b4d;
+  box-shadow: 0 0 0 2px rgba(11, 91, 77, 0.08);
+}
+
+.smart-picker-panel {
+  position: absolute;
+  z-index: 100;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #fffdf7;
+  border: 1px solid #d6c39a;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  padding: 10px;
+  max-height: 360px;
+  overflow: hidden;
+}
+
+.smart-picker-search {
+  width: 100%;
+  border: 1px solid #d6c39a;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.smart-picker-list {
+  max-height: 285px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.smart-picker-item {
+  border: 1px solid #eadbbb;
+  background: #fffaf0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  color: #073d31;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.smart-picker-item:hover {
+  background: #f6e8c6;
+  border-color: #c9a85d;
+}
+
+.smart-picker-item b {
+  font-size: 14px;
+}
+
+.smart-picker-item span,
+.smart-picker-item small {
+  color: #6f5b35;
+}
+
+.smart-picker-empty {
+  padding: 14px;
+  color: #8a6a2f;
+}
+
+body.dark .cart-total {
+  background: #172520;
+  border-color: #35594e;
+  color: #f7dc91;
+}
+
+body.dark .smart-picker-trigger,
+body.dark .smart-picker-panel,
+body.dark .smart-picker-search,
+body.dark .smart-picker-item {
+  background: #172520;
+  color: #f7dc91;
+  border-color: #35594e;
+}
+
+body.dark .smart-picker-item:hover {
+  background: #20352d;
+}
+
+@media (max-width: 900px) {
+  .sales-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Product main -> variant selector */
+.product-variant-picker {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr);
+  gap: 14px;
+  grid-column: span 2;
+}
+
+.product-variant-picker .smart-picker-search {
+  margin-bottom: 8px;
+}
+
+.picker-help {
+  color: #7c6a45;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+@media (max-width: 900px) {
+  .product-variant-picker {
+    grid-template-columns: 1fr;
+    grid-column: span 1;
+  }
+}

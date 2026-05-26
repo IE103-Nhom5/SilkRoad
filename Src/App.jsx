@@ -92,14 +92,14 @@ function first(obj, keys, fallback = "") {
 
 function variantLabel(item) {
   return [
-    item?.product?.productname || "Sản phẩm",
-    item?.sku,
+    item?.sku ? `SKU ${item.sku}` : "Chưa có SKU",
+    item?.barcode ? `Barcode ${item.barcode}` : "",
     item?.size ? `Size ${item.size}` : "",
-    item?.color,
-    item?.barcode,
+    item?.color ? `Màu ${item.color}` : "",
+    item?.sellingprice ? money(item.sellingprice) : "",
   ]
     .filter(Boolean)
-    .join(" - ");
+    .join(" · ");
 }
 
 export default function App() {
@@ -149,13 +149,15 @@ export default function App() {
     alttext: "",
   });
   const [transferForm, setTransferForm] = useState({
-  frombranchid: "",
-  tobranchid: "",
-  variantid: "",
-  quantity: 1,
-});
+    frombranchid: "",
+    tobranchid: "",
+    productid: "",
+    variantid: "",
+    quantity: 1,
+  });
   const [adjustForm, setAdjustForm] = useState({
     branchid: "",
+    productid: "",
     variantid: "",
     actualquantity: 0,
     note: "",
@@ -430,9 +432,9 @@ async function loadOptions() {
       const reserved = Number(stockItem.reservedquantity || 0);
 
       return {
-        "Chi nhánh": branch?.branchname || stockItem.branchid || "",
-        "Sản phẩm": variant?.product?.productname || "",
-        "SKU": variant?.sku || "",
+        "Chi nhánh": branch?.branchname || "Chưa xác định",
+        "Sản phẩm": variant?.product?.productname || "Chưa ghép sản phẩm",
+        "SKU": variant?.sku || "Chưa có SKU",
         "Barcode": variant?.barcode || "",
         "Size": variant?.size || "",
         "Màu": variant?.color || "",
@@ -478,9 +480,9 @@ async function loadOptions() {
         );
 
         return {
-          "Chi nhánh": branch?.branchname || stockItem.branchid || "",
-          "Sản phẩm": variant?.product?.productname || "",
-          "SKU": variant?.sku || "",
+          "Chi nhánh": branch?.branchname || "Chưa xác định",
+          "Sản phẩm": variant?.product?.productname || "Chưa ghép sản phẩm",
+          "SKU": variant?.sku || "Chưa có SKU",
           "Barcode": variant?.barcode || "",
           "Size": variant?.size || "",
           "Màu": variant?.color || "",
@@ -722,9 +724,9 @@ async function loadOptions() {
         branchid: cartItem.branchid,
         branchname: branch?.branchname || "",
         productid: variant?.productid || "",
-        productname: variant?.product?.productname || "",
+        productname: variant?.product?.productname || "Chưa ghép sản phẩm",
         variantid: cartItem.variantid,
-        sku: variant?.sku || "",
+        sku: variant?.sku || "Chưa có SKU",
         barcode: variant?.barcode || "",
         size: variant?.size || "",
         color: variant?.color || "",
@@ -806,7 +808,7 @@ async function loadOptions() {
         const now = new Date().toISOString();
 
         if (after < 0) {
-          throw new Error(`Không đủ tồn kho cho SKU ${item.sku || item.variantid}`);
+          throw new Error(`Không đủ tồn kho cho sản phẩm ${item.productname || item.sku || "đã chọn"}`);
         }
 
         const { error: stockError } = await supabase
@@ -1140,6 +1142,43 @@ function Grid({ children }) {
 }
 
 function DataTable({ rows }) {
+  if (!rows?.length) return <p className="muted">Chưa có dữ liệu</p>;
+
+  const isIdColumn = (key) => {
+    const normalized = String(key).toLowerCase().replace(/[\s_-]/g, "");
+    return normalized === "id" || normalized.endsWith("id");
+  };
+
+  const allKeys = Object.keys(rows[0]);
+  const keys = allKeys.filter((key) => !isIdColumn(key));
+
+  if (!keys.length) {
+    return <p className="muted">Dữ liệu chỉ có mã kỹ thuật nên đã được ẩn khỏi giao diện.</p>;
+  }
+
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            {keys.map((k) => (
+              <th key={k}>{k}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i}>
+              {keys.map((k) => (
+                <td key={k}>{typeof r[k] === "object" && r[k] !== null ? JSON.stringify(r[k]) : str(r[k])}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}) {
   if (!rows?.length) return <p className="muted">Chưa có dữ liệu</p>;
   const keys = Object.keys(rows[0]);
   return (
@@ -1481,7 +1520,90 @@ function Products(p) {
 }
 
 
-function SmartProductPicker({ label, value, variants, onChange, placeholder = "Chọn sản phẩm/SKU" }) {
+function ProductVariantSelector({
+  products,
+  variants,
+  productId,
+  variantId,
+  onProductChange,
+  onVariantChange,
+  productLabel = "Sản phẩm chính",
+  variantLabelText = "Biến thể",
+}) {
+  const [keyword, setKeyword] = useState("");
+
+  const normalizedKeyword = keyword.trim().toLowerCase();
+  const selectedProduct = products.find((item) => item.productid === productId) || null;
+  const selectedVariant = variants.find((item) => item.variantid === variantId) || null;
+
+  const filteredProducts = products.filter((item) => {
+    if (!normalizedKeyword) return true;
+    return [item.productname, item.brand]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedKeyword);
+  });
+
+  const variantsOfProduct = variants.filter((item) => item.productid === productId);
+
+  return (
+    <div className="product-variant-picker">
+      <div className="field">
+        <label>{productLabel}</label>
+        <input
+          className="smart-picker-search"
+          placeholder="Tìm tên sản phẩm chính..."
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+        />
+        <select
+          value={productId || ""}
+          onChange={(e) => {
+            const product = products.find((item) => item.productid === e.target.value) || null;
+            onProductChange(product);
+          }}
+        >
+          <option value="">Chọn sản phẩm chính</option>
+          {filteredProducts.map((item) => (
+            <option key={item.productid} value={item.productid}>
+              {item.productname}{item.brand ? ` - ${item.brand}` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="field">
+        <label>{variantLabelText}</label>
+        <select
+          value={variantId || ""}
+          disabled={!productId}
+          onChange={(e) => {
+            const variant = variants.find((item) => item.variantid === e.target.value) || null;
+            onVariantChange(variant);
+          }}
+        >
+          <option value="">{productId ? "Chọn size / màu / SKU" : "Chọn sản phẩm chính trước"}</option>
+          {variantsOfProduct.map((item) => (
+            <option key={item.variantid} value={item.variantid}>
+              {variantLabel(item)}
+            </option>
+          ))}
+        </select>
+        {productId && variantsOfProduct.length === 0 && (
+          <small className="picker-help">
+            Sản phẩm này chưa có biến thể. Hãy tạo SKU/biến thể ở mục Hàng hóa trước.
+          </small>
+        )}
+        {selectedProduct && selectedVariant && (
+          <small className="picker-help">
+            Đã chọn: {selectedProduct.productname} · {variantLabel(selectedVariant)}
+          </small>
+        )}
+      </div>
+    </div>
+  );
+}) {
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
 
@@ -1633,14 +1755,25 @@ function Transfer(p) {
           </select>
         </div>
 
-        <SmartProductPicker
-          label="Sản phẩm / SKU / Barcode"
-          value={p.transferForm.variantid}
+        <ProductVariantSelector
+          products={p.options.products}
           variants={p.options.variants}
-          onChange={(item) =>
+          productId={p.transferForm.productid}
+          variantId={p.transferForm.variantid}
+          productLabel="Sản phẩm chính"
+          variantLabelText="Biến thể cần chuyển"
+          onProductChange={(product) =>
             p.setTransferForm({
               ...p.transferForm,
-              variantid: item.variantid,
+              productid: product?.productid || "",
+              variantid: "",
+            })
+          }
+          onVariantChange={(variant) =>
+            p.setTransferForm({
+              ...p.transferForm,
+              productid: variant?.productid || p.transferForm.productid,
+              variantid: variant?.variantid || "",
             })
           }
         />
@@ -1692,14 +1825,25 @@ function Adjustment(p) {
           </select>
         </div>
 
-        <SmartProductPicker
-          label="Sản phẩm / SKU / Barcode"
-          value={p.adjustForm.variantid}
+        <ProductVariantSelector
+          products={p.options.products}
           variants={p.options.variants}
-          onChange={(item) =>
+          productId={p.adjustForm.productid}
+          variantId={p.adjustForm.variantid}
+          productLabel="Sản phẩm chính"
+          variantLabelText="Biến thể kiểm kho"
+          onProductChange={(product) =>
             p.setAdjustForm({
               ...p.adjustForm,
-              variantid: item.variantid,
+              productid: product?.productid || "",
+              variantid: "",
+            })
+          }
+          onVariantChange={(variant) =>
+            p.setAdjustForm({
+              ...p.adjustForm,
+              productid: variant?.productid || p.adjustForm.productid,
+              variantid: variant?.variantid || "",
             })
           }
         />
@@ -1772,17 +1916,30 @@ function Orders(p) {
             </select>
           </div>
 
-          <SmartProductPicker
-            label="Sản phẩm / SKU / Barcode"
-            value={p.cartItem.variantid}
+          <ProductVariantSelector
+            products={p.options.products}
             variants={p.options.variants}
-            onChange={(selectedVariant) =>
+            productId={p.cartItem.productid}
+            variantId={p.cartItem.variantid}
+            productLabel="Sản phẩm chính"
+            variantLabelText="Biến thể bán"
+            onProductChange={(product) =>
               p.setCartItem({
                 ...p.cartItem,
-                variantid: selectedVariant.variantid,
+                productid: product?.productid || "",
+                variantid: "",
+                unitprice: product?.defaultsellingprice || 0,
+              })
+            }
+            onVariantChange={(selectedVariant) =>
+              p.setCartItem({
+                ...p.cartItem,
+                productid: selectedVariant?.productid || p.cartItem.productid,
+                variantid: selectedVariant?.variantid || "",
                 unitprice:
                   selectedVariant?.sellingprice ||
                   selectedVariant?.product?.defaultsellingprice ||
+                  p.cartItem.unitprice ||
                   0,
               })
             }
