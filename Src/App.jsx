@@ -1453,14 +1453,6 @@ function Adjustment(p) {
 }
 
 function Orders(p) {
-  const filteredVariants = p.options.variants.filter(
-    (item) => item.productid === p.cartItem.productid
-  );
-
-  const selectedProduct = p.options.products.find(
-    (item) => item.productid === p.cartItem.productid
-  );
-
   const cartTotal = p.cart.reduce(
     (sum, item) => sum + Number(item.total || item.quantity * item.unitprice || 0),
     0
@@ -1475,7 +1467,10 @@ function Orders(p) {
             <select
               value={p.cartItem.branchid}
               onChange={(e) =>
-                p.setCartItem({ ...p.cartItem, branchid: e.target.value })
+                p.setCartItem({
+                  ...p.cartItem,
+                  branchid: e.target.value,
+                })
               }
             >
               <option value="">Chọn chi nhánh</option>
@@ -1488,33 +1483,9 @@ function Orders(p) {
           </div>
 
           <div className="field">
-            <label>Sản phẩm</label>
-            <select
-              value={p.cartItem.productid}
-              onChange={(e) =>
-                p.setCartItem({
-                  ...p.cartItem,
-                  productid: e.target.value,
-                  variantid: "",
-                  unitprice: 0,
-                })
-              }
-            >
-              <option value="">Chọn sản phẩm</option>
-              {p.options.products.map((item) => (
-                <option key={item.productid} value={item.productid}>
-                  {item.productname}
-                  {item.brand ? ` - ${item.brand}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="field">
-            <label>Biến thể / SKU</label>
+            <label>Sản phẩm / SKU / size / màu</label>
             <select
               value={p.cartItem.variantid}
-              disabled={!p.cartItem.productid}
               onChange={(e) => {
                 const selectedVariant = p.options.variants.find(
                   (item) => item.variantid === e.target.value
@@ -1522,20 +1493,21 @@ function Orders(p) {
 
                 p.setCartItem({
                   ...p.cartItem,
+                  productid: selectedVariant?.productid || "",
                   variantid: e.target.value,
                   unitprice:
                     selectedVariant?.sellingprice ||
-                    selectedProduct?.defaultsellingprice ||
+                    selectedVariant?.product?.defaultsellingprice ||
                     0,
                 });
               }}
             >
-              <option value="">
-                {p.cartItem.productid ? "Chọn size/màu/SKU" : "Chọn sản phẩm trước"}
-              </option>
-              {filteredVariants.map((item) => (
+              <option value="">Chọn sản phẩm/SKU</option>
+
+              {p.options.variants.map((item) => (
                 <option key={item.variantid} value={item.variantid}>
-                  {item.sku}
+                  {item.product?.productname || "Sản phẩm"}
+                  {item.sku ? ` - ${item.sku}` : ""}
                   {item.size ? ` - Size ${item.size}` : ""}
                   {item.color ? ` - ${item.color}` : ""}
                   {item.barcode ? ` - ${item.barcode}` : ""}
@@ -1551,7 +1523,10 @@ function Orders(p) {
               min="1"
               value={p.cartItem.quantity}
               onChange={(e) =>
-                p.setCartItem({ ...p.cartItem, quantity: e.target.value })
+                p.setCartItem({
+                  ...p.cartItem,
+                  quantity: e.target.value,
+                })
               }
             />
           </div>
@@ -1563,7 +1538,10 @@ function Orders(p) {
               min="0"
               value={p.cartItem.unitprice}
               onChange={(e) =>
-                p.setCartItem({ ...p.cartItem, unitprice: e.target.value })
+                p.setCartItem({
+                  ...p.cartItem,
+                  unitprice: e.target.value,
+                })
               }
             />
           </div>
@@ -1572,8 +1550,14 @@ function Orders(p) {
         <button onClick={p.addCart}>
           <Plus /> Thêm vào giỏ
         </button>
-        <button onClick={() => p.run(p.createInvoice)}>Tạo hóa đơn</button>
-        <button onClick={() => p.setCart([])}>Xóa giỏ</button>
+
+        <button onClick={() => p.run(p.createInvoice)}>
+          Tạo hóa đơn
+        </button>
+
+        <button onClick={() => p.setCart([])}>
+          Xóa giỏ
+        </button>
       </Card>
 
       <Card title="Giỏ hàng">
@@ -1596,6 +1580,7 @@ function Orders(p) {
                     <th>Thành tiền</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {p.cart.map((item, index) => (
                     <tr key={index}>
@@ -1613,6 +1598,7 @@ function Orders(p) {
                 </tbody>
               </table>
             </div>
+
             <div className="cart-total">
               Tổng tiền: <b>{money(cartTotal)}</b>
             </div>
