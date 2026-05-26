@@ -1633,7 +1633,7 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
         />
 
         <div className="sr-login-form-layer">
-          <h1>ĐĂNG NHẬP</h1>
+          <h1>login</h1>
 
           <div className="sr-login-line">
             <span></span>
@@ -1708,7 +1708,7 @@ function Login({ login, setLogin, signIn, signUp, toast }) {
             className="sr-login-submit"
             onClick={signIn}
           >
-            ĐĂNG NHẬP
+            login
           </button>
 
           <p className="sr-login-register">
