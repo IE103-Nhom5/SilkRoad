@@ -90,6 +90,18 @@ function first(obj, keys, fallback = "") {
   return fallback;
 }
 
+function variantLabel(item) {
+  return [
+    item?.product?.productname || "Sản phẩm",
+    item?.sku,
+    item?.size ? `Size ${item.size}` : "",
+    item?.color,
+    item?.barcode,
+  ]
+    .filter(Boolean)
+    .join(" - ");
+}
+
 export default function App() {
   // Auth + layout state
   const [session, setSession] = useState(null);
@@ -143,12 +155,11 @@ export default function App() {
   quantity: 1,
 });
   const [adjustForm, setAdjustForm] = useState({
-  branchid: "",
-  productid: "",
-  variantid: "",
-  actualquantity: 0,
-  note: "",
-});
+    branchid: "",
+    variantid: "",
+    actualquantity: 0,
+    note: "",
+  });
   const [cart, setCart] = useState([]);
   const [cartItem, setCartItem] = useState({
     branchid: "",
@@ -224,74 +235,73 @@ export default function App() {
   }
 
 async function loadOptions() {
-  const [productsRes, variantsRes, branchesRes, rolesRes] = await Promise.all([
-    supabase
-      .from("product")
-      .select("productid, productname, defaultsellingprice")
-      .order("productname"),
+    async function read(table, columns, fallbackColumns, orderColumn) {
+      let query = supabase.from(table).select(columns);
+      if (orderColumn) query = query.order(orderColumn);
+      let result = await query;
 
-    supabase
-      .from("product_variant")
-      .select("variantid, productid, sku, barcode, size, color, sellingprice")
-      .order("sku"),
+      if (result.error && fallbackColumns) {
+        console.warn(`Fallback select for ${table}:`, result.error.message);
+        let fallbackQuery = supabase.from(table).select(fallbackColumns);
+        if (orderColumn) fallbackQuery = fallbackQuery.order(orderColumn);
+        result = await fallbackQuery;
+      }
 
-    supabase
-      .from("branch")
-      .select("branchid, branchname")
-      .order("branchname"),
+      return result;
+    }
 
-    supabase
-      .from("role")
-      .select("roleid, rolename")
-      .order("rolename"),
-  ]);
+    const [productsRes, variantsRes, branchesRes, rolesRes] = await Promise.all([
+      read(
+        "product",
+        "productid, productname, brand, defaultsellingprice",
+        "productid, productname, defaultsellingprice",
+        "productname"
+      ),
+      read(
+        "product_variant",
+        "variantid, productid, sku, barcode, size, color, sellingprice",
+        "variantid, productid, sku, barcode, sellingprice",
+        "sku"
+      ),
+      read("branch", "branchid, branchname", null, "branchname"),
+      read("role", "roleid, rolename", null, "rolename"),
+    ]);
 
-  console.log("productsRes", productsRes);
-  console.log("variantsRes", variantsRes);
-  console.log("branchesRes", branchesRes);
-  console.log("rolesRes", rolesRes);
+    console.log("productsRes", productsRes);
+    console.log("variantsRes", variantsRes);
+    console.log("branchesRes", branchesRes);
+    console.log("rolesRes", rolesRes);
 
-  if (productsRes.error) {
-    show("Lỗi product: " + productsRes.error.message);
+    if (productsRes.error) show("Lỗi product: " + productsRes.error.message);
+    if (variantsRes.error) show("Lỗi product_variant: " + variantsRes.error.message);
+    if (branchesRes.error) show("Lỗi branch: " + branchesRes.error.message);
+
+    const products = productsRes.data || [];
+
+    const variants = (variantsRes.data || []).map((variant) => ({
+      ...variant,
+      product:
+        products.find((product) => product.productid === variant.productid) ||
+        null,
+    }));
+
+    const loaded = {
+      products,
+      variants,
+      branches: branchesRes.data || [],
+      roles: rolesRes.data || [],
+    };
+
+    setOptions(loaded);
+
+    if ((loaded.branches.length === 0 || loaded.variants.length === 0) && !branchesRes.error && !variantsRes.error) {
+      show(
+        `Đã tải: ${loaded.branches.length} chi nhánh, ${loaded.variants.length} SKU. Nếu dropdown trống, kiểm tra RLS hoặc dữ liệu mẫu.`
+      );
+    }
+
+    return loaded;
   }
-
-  if (variantsRes.error) {
-    show("Lỗi product_variant: " + variantsRes.error.message);
-  }
-
-  if (branchesRes.error) {
-    show("Lỗi branch: " + branchesRes.error.message);
-  }
-
-  const products = productsRes.data || [];
-
-  const variants = (variantsRes.data || []).map((variant) => ({
-    ...variant,
-    product:
-      products.find((product) => product.productid === variant.productid) ||
-      null,
-  }));
-
-  setOptions({
-    products,
-    variants,
-    branches: branchesRes.data || [],
-    roles: rolesRes.data || [],
-  });
-
-  show(
-    `Đã tải: ${branchesRes.data?.length || 0} chi nhánh, ${
-      variantsRes.data?.length || 0
-    } SKU`
-  );
-
-  return {
-    products,
-    variants,
-    branches: branchesRes.data || [],
-    roles: rolesRes.data || [],
-  };
-}
   async function loadProfile(email) {
   const { data, error } = await supabase
     .from("users")
@@ -396,69 +406,18 @@ async function loadOptions() {
   }
 
   async function loadStockFriendly() {
-  if (!guard("stock")) return;
+    if (!guard("stock")) return;
 
-  const opts = await loadOptions();
+    const opts = await loadOptions();
 
-  const { data, error } = await supabase
-    .from("stock")
-    .select("*")
-    .order("lastupdated", { ascending: false });
+    const { data, error } = await supabase
+      .from("stock")
+      .select("*")
+      .order("lastupdated", { ascending: false });
 
-  if (error) throw error;
+    if (error) throw error;
 
-  const friendlyRows = (data || []).map((stockItem) => {
-    const branch = opts.branches.find(
-      (item) => item.branchid === stockItem.branchid
-    );
-
-    const variant = opts.variants.find(
-      (item) => item.variantid === stockItem.variantid
-    );
-
-    const quantity = Number(stockItem.quantity || 0);
-    const reserved = Number(stockItem.reservedquantity || 0);
-
-    return {
-      "Chi nhánh": branch?.branchname || stockItem.branchid || "",
-      "Sản phẩm": variant?.product?.productname || "",
-      "SKU": variant?.sku || "",
-      "Barcode": variant?.barcode || "",
-      "Size": variant?.size || "",
-      "Màu": variant?.color || "",
-      "Tồn kho": quantity,
-      "Đã giữ": reserved,
-      "Tồn khả dụng": quantity - reserved,
-      "Mức tối thiểu": stockItem.minstocklevel || 0,
-      "Cập nhật": stockItem.lastupdated
-        ? new Date(stockItem.lastupdated).toLocaleString("vi-VN")
-        : "",
-    };
-  });
-
-  setRows(friendlyRows);
-}
-
-
- async function loadLowStock() {
-  if (!guard("stock")) return;
-
-  const opts = await loadOptions();
-
-  const { data, error } = await supabase
-    .from("stock")
-    .select("*")
-    .order("quantity", { ascending: true });
-
-  if (error) throw error;
-
-  const lowRows = (data || [])
-    .filter((stockItem) => {
-      const quantity = Number(stockItem.quantity || 0);
-      const min = Number(stockItem.minstocklevel || stockItem.min_stock_level || 5);
-      return quantity <= min;
-    })
-    .map((stockItem) => {
+    const friendlyRows = (data || []).map((stockItem) => {
       const branch = opts.branches.find(
         (item) => item.branchid === stockItem.branchid
       );
@@ -467,6 +426,9 @@ async function loadOptions() {
         (item) => item.variantid === stockItem.variantid
       );
 
+      const quantity = Number(stockItem.quantity || 0);
+      const reserved = Number(stockItem.reservedquantity || 0);
+
       return {
         "Chi nhánh": branch?.branchname || stockItem.branchid || "",
         "Sản phẩm": variant?.product?.productname || "",
@@ -474,171 +436,234 @@ async function loadOptions() {
         "Barcode": variant?.barcode || "",
         "Size": variant?.size || "",
         "Màu": variant?.color || "",
-        "Tồn kho": stockItem.quantity || 0,
-        "Mức tối thiểu": stockItem.minstocklevel || 0,
-        "Trạng thái": "Sắp hết hàng",
+        "Tồn kho": quantity,
+        "Đã giữ": reserved,
+        "Tồn khả dụng": quantity - reserved,
+        "Mức tối thiểu": stockItem.minstocklevel || stockItem.min_stock_level || 0,
         "Cập nhật": stockItem.lastupdated
           ? new Date(stockItem.lastupdated).toLocaleString("vi-VN")
           : "",
       };
     });
 
-  setRows(lowRows);
-  show("Đã lọc cảnh báo sắp hết hàng");
-}
+    setRows(friendlyRows);
+  }
+
+
+ async function loadLowStock() {
+    if (!guard("stock")) return;
+
+    const opts = await loadOptions();
+
+    const { data, error } = await supabase
+      .from("stock")
+      .select("*")
+      .order("quantity", { ascending: true });
+
+    if (error) throw error;
+
+    const lowRows = (data || [])
+      .filter((stockItem) => {
+        const quantity = Number(stockItem.quantity || 0);
+        const min = Number(stockItem.minstocklevel || stockItem.min_stock_level || 5);
+        return quantity <= min;
+      })
+      .map((stockItem) => {
+        const branch = opts.branches.find(
+          (item) => item.branchid === stockItem.branchid
+        );
+
+        const variant = opts.variants.find(
+          (item) => item.variantid === stockItem.variantid
+        );
+
+        return {
+          "Chi nhánh": branch?.branchname || stockItem.branchid || "",
+          "Sản phẩm": variant?.product?.productname || "",
+          "SKU": variant?.sku || "",
+          "Barcode": variant?.barcode || "",
+          "Size": variant?.size || "",
+          "Màu": variant?.color || "",
+          "Tồn kho": Number(stockItem.quantity || 0),
+          "Mức tối thiểu": stockItem.minstocklevel || stockItem.min_stock_level || 0,
+          "Trạng thái": "Sắp hết hàng",
+          "Cập nhật": stockItem.lastupdated
+            ? new Date(stockItem.lastupdated).toLocaleString("vi-VN")
+            : "",
+        };
+      });
+
+    setRows(lowRows);
+    show("Đã lọc cảnh báo sắp hết hàng");
+  }
 
   async function transferStock() {
-  if (!guard("transfer")) return;
+    if (!guard("transfer")) return;
 
-  if (
-    !transferForm.frombranchid ||
-    !transferForm.tobranchid ||
-    !transferForm.variantid
-  ) {
-    return show("Vui lòng chọn đủ chi nhánh gửi, chi nhánh nhận và sản phẩm/SKU");
-  }
+    if (
+      !transferForm.frombranchid ||
+      !transferForm.tobranchid ||
+      !transferForm.variantid
+    ) {
+      return show("Vui lòng chọn đủ chi nhánh gửi, chi nhánh nhận và sản phẩm/SKU");
+    }
 
-  if (transferForm.frombranchid === transferForm.tobranchid) {
-    return show("Chi nhánh gửi và chi nhánh nhận không được trùng nhau");
-  }
+    if (transferForm.frombranchid === transferForm.tobranchid) {
+      return show("Chi nhánh gửi và chi nhánh nhận không được trùng nhau");
+    }
 
-  const q = Number(transferForm.quantity);
+    const q = Number(transferForm.quantity);
 
-  if (!Number.isFinite(q) || q <= 0) {
-    return show("Số lượng chuyển phải lớn hơn 0");
-  }
+    if (!Number.isFinite(q) || q <= 0) {
+      return show("Số lượng chuyển phải lớn hơn 0");
+    }
 
-  const from = await supabase
-    .from("stock")
-    .select("*")
-    .eq("branchid", transferForm.frombranchid)
-    .eq("variantid", transferForm.variantid)
-    .maybeSingle();
-
-  if (from.error) throw from.error;
-  if (!from.data) throw new Error("Không tìm thấy tồn kho chi nhánh gửi");
-
-  if (Number(from.data.quantity || 0) < q) {
-    throw new Error("Không đủ tồn để chuyển");
-  }
-
-  const to = await supabase
-    .from("stock")
-    .select("*")
-    .eq("branchid", transferForm.tobranchid)
-    .eq("variantid", transferForm.variantid)
-    .maybeSingle();
-
-  if (to.error) throw to.error;
-
-  const beforeFrom = Number(from.data.quantity || 0);
-  const afterFrom = beforeFrom - q;
-
-  const beforeTo = Number(to.data?.quantity || 0);
-  const afterTo = beforeTo + q;
-
-  const updates = [
-    supabase
+    const from = await supabase
       .from("stock")
-      .update({
-        quantity: afterFrom,
-        lastupdated: new Date().toISOString(),
-      })
+      .select("*")
       .eq("branchid", transferForm.frombranchid)
-      .eq("variantid", transferForm.variantid),
-  ];
+      .eq("variantid", transferForm.variantid)
+      .maybeSingle();
 
-  if (to.data) {
-    updates.push(
+    if (from.error) throw from.error;
+    if (!from.data) throw new Error("Không tìm thấy tồn kho chi nhánh gửi");
+
+    const beforeFrom = Number(from.data.quantity || 0);
+
+    if (beforeFrom < q) {
+      throw new Error("Không đủ tồn để chuyển");
+    }
+
+    const to = await supabase
+      .from("stock")
+      .select("*")
+      .eq("branchid", transferForm.tobranchid)
+      .eq("variantid", transferForm.variantid)
+      .maybeSingle();
+
+    if (to.error) throw to.error;
+
+    const afterFrom = beforeFrom - q;
+    const beforeTo = Number(to.data?.quantity || 0);
+    const afterTo = beforeTo + q;
+    const now = new Date().toISOString();
+
+    const updates = [
       supabase
         .from("stock")
         .update({
-          quantity: afterTo,
-          lastupdated: new Date().toISOString(),
+          quantity: afterFrom,
+          lastupdated: now,
         })
-        .eq("branchid", transferForm.tobranchid)
-        .eq("variantid", transferForm.variantid)
-    );
-  } else {
-    updates.push(
-      supabase.from("stock").insert([
-        {
-          branchid: transferForm.tobranchid,
-          variantid: transferForm.variantid,
-          quantity: q,
-          reservedquantity: 0,
-          minstocklevel: 0,
-          lastupdated: new Date().toISOString(),
-        },
-      ])
-    );
-  }
+        .eq("branchid", transferForm.frombranchid)
+        .eq("variantid", transferForm.variantid),
+    ];
 
-  const res = await Promise.all(updates);
-  const err = res.find((item) => item.error)?.error;
-  if (err) throw err;
+    if (to.data) {
+      updates.push(
+        supabase
+          .from("stock")
+          .update({
+            quantity: afterTo,
+            lastupdated: now,
+          })
+          .eq("branchid", transferForm.tobranchid)
+          .eq("variantid", transferForm.variantid)
+      );
+    } else {
+      updates.push(
+        supabase.from("stock").insert([
+          {
+            branchid: transferForm.tobranchid,
+            variantid: transferForm.variantid,
+            quantity: q,
+            reservedquantity: 0,
+            minstocklevel: 0,
+            lastupdated: now,
+          },
+        ])
+      );
+    }
 
-  const referenceId = uuid();
+    const res = await Promise.all(updates);
+    const err = res.find((item) => item.error)?.error;
+    if (err) throw err;
 
-  const { error: historyError } = await supabase.from("stock_history").insert([
-    {
-      historyid: uuid(),
-      branchid: transferForm.frombranchid,
-      variantid: transferForm.variantid,
-      transactiontype: "transfer_out",
-      referencetype: "TRANSFER_DEMO",
-      referenceid: referenceId,
-      quantitychange: -q,
-      quantitybefore: beforeFrom,
-      quantityafter: afterFrom,
-      performedby: profile?.userid || null,
-      timestamp: new Date().toISOString(),
-      note: "Demo chuyển kho xuất",
-    },
-    {
-      historyid: uuid(),
-      branchid: transferForm.tobranchid,
-      variantid: transferForm.variantid,
-      transactiontype: "transfer_in",
-      referencetype: "TRANSFER_DEMO",
-      referenceid: referenceId,
-      quantitychange: q,
-      quantitybefore: beforeTo,
-      quantityafter: afterTo,
-      performedby: profile?.userid || null,
-      timestamp: new Date().toISOString(),
-      note: "Demo chuyển kho nhập",
-    },
-  ]);
+    const referenceId = uuid();
 
-  if (historyError) throw historyError;
+    const { error: historyError } = await supabase.from("stock_history").insert([
+      {
+        historyid: uuid(),
+        branchid: transferForm.frombranchid,
+        variantid: transferForm.variantid,
+        transactiontype: "transfer_out",
+        referencetype: "TRANSFER_DEMO",
+        referenceid: referenceId,
+        quantitychange: -q,
+        quantitybefore: beforeFrom,
+        quantityafter: afterFrom,
+        performedby: profile?.userid || null,
+        timestamp: now,
+        note: "Demo chuyển kho xuất",
+      },
+      {
+        historyid: uuid(),
+        branchid: transferForm.tobranchid,
+        variantid: transferForm.variantid,
+        transactiontype: "transfer_in",
+        referencetype: "TRANSFER_DEMO",
+        referenceid: referenceId,
+        quantitychange: q,
+        quantitybefore: beforeTo,
+        quantityafter: afterTo,
+        performedby: profile?.userid || null,
+        timestamp: now,
+        note: "Demo chuyển kho nhập",
+      },
+    ]);
 
-  show("Chuyển kho thành công");
+    if (historyError) throw historyError;
 
-  if (typeof loadStockFriendly === "function") {
+    show("Chuyển kho thành công");
     await loadStockFriendly();
-  } else {
-    await selectTable("stock");
   }
-}
 
   async function adjustStock() {
     if (!guard("adjustment")) return;
-    if (!adjustForm.branchid || !adjustForm.variantid) return show("Vui lòng chọn chi nhánh và SKU");
 
-    const old = await supabase.from("stock").select("*").eq("branchid", adjustForm.branchid).eq("variantid", adjustForm.variantid).maybeSingle();
-    if (old.error || !old.data) throw new Error("Không tìm thấy tồn kho để kiểm");
+    if (!adjustForm.branchid || !adjustForm.variantid) {
+      return show("Vui lòng chọn chi nhánh và sản phẩm/SKU");
+    }
 
-    const before = Number(old.data.quantity);
-    const after = Number(adjustForm.actualquantity);
+    const actual = Number(adjustForm.actualquantity);
+
+    if (!Number.isFinite(actual) || actual < 0) {
+      return show("Số lượng thực tế phải lớn hơn hoặc bằng 0");
+    }
+
+    const old = await supabase
+      .from("stock")
+      .select("*")
+      .eq("branchid", adjustForm.branchid)
+      .eq("variantid", adjustForm.variantid)
+      .maybeSingle();
+
+    if (old.error) throw old.error;
+    if (!old.data) throw new Error("Không tìm thấy tồn kho để kiểm");
+
+    const before = Number(old.data.quantity || 0);
+    const after = actual;
+    const now = new Date().toISOString();
+
     const { error } = await supabase
       .from("stock")
-      .update({ quantity: after, lastupdated: new Date().toISOString() })
+      .update({ quantity: after, lastupdated: now })
       .eq("branchid", adjustForm.branchid)
       .eq("variantid", adjustForm.variantid);
+
     if (error) throw error;
 
-    await supabase.from("stock_history").insert([
+    const { error: historyError } = await supabase.from("stock_history").insert([
       {
         historyid: uuid(),
         branchid: adjustForm.branchid,
@@ -650,194 +675,203 @@ async function loadOptions() {
         quantitybefore: before,
         quantityafter: after,
         performedby: profile?.userid || null,
-        timestamp: new Date().toISOString(),
+        timestamp: now,
         note: adjustForm.note || "Demo kiểm kho",
       },
     ]);
 
+    if (historyError) throw historyError;
+
     show("Kiểm kho xong, đã cập nhật tồn");
-    await selectTable("stock");
+    await loadStockFriendly();
   }
 
   function addCart() {
-  if (!cartItem.branchid) return show("Vui lòng chọn chi nhánh");
-  if (!cartItem.variantid) return show("Vui lòng chọn sản phẩm/SKU");
+    if (!cartItem.branchid) return show("Vui lòng chọn chi nhánh");
+    if (!cartItem.variantid) return show("Vui lòng chọn sản phẩm/SKU");
 
-  const branch = options.branches.find(
-    (item) => item.branchid === cartItem.branchid
-  );
+    const branch = options.branches.find(
+      (item) => item.branchid === cartItem.branchid
+    );
 
-  const variant = options.variants.find(
-    (item) => item.variantid === cartItem.variantid
-  );
+    const variant = options.variants.find(
+      (item) => item.variantid === cartItem.variantid
+    );
 
-  const quantity = Number(cartItem.quantity || 1);
+    if (!variant) return show("Không tìm thấy SKU đã chọn. Hãy tải lại trang.");
 
-  const unitprice = Number(
-    cartItem.unitprice ||
-      variant?.sellingprice ||
-      variant?.product?.defaultsellingprice ||
-      0
-  );
+    const quantity = Number(cartItem.quantity || 1);
+    const unitprice = Number(
+      cartItem.unitprice ||
+        variant?.sellingprice ||
+        variant?.product?.defaultsellingprice ||
+        0
+    );
 
-  if (quantity <= 0) return show("Số lượng phải lớn hơn 0");
-  if (unitprice <= 0) return show("Đơn giá phải lớn hơn 0");
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return show("Số lượng phải lớn hơn 0");
+    }
 
-  setCart([
-    ...cart,
-    {
-      branchid: cartItem.branchid,
-      branchname: branch?.branchname || "",
-      productid: variant?.productid || "",
-      productname: variant?.product?.productname || "",
-      variantid: cartItem.variantid,
-      sku: variant?.sku || "",
-      barcode: variant?.barcode || "",
-      size: variant?.size || "",
-      color: variant?.color || "",
-      quantity,
-      unitprice,
-      total: quantity * unitprice,
-    },
-  ]);
+    if (!Number.isFinite(unitprice) || unitprice <= 0) {
+      return show("Đơn giá phải lớn hơn 0");
+    }
 
-  setCartItem({
-    ...cartItem,
-    productid: "",
-    variantid: "",
-    quantity: 1,
-    unitprice: 0,
-  });
-
-  show("Đã thêm sản phẩm vào giỏ");
-}
-
-  async function createInvoice() {
-  if (!guard("orders")) return;
-  if (!cart.length) return show("Giỏ hàng trống");
-
-  const branchid = cart[0].branchid;
-  const orderid = uuid();
-
-  const total = cart.reduce(
-    (sum, item) =>
-      sum + Number(item.quantity || 0) * Number(item.unitprice || 0),
-    0
-  );
-
-  const channelid = orderMeta.channelid || (await getDefaultChannelId());
-
-  const { error: orderError } = await supabase.from("orders").insert([
-    {
-      orderid,
-      branchid,
-      customerid: orderMeta.customerid || null,
-      channelid,
-      createdby: profile?.userid || null,
-      orderdate: new Date().toISOString(),
-      orderstatus: orderMeta.status,
-      paymentstatus: orderMeta.paymentstatus,
-      totalamount: total,
-      discountamount: 0,
-      shippingfee: 0,
-      note: "Demo hóa đơn từ frontend",
-    },
-  ]);
-
-  if (orderError) throw orderError;
-
-  for (const item of cart) {
-    const { error: detailError } = await supabase.from("order_detail").insert([
+    setCart([
+      ...cart,
       {
-        orderid,
-        variantid: item.variantid,
-        quantity: item.quantity,
-        unitprice: item.unitprice,
+        branchid: cartItem.branchid,
+        branchname: branch?.branchname || "",
+        productid: variant?.productid || "",
+        productname: variant?.product?.productname || "",
+        variantid: cartItem.variantid,
+        sku: variant?.sku || "",
+        barcode: variant?.barcode || "",
+        size: variant?.size || "",
+        color: variant?.color || "",
+        quantity,
+        unitprice,
+        total: quantity * unitprice,
       },
     ]);
 
-    if (detailError) throw detailError;
+    setCartItem({
+      ...cartItem,
+      variantid: "",
+      quantity: 1,
+      unitprice: 0,
+    });
 
-    const old = await supabase
-      .from("stock")
-      .select("*")
-      .eq("branchid", item.branchid)
-      .eq("variantid", item.variantid)
-      .maybeSingle();
-
-    if (old.error) throw old.error;
-
-    if (old.data) {
-      const before = Number(old.data.quantity || 0);
-      const after = before - Number(item.quantity || 0);
-      const now = new Date().toISOString();
-
-      const { error: stockError } = await supabase
-        .from("stock")
-        .update({
-          quantity: after,
-          lastupdated: now,
-        })
-        .eq("branchid", item.branchid)
-        .eq("variantid", item.variantid);
-
-      if (stockError) throw stockError;
-
-      const { error: historyError } = await supabase
-        .from("stock_history")
-        .insert([
-          {
-            historyid: uuid(),
-            branchid: item.branchid,
-            variantid: item.variantid,
-            transactiontype: "sales",
-            referencetype: "ORDERS",
-            referenceid: orderid,
-            quantitychange: -Number(item.quantity || 0),
-            quantitybefore: before,
-            quantityafter: after,
-            performedby: profile?.userid || null,
-            timestamp: now,
-            note: "Bán hàng demo",
-          },
-        ]);
-
-      if (historyError) throw historyError;
-    }
+    show("Đã thêm sản phẩm vào giỏ");
   }
 
-  setCart([]);
-  show("Đã tạo hóa đơn và trừ kho");
-  await selectTable("orders");
-}
+  async function createInvoice() {
+    if (!guard("orders")) return;
+    if (!cart.length) return show("Giỏ hàng trống");
+
+    const branchid = cart[0].branchid;
+    const orderid = uuid();
+
+    const total = cart.reduce(
+      (sum, item) =>
+        sum + Number(item.quantity || 0) * Number(item.unitprice || 0),
+      0
+    );
+
+    const channelid = orderMeta.channelid || (await getDefaultChannelId());
+
+    const { error: orderError } = await supabase.from("orders").insert([
+      {
+        orderid,
+        branchid,
+        customerid: orderMeta.customerid || null,
+        channelid,
+        createdby: profile?.userid || null,
+        orderdate: new Date().toISOString(),
+        orderstatus: orderMeta.status,
+        paymentstatus: orderMeta.paymentstatus,
+        totalamount: total,
+        discountamount: 0,
+        shippingfee: 0,
+        note: "Demo hóa đơn từ frontend",
+      },
+    ]);
+
+    if (orderError) throw orderError;
+
+    for (const item of cart) {
+      const { error: detailError } = await supabase.from("order_detail").insert([
+        {
+          orderid,
+          variantid: item.variantid,
+          quantity: item.quantity,
+          unitprice: item.unitprice,
+        },
+      ]);
+
+      if (detailError) throw detailError;
+
+      const old = await supabase
+        .from("stock")
+        .select("*")
+        .eq("branchid", item.branchid)
+        .eq("variantid", item.variantid)
+        .maybeSingle();
+
+      if (old.error) throw old.error;
+
+      if (old.data) {
+        const before = Number(old.data.quantity || 0);
+        const soldQty = Number(item.quantity || 0);
+        const after = before - soldQty;
+        const now = new Date().toISOString();
+
+        if (after < 0) {
+          throw new Error(`Không đủ tồn kho cho SKU ${item.sku || item.variantid}`);
+        }
+
+        const { error: stockError } = await supabase
+          .from("stock")
+          .update({
+            quantity: after,
+            lastupdated: now,
+          })
+          .eq("branchid", item.branchid)
+          .eq("variantid", item.variantid);
+
+        if (stockError) throw stockError;
+
+        const { error: historyError } = await supabase
+          .from("stock_history")
+          .insert([
+            {
+              historyid: uuid(),
+              branchid: item.branchid,
+              variantid: item.variantid,
+              transactiontype: "sales",
+              referencetype: "ORDERS",
+              referenceid: orderid,
+              quantitychange: -soldQty,
+              quantitybefore: before,
+              quantityafter: after,
+              performedby: profile?.userid || null,
+              timestamp: now,
+              note: "Bán hàng demo",
+            },
+          ]);
+
+        if (historyError) throw historyError;
+      }
+    }
+
+    setCart([]);
+    show("Đã tạo hóa đơn và trừ kho");
+    await selectTable("orders");
+  }
 
 async function getDefaultChannelId() {
-  const { data, error } = await supabase
-    .from("sales_channel")
-    .select("channelid")
-    .eq("channelname", "POS")
-    .maybeSingle();
+    const primary = await supabase
+      .from("sales_channel")
+      .select("channelid")
+      .eq("channelname", "POS")
+      .maybeSingle();
 
-  if (error) throw error;
+    if (primary.error) throw primary.error;
+    if (primary.data?.channelid) return primary.data.channelid;
 
-  if (data?.channelid) {
-    return data.channelid;
+    const fallback = await supabase
+      .from("sales_channel")
+      .select("channelid")
+      .limit(1)
+      .maybeSingle();
+
+    if (fallback.error) throw fallback.error;
+
+    if (!fallback.data?.channelid) {
+      throw new Error("Chưa có dữ liệu trong bảng sales_channel. Hãy tạo kênh POS trước.");
+    }
+
+    return fallback.data.channelid;
   }
-
-  const fallback = await supabase
-    .from("sales_channel")
-    .select("channelid")
-    .limit(1)
-    .maybeSingle();
-
-  if (fallback.error) throw fallback.error;
-
-  if (!fallback.data?.channelid) {
-    throw new Error("Chưa có dữ liệu trong bảng sales_channel");
-  }
-
-  return fallback.data.channelid;
-}
 
   async function createOrUpdateUser() {
     if (!guard("users")) return;
@@ -1446,6 +1480,93 @@ function Products(p) {
   );
 }
 
+
+function SmartProductPicker({ label, value, variants, onChange, placeholder = "Chọn sản phẩm/SKU" }) {
+  const [open, setOpen] = useState(false);
+  const [keyword, setKeyword] = useState("");
+
+  const selected = variants.find((item) => item.variantid === value);
+
+  const normalizedKeyword = keyword.trim().toLowerCase();
+
+  const filtered = variants
+    .filter((item) => {
+      if (!normalizedKeyword) return true;
+
+      return [
+        item?.product?.productname,
+        item?.sku,
+        item?.barcode,
+        item?.size,
+        item?.color,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedKeyword);
+    })
+    .slice(0, 80);
+
+  return (
+    <div className="field smart-picker">
+      <label>{label}</label>
+
+      <button
+        type="button"
+        className={`smart-picker-trigger ${selected ? "has-value" : ""}`}
+        onClick={() => setOpen(!open)}
+      >
+        <span>{selected ? variantLabel(selected) : placeholder}</span>
+        <Search size={16} />
+      </button>
+
+      {open && (
+        <div className="smart-picker-panel">
+          <input
+            autoFocus
+            className="smart-picker-search"
+            placeholder="Tìm theo tên, SKU hoặc barcode..."
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+
+          <div className="smart-picker-list">
+            {filtered.length === 0 ? (
+              <p className="smart-picker-empty">
+                Không có SKU phù hợp. Kiểm tra dữ liệu product_variant hoặc quyền SELECT.
+              </p>
+            ) : (
+              filtered.map((item) => (
+                <button
+                  type="button"
+                  key={item.variantid}
+                  className="smart-picker-item"
+                  onClick={() => {
+                    onChange(item);
+                    setOpen(false);
+                    setKeyword("");
+                  }}
+                >
+                  <b>{item.product?.productname || "Sản phẩm"}</b>
+                  <span>
+                    {item.sku || "Chưa có SKU"}
+                    {item.barcode ? ` · ${item.barcode}` : ""}
+                  </span>
+                  <small>
+                    {[item.size ? `Size ${item.size}` : "", item.color, item.sellingprice ? money(item.sellingprice) : ""]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </small>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Stock({ run, loadStockFriendly, loadLowStock, rows }) {
   return (
     <>
@@ -1512,29 +1633,17 @@ function Transfer(p) {
           </select>
         </div>
 
-        <div className="field">
-          <label>Sản phẩm / SKU / Size / Màu</label>
-          <select
-            value={p.transferForm.variantid}
-            onChange={(e) =>
-              p.setTransferForm({
-                ...p.transferForm,
-                variantid: e.target.value,
-              })
-            }
-          >
-            <option value="">Chọn sản phẩm/SKU</option>
-            {p.options.variants.map((item) => (
-              <option key={item.variantid} value={item.variantid}>
-                {item.product?.productname || "Sản phẩm"}
-                {item.sku ? ` - ${item.sku}` : ""}
-                {item.size ? ` - Size ${item.size}` : ""}
-                {item.color ? ` - ${item.color}` : ""}
-                {item.barcode ? ` - ${item.barcode}` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SmartProductPicker
+          label="Sản phẩm / SKU / Barcode"
+          value={p.transferForm.variantid}
+          variants={p.options.variants}
+          onChange={(item) =>
+            p.setTransferForm({
+              ...p.transferForm,
+              variantid: item.variantid,
+            })
+          }
+        />
 
         <div className="field">
           <label>Số lượng chuyển</label>
@@ -1583,29 +1692,17 @@ function Adjustment(p) {
           </select>
         </div>
 
-        <div className="field">
-          <label>Sản phẩm / SKU / Size / Màu</label>
-          <select
-            value={p.adjustForm.variantid}
-            onChange={(e) =>
-              p.setAdjustForm({
-                ...p.adjustForm,
-                variantid: e.target.value,
-              })
-            }
-          >
-            <option value="">Chọn sản phẩm/SKU</option>
-            {p.options.variants.map((item) => (
-              <option key={item.variantid} value={item.variantid}>
-                {item.product?.productname || "Sản phẩm"}
-                {item.sku ? ` - ${item.sku}` : ""}
-                {item.size ? ` - Size ${item.size}` : ""}
-                {item.color ? ` - ${item.color}` : ""}
-                {item.barcode ? ` - ${item.barcode}` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SmartProductPicker
+          label="Sản phẩm / SKU / Barcode"
+          value={p.adjustForm.variantid}
+          variants={p.options.variants}
+          onChange={(item) =>
+            p.setAdjustForm({
+              ...p.adjustForm,
+              variantid: item.variantid,
+            })
+          }
+        />
 
         <div className="field">
           <label>Số lượng thực tế</label>
@@ -1646,7 +1743,8 @@ function Adjustment(p) {
 
 function Orders(p) {
   const cartTotal = p.cart.reduce(
-    (sum, item) => sum + Number(item.total || item.quantity * item.unitprice || 0),
+    (sum, item) =>
+      sum + Number(item.total || item.quantity * item.unitprice || 0),
     0
   );
 
@@ -1674,39 +1772,21 @@ function Orders(p) {
             </select>
           </div>
 
-          <div className="field">
-            <label>Sản phẩm / SKU / size / màu</label>
-            <select
-              value={p.cartItem.variantid}
-              onChange={(e) => {
-                const selectedVariant = p.options.variants.find(
-                  (item) => item.variantid === e.target.value
-                );
-
-                p.setCartItem({
-                  ...p.cartItem,
-                  productid: selectedVariant?.productid || "",
-                  variantid: e.target.value,
-                  unitprice:
-                    selectedVariant?.sellingprice ||
-                    selectedVariant?.product?.defaultsellingprice ||
-                    0,
-                });
-              }}
-            >
-              <option value="">Chọn sản phẩm/SKU</option>
-
-              {p.options.variants.map((item) => (
-                <option key={item.variantid} value={item.variantid}>
-                  {item.product?.productname || "Sản phẩm"}
-                  {item.sku ? ` - ${item.sku}` : ""}
-                  {item.size ? ` - Size ${item.size}` : ""}
-                  {item.color ? ` - ${item.color}` : ""}
-                  {item.barcode ? ` - ${item.barcode}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SmartProductPicker
+            label="Sản phẩm / SKU / Barcode"
+            value={p.cartItem.variantid}
+            variants={p.options.variants}
+            onChange={(selectedVariant) =>
+              p.setCartItem({
+                ...p.cartItem,
+                variantid: selectedVariant.variantid,
+                unitprice:
+                  selectedVariant?.sellingprice ||
+                  selectedVariant?.product?.defaultsellingprice ||
+                  0,
+              })
+            }
+          />
 
           <div className="field">
             <label>Số lượng</label>
