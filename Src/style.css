@@ -4799,3 +4799,110 @@ body.dark .topbar .account-trigger {
   border-color: rgba(214, 181, 109, 0.38) !important;
   color: #fff1ba;
 }
+
+/* ===== Sidebar closed rail and dashboard chart placement fix ===== */
+.topbar-logo {
+  display: none;
+  width: 112px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.dashboard-chart .bar span {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.dashboard-chart .bar i {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.dashboard-chart .bar::after {
+  pointer-events: none;
+}
+
+@media (min-width: 901px) {
+  .app-shell.sidebar-open .topbar {
+    grid-template-columns: auto auto auto minmax(0, 1fr);
+  }
+
+  .app-shell.sidebar-open .topbar-logo {
+    display: block;
+  }
+
+  .app-shell.sidebar-closed .topbar {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding-left: 82px !important;
+  }
+
+  .app-shell.sidebar-closed .topbar-logo {
+    display: none !important;
+  }
+
+  .app-shell.sidebar-closed .topbar > span {
+    display: none;
+  }
+
+  .app-shell.sidebar-closed .topbar > b {
+    padding-left: 14px;
+  }
+
+  .app-shell.sidebar-closed .topbar > button:first-child,
+  .app-shell.sidebar-closed .menu-toggle {
+    position: fixed !important;
+    left: calc(var(--sidebar-gap) + 16px) !important;
+    top: 40px !important;
+    z-index: 160 !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    height: 48px !important;
+    padding: 0 !important;
+  }
+
+  .app-shell.sidebar-closed .sidebar-brand {
+    visibility: hidden !important;
+    min-height: 94px !important;
+    margin: 0 !important;
+  }
+
+  .app-shell.sidebar-closed .sidebar-logo-img,
+  .app-shell.sidebar-closed .sidebar-brand small {
+    display: none !important;
+  }
+
+  .app-shell.sidebar-closed .sidebar-nav {
+    padding-top: 10px;
+  }
+
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover .sidebar-brand {
+    visibility: visible !important;
+    min-height: 0 !important;
+    margin-bottom: 14px !important;
+  }
+
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover .sidebar-logo-img {
+    display: block !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .topbar-logo {
+    display: none !important;
+  }
+
+  .dashboard-chart .bar span,
+  .dashboard-chart .bar i,
+  .dashboard-chart .bar::after {
+    grid-column: 1;
+  }
+
+  .dashboard-chart .bar span {
+    grid-row: 1;
+  }
+
+  .dashboard-chart .bar i,
+  .dashboard-chart .bar::after {
+    grid-row: 2;
+  }
+}
