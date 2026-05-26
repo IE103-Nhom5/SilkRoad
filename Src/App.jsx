@@ -181,7 +181,23 @@ function availableStock(stockRows = [], branchid, variantid) {
   if (!branchid || !variantid) return null;
   const stock = stockRows.find((item) => sameId(branchIdOf(item), branchid) && sameId(variantIdOf(item), variantid));
   if (!stock) return null;
-  return Number(stock.quantity || 0) - Number(first(stock, ["reservedquantity", "reserved_quantity"], 0) || 0);
+  return availableStockOf(stock);
+}
+
+function stockQuantityOf(stock) {
+  return Number(first(stock, ["quantity", "qty"], 0) || 0);
+}
+
+function reservedQuantityOf(stock) {
+  return Number(first(stock, ["reservedquantity", "reserved_quantity"], 0) || 0);
+}
+
+function availableStockOf(stock) {
+  return stockQuantityOf(stock) - reservedQuantityOf(stock);
+}
+
+function findStockRow(stockRows = [], branchid, variantid) {
+  return stockRows.find((item) => sameId(branchIdOf(item), branchid) && sameId(variantIdOf(item), variantid)) || null;
 }
 
 function productAvailableStock(stockRows = [], variants = [], branchid, productid) {
@@ -1113,7 +1129,7 @@ export default function App() {
     const unitprice = Number(cartItem.unitprice);
     if (!Number.isFinite(quantity) || quantity <= 0) return show("Số lượng bán phải lớn hơn 0");
     if (!Number.isFinite(unitprice) || unitprice < 0) return show("Đơn giá không hợp lệ");
-    if (cart.length && cart.some((item) => item.branchid !== cartItem.branchid)) {
+    if (cart.length && cart.some((item) => !sameId(item.branchid, cartItem.branchid))) {
       return show("Một hóa đơn chỉ tạo cho một chi nhánh. Hãy xóa giỏ hoặc chọn cùng chi nhánh.");
     }
 
@@ -1122,6 +1138,14 @@ export default function App() {
     const productVariants = options.variants.filter((item) => sameId(productIdOf(item), productIdOf(product)));
     const branch = options.branches.find((item) => sameId(branchIdOf(item), cartItem.branchid));
     const existingIndex = cart.findIndex((item) => sameId(item.branchid, cartItem.branchid) && sameId(item.variantid, cartItem.variantid));
+    const currentInCart = cart
+      .filter((item) => sameId(item.branchid, cartItem.branchid) && sameId(item.variantid, cartItem.variantid))
+      .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const stockAvailable = availableStock(options.stock, cartItem.branchid, cartItem.variantid);
+
+    if (stockAvailable !== null && currentInCart + quantity > stockAvailable) {
+      return show(`Không đủ tồn khả dụng. Còn ${stockAvailable}, trong giỏ đã có ${currentInCart}.`);
+    }
 
     if (existingIndex >= 0) {
       const nextCart = cart.map((item, index) => {
@@ -1164,7 +1188,7 @@ export default function App() {
     if (!cart.length) return show("Giỏ hàng trống");
 
     const branchid = cart[0].branchid;
-    if (cart.some((item) => item.branchid !== branchid)) {
+    if (cart.some((item) => !sameId(item.branchid, branchid))) {
       return show("Giỏ hàng có nhiều chi nhánh. Vui lòng tách hóa đơn theo chi nhánh.");
     }
 
@@ -1175,18 +1199,19 @@ export default function App() {
       return show("Vui lòng chọn hoặc nhập kênh bán trước khi tạo hóa đơn");
     }
 
-    const stockChecks = await Promise.all(
-      cart.map(async (item) => {
-        const result = await supabase.from("stock").select("*").eq("branchid", item.branchid).eq("variantid", item.variantid).maybeSingle();
-        return { item, result };
-      })
-    );
+    const stockResult = await supabase.from("stock").select("*").limit(5000);
+    if (stockResult.error) throw stockResult.error;
+    const latestStockRows = stockResult.data || [];
+    const stockChecks = cart.map((item) => ({
+      item,
+      stock: findStockRow(latestStockRows, item.branchid, item.variantid),
+    }));
 
-    for (const { item, result } of stockChecks) {
-      if (result.error) throw result.error;
-      if (!result.data) throw new Error(`Chưa có tồn kho cho ${item.productname || item.sku}`);
-      if (Number(result.data.quantity || 0) < item.quantity) {
-        throw new Error(`Không đủ tồn cho ${item.productname || item.sku}`);
+    for (const { item, stock } of stockChecks) {
+      const itemName = [item.productname, item.variantname].filter(Boolean).join(" - ");
+      if (!stock) throw new Error(`Chưa có tồn kho cho ${itemName || "sản phẩm đã chọn"} tại ${item.branchname || "chi nhánh này"}`);
+      if (availableStockOf(stock) < item.quantity) {
+        throw new Error(`Không đủ tồn khả dụng cho ${itemName || "sản phẩm đã chọn"}. Còn ${availableStockOf(stock)}, cần ${item.quantity}.`);
       }
     }
 
@@ -1208,7 +1233,7 @@ export default function App() {
     ]);
     if (orderError) throw orderError;
 
-    for (const { item, result: old } of stockChecks) {
+    for (const { item, stock: old } of stockChecks) {
       const { error: detailError } = await supabase.from("order_detail").insert([
         {
           orderid,
@@ -1219,12 +1244,14 @@ export default function App() {
       ]);
       if (detailError) throw detailError;
 
-      if (old.data) {
+      if (old) {
+        const beforeQuantity = stockQuantityOf(old);
+        const nextQuantity = beforeQuantity - item.quantity;
         const { error: stockError } = await supabase
           .from("stock")
-          .update({ quantity: Number(old.data.quantity) - item.quantity, lastupdated: new Date().toISOString() })
-          .eq("branchid", item.branchid)
-          .eq("variantid", item.variantid);
+          .update({ quantity: nextQuantity, lastupdated: new Date().toISOString() })
+          .eq("branchid", branchIdOf(old))
+          .eq("variantid", variantIdOf(old));
         if (stockError) throw stockError;
 
         const { error: historyError } = await supabase.from("stock_history").insert([
@@ -1236,8 +1263,8 @@ export default function App() {
             referencetype: "ORDERS",
             referenceid: orderid,
             quantitychange: -item.quantity,
-            quantitybefore: old.data.quantity,
-            quantityafter: Number(old.data.quantity) - item.quantity,
+            quantitybefore: beforeQuantity,
+            quantityafter: nextQuantity,
             performedby: profile?.userid || null,
             timestamp: new Date().toISOString(),
             note: "Bán hàng demo",
