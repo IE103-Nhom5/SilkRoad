@@ -1498,35 +1498,34 @@ export default function App() {
         </Modal>
       )}
 
-      {sidebar && (
-        <aside
-          className="sidebar"
-          style={{
-            backgroundImage: `linear-gradient(rgba(0, 35, 22, 0.45), rgba(0, 35, 22, 0.45)), url(${bg})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center bottom",
-            backgroundRepeat: "no-repeat",
-          }}
-        >
-          <div className="sidebar-brand">
-            <img src={LOGO_SRC} alt="SilkRoad" className="sidebar-logo-img" />
-            <small>{roleName()}</small>
-          </div>
-          {MENU.filter(([key]) => can(key)).map(([key, label, Icon]) => (
-            <button
-              key={key}
-              className={page === key ? "active" : ""}
-              onClick={() => {
-                setPage(key);
-                if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebar(false);
-              }}
-            >
-              <Icon size={18} />
-              {label}
-            </button>
-          ))}
-        </aside>
-      )}
+      <aside
+        className="sidebar"
+        style={{
+          backgroundImage: `linear-gradient(rgba(0, 35, 22, 0.45), rgba(0, 35, 22, 0.45)), url(${bg})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center bottom",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        <div className="sidebar-brand">
+          <img src={LOGO_SRC} alt="SilkRoad" className="sidebar-logo-img" />
+          <small>{roleName()}</small>
+        </div>
+        {MENU.filter(([key]) => can(key)).map(([key, label, Icon]) => (
+          <button
+            key={key}
+            className={page === key ? "active" : ""}
+            title={label}
+            onClick={() => {
+              setPage(key);
+              if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebar(false);
+            }}
+          >
+            <Icon size={18} />
+            <span>{label}</span>
+          </button>
+        ))}
+      </aside>
       {sidebar && <button type="button" className="app-scrim" aria-label="Đóng menu" onClick={() => setSidebar(false)} />}
 
       <main className="main">
