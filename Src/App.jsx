@@ -387,95 +387,124 @@ export default function App() {
   }
 
   const q = Number(transferForm.quantity);
-  if (q <= 0) return show("Số lượng chuyển phải lớn hơn 0");
 
-    const q = Number(transferForm.quantity);
-    const from = await supabase
+  if (!Number.isFinite(q) || q <= 0) {
+    return show("Số lượng chuyển phải lớn hơn 0");
+  }
+
+  const from = await supabase
+    .from("stock")
+    .select("*")
+    .eq("branchid", transferForm.frombranchid)
+    .eq("variantid", transferForm.variantid)
+    .maybeSingle();
+
+  if (from.error) throw from.error;
+  if (!from.data) throw new Error("Không tìm thấy tồn kho chi nhánh gửi");
+
+  if (Number(from.data.quantity || 0) < q) {
+    throw new Error("Không đủ tồn để chuyển");
+  }
+
+  const to = await supabase
+    .from("stock")
+    .select("*")
+    .eq("branchid", transferForm.tobranchid)
+    .eq("variantid", transferForm.variantid)
+    .maybeSingle();
+
+  if (to.error) throw to.error;
+
+  const beforeFrom = Number(from.data.quantity || 0);
+  const afterFrom = beforeFrom - q;
+
+  const beforeTo = Number(to.data?.quantity || 0);
+  const afterTo = beforeTo + q;
+
+  const updates = [
+    supabase
       .from("stock")
-      .select("*")
+      .update({
+        quantity: afterFrom,
+        lastupdated: new Date().toISOString(),
+      })
       .eq("branchid", transferForm.frombranchid)
-      .eq("variantid", transferForm.variantid)
-      .maybeSingle();
-    const to = await supabase
-      .from("stock")
-      .select("*")
-      .eq("branchid", transferForm.tobranchid)
-      .eq("variantid", transferForm.variantid)
-      .maybeSingle();
+      .eq("variantid", transferForm.variantid),
+  ];
 
-    if (from.error || !from.data) throw new Error("Không tìm thấy tồn kho chi nhánh gửi");
-    if (Number(from.data.quantity) < q) throw new Error("Không đủ tồn để chuyển");
-
-    const updates = [
+  if (to.data) {
+    updates.push(
       supabase
         .from("stock")
-        .update({ quantity: Number(from.data.quantity) - q, lastupdated: new Date().toISOString() })
-        .eq("branchid", transferForm.frombranchid)
-        .eq("variantid", transferForm.variantid),
-    ];
+        .update({
+          quantity: afterTo,
+          lastupdated: new Date().toISOString(),
+        })
+        .eq("branchid", transferForm.tobranchid)
+        .eq("variantid", transferForm.variantid)
+    );
+  } else {
+    updates.push(
+      supabase.from("stock").insert([
+        {
+          branchid: transferForm.tobranchid,
+          variantid: transferForm.variantid,
+          quantity: q,
+          reservedquantity: 0,
+          minstocklevel: 0,
+          lastupdated: new Date().toISOString(),
+        },
+      ])
+    );
+  }
 
-    if (to.data) {
-      updates.push(
-        supabase
-          .from("stock")
-          .update({ quantity: Number(to.data.quantity) + q, lastupdated: new Date().toISOString() })
-          .eq("branchid", transferForm.tobranchid)
-          .eq("variantid", transferForm.variantid)
-      );
-    } else {
-      updates.push(
-        supabase.from("stock").insert([
-          {
-            branchid: transferForm.tobranchid,
-            variantid: transferForm.variantid,
-            quantity: q,
-            reservedquantity: 0,
-            minstocklevel: 0,
-            lastupdated: new Date().toISOString(),
-          },
-        ])
-      );
-    }
+  const res = await Promise.all(updates);
+  const err = res.find((item) => item.error)?.error;
+  if (err) throw err;
 
-    const res = await Promise.all(updates);
-    const err = res.find((x) => x.error)?.error;
-    if (err) throw err;
+  const referenceId = uuid();
 
-    const referenceId = uuid();
-    await supabase.from("stock_history").insert([
-      {
-        historyid: uuid(),
-        branchid: transferForm.frombranchid,
-        variantid: transferForm.variantid,
-        transactiontype: "transfer_out",
-        referencetype: "TRANSFER_DEMO",
-        referenceid: referenceId,
-        quantitychange: -q,
-        quantitybefore: from.data.quantity,
-        quantityafter: Number(from.data.quantity) - q,
-        performedby: profile?.userid || null,
-        timestamp: new Date().toISOString(),
-        note: "Demo chuyển kho xuất",
-      },
-      {
-        historyid: uuid(),
-        branchid: transferForm.tobranchid,
-        variantid: transferForm.variantid,
-        transactiontype: "transfer_in",
-        referencetype: "TRANSFER_DEMO",
-        referenceid: referenceId,
-        quantitychange: q,
-        quantitybefore: to.data?.quantity || 0,
-        quantityafter: Number(to.data?.quantity || 0) + q,
-        performedby: profile?.userid || null,
-        timestamp: new Date().toISOString(),
-        note: "Demo chuyển kho nhập",
-      },
-    ]);
+  const { error: historyError } = await supabase.from("stock_history").insert([
+    {
+      historyid: uuid(),
+      branchid: transferForm.frombranchid,
+      variantid: transferForm.variantid,
+      transactiontype: "transfer_out",
+      referencetype: "TRANSFER_DEMO",
+      referenceid: referenceId,
+      quantitychange: -q,
+      quantitybefore: beforeFrom,
+      quantityafter: afterFrom,
+      performedby: profile?.userid || null,
+      timestamp: new Date().toISOString(),
+      note: "Demo chuyển kho xuất",
+    },
+    {
+      historyid: uuid(),
+      branchid: transferForm.tobranchid,
+      variantid: transferForm.variantid,
+      transactiontype: "transfer_in",
+      referencetype: "TRANSFER_DEMO",
+      referenceid: referenceId,
+      quantitychange: q,
+      quantitybefore: beforeTo,
+      quantityafter: afterTo,
+      performedby: profile?.userid || null,
+      timestamp: new Date().toISOString(),
+      note: "Demo chuyển kho nhập",
+    },
+  ]);
 
-    show("Chuyển kho thành công");
+  if (historyError) throw historyError;
+
+  show("Chuyển kho thành công");
+
+  if (typeof loadStockFriendly === "function") {
+    await loadStockFriendly();
+  } else {
     await selectTable("stock");
   }
+}
 
   async function adjustStock() {
     if (!guard("adjustment")) return;
