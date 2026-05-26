@@ -2498,6 +2498,9 @@ export default function App() {
         }}
       >
         <div className="sidebar-brand">
+          <button type="button" className="sidebar-menu-toggle" onClick={toggleSidebar} aria-label="Thu gọn menu">
+            <Menu />
+          </button>
           <img src={LOGO_SRC} alt="SilkRoad" className="sidebar-logo-img" />
           <small>{roleName()}</small>
         </div>
@@ -2525,7 +2528,6 @@ export default function App() {
           <button className="menu-toggle" onClick={toggleSidebar}>
             <Menu />
           </button>
-          <img src={LOGO_SRC} alt="SilkRoad" className="topbar-logo" />
           <b>{page.toUpperCase()}</b>
           <span />
           <div className="topbar-actions">

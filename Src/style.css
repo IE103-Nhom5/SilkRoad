@@ -4603,48 +4603,143 @@ body.dark .dashboard-chart .bar::after {
   background: rgba(255, 236, 186, 0.1);
 }
 
-/* ===== Definitive logo/menu placement ===== */
-.sidebar-brand .sidebar-logo-img {
+/* ===== Sidebar-native logo/menu placement ===== */
+.sidebar-menu-toggle {
+  display: none;
+}
+
+.topbar-logo {
   display: none !important;
 }
 
-.sidebar-brand {
-  min-height: 68px;
-  display: flex;
-  align-items: center;
-}
-
-.sidebar-brand small {
-  margin: 0 !important;
-}
-
 @media (min-width: 901px) {
-  .app-shell.sidebar-open .topbar {
-    grid-template-columns: 56px 110px auto minmax(0, 1fr) !important;
-    column-gap: 18px !important;
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+  }
+
+  .app-shell.sidebar-open .topbar,
+  .app-shell.sidebar-closed .topbar {
     padding-left: 28px !important;
-  }
-
-  .app-shell.sidebar-open .topbar-logo {
-    display: block !important;
-    justify-self: start;
-  }
-
-  .app-shell.sidebar-open .topbar > b {
-    padding-left: 0 !important;
+    padding-right: clamp(280px, 24vw, 350px) !important;
   }
 
   .app-shell.sidebar-closed .topbar {
-    grid-template-columns: auto minmax(0, 1fr) !important;
     padding-left: 82px !important;
   }
 
-  .app-shell.sidebar-closed .topbar-logo {
+  .app-shell.sidebar-open .topbar > .menu-toggle {
     display: none !important;
   }
 
-  .app-shell.sidebar-closed .topbar > b {
-    padding-left: 12px !important;
+  .app-shell.sidebar-closed .topbar > .menu-toggle {
+    display: inline-flex !important;
+    position: fixed !important;
+    left: calc(var(--sidebar-gap) + 14px) !important;
+    top: 30px !important;
+    z-index: 165 !important;
+    width: 50px !important;
+    min-width: 50px !important;
+    height: 50px !important;
+    padding: 0 !important;
+  }
+
+  .sidebar-brand {
+    min-height: 74px !important;
+    display: grid !important;
+    grid-template-columns: 48px minmax(0, 1fr) !important;
+    grid-template-areas:
+      "toggle logo"
+      ". role" !important;
+    align-items: center !important;
+    gap: 6px 12px !important;
+    margin: 0 0 18px !important;
+  }
+
+  .sidebar-menu-toggle {
+    grid-area: toggle;
+    display: inline-flex !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+    background: rgba(255, 250, 240, 0.08) !important;
+    border: 1px solid rgba(214, 181, 109, 0.62) !important;
+    color: #fff1ba !important;
+  }
+
+  .sidebar-brand .sidebar-logo-img {
+    grid-area: logo;
+    display: block !important;
+    width: 138px !important;
+    height: 42px !important;
+    object-fit: contain !important;
+    margin: 0 !important;
+    justify-self: start !important;
+  }
+
+  .sidebar-brand small {
+    grid-area: role;
+    display: block !important;
+    margin: 0 !important;
+    color: #fff1ba !important;
+  }
+
+  .app-shell.sidebar-closed .sidebar-brand {
+    min-height: 86px !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    visibility: visible !important;
+    margin: 0 0 8px !important;
+    padding-top: 8px !important;
+  }
+
+  .app-shell.sidebar-closed .sidebar-menu-toggle {
+    display: none !important;
+  }
+
+  .app-shell.sidebar-closed .sidebar-logo-img,
+  .app-shell.sidebar-closed .sidebar-brand small {
+    display: none !important;
+  }
+
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover .sidebar-brand {
+    display: grid !important;
+    grid-template-columns: 48px minmax(0, 1fr) !important;
+    grid-template-areas:
+      "toggle logo"
+      ". role" !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    min-height: 74px !important;
+    padding-top: 0 !important;
+    margin-bottom: 18px !important;
+  }
+
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover .sidebar-menu-toggle {
+    display: inline-flex !important;
+  }
+
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover .sidebar-logo-img {
+    display: block !important;
+  }
+
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover .sidebar-brand small {
+    display: block !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .sidebar-menu-toggle {
+    display: inline-flex !important;
+  }
+
+  .topbar-logo {
+    display: none !important;
   }
 }
 
