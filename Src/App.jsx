@@ -2157,20 +2157,22 @@ export default function App() {
           <img src={LOGO_SRC} alt="SilkRoad" className="sidebar-logo-img" />
           <small>{roleName()}</small>
         </div>
-        {MENU.filter(([key]) => can(key)).map(([key, label, Icon]) => (
-          <button
-            key={key}
-            className={page === key ? "active" : ""}
-            title={label}
-            onClick={() => {
-              setPage(key);
-              if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebar(false);
-            }}
-          >
-            <Icon size={18} />
-            <span>{label}</span>
-          </button>
-        ))}
+        <nav className="sidebar-nav" aria-label="Điều hướng chính">
+          {MENU.filter(([key]) => can(key)).map(([key, label, Icon]) => (
+            <button
+              key={key}
+              className={page === key ? "active" : ""}
+              title={label}
+              onClick={() => {
+                setPage(key);
+                if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebar(false);
+              }}
+            >
+              <Icon size={18} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
       </aside>
       {sidebar && <button type="button" className="app-scrim" aria-label="Đóng menu" onClick={() => setSidebar(false)} />}
 
@@ -2181,30 +2183,34 @@ export default function App() {
           </button>
           <b>{page.toUpperCase()}</b>
           <span />
-          <button onClick={() => setDark(!dark)}>{dark ? <Sun /> : <Moon />}</button>
-          <div className="account-menu">
-            <button className="account-trigger" onClick={() => setAccountMenu(!accountMenu)}>
-              <UserCircle /> <span>{first(profile, ["username", "fullname", "email"], "Tài khoản")}</span>
+          <div className="topbar-actions">
+            <button className="theme-toggle" title={dark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"} onClick={() => setDark(!dark)}>
+              {dark ? <Sun /> : <Moon />}
             </button>
-            {accountMenu && (
-              <div className="account-dropdown">
-                <button onClick={() => openAccountModal("account")}>
-                  <UserCircle /> Tài khoản
-                </button>
-                <button onClick={() => openAccountModal("info")}>
-                  <Info /> Thông tin tài khoản
-                </button>
-                <button onClick={() => openAccountModal("settings")}>
-                  <Settings /> Cài đặt
-                </button>
-                <button onClick={() => openAccountModal("help")}>
-                  <HelpCircle /> Trợ giúp
-                </button>
-                <button className="danger" onClick={signOut}>
-                  <LogOut /> Đăng xuất
-                </button>
-              </div>
-            )}
+            <div className="account-menu">
+              <button className="account-trigger" onClick={() => setAccountMenu(!accountMenu)}>
+                <UserCircle /> <span>{first(profile, ["username", "fullname", "email"], "Tài khoản")}</span>
+              </button>
+              {accountMenu && (
+                <div className="account-dropdown">
+                  <button onClick={() => openAccountModal("account")}>
+                    <UserCircle /> Tài khoản
+                  </button>
+                  <button onClick={() => openAccountModal("info")}>
+                    <Info /> Thông tin tài khoản
+                  </button>
+                  <button onClick={() => openAccountModal("settings")}>
+                    <Settings /> Cài đặt
+                  </button>
+                  <button onClick={() => openAccountModal("help")}>
+                    <HelpCircle /> Trợ giúp
+                  </button>
+                  <button className="danger" onClick={signOut}>
+                    <LogOut /> Đăng xuất
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

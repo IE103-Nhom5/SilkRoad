@@ -4602,3 +4602,200 @@ body.dark .dashboard-grid .metric strong {
 body.dark .dashboard-chart .bar::after {
   background: rgba(255, 236, 186, 0.1);
 }
+
+/* ===== Header controls and sidebar navigation fix ===== */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden !important;
+}
+
+.sidebar-brand {
+  flex: 0 0 auto;
+  margin-bottom: 4px;
+}
+
+.sidebar-nav {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 2px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(214, 181, 109, 0.42) transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(214, 181, 109, 0.36);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+.sidebar-nav button,
+.sidebar button {
+  margin-bottom: 0 !important;
+}
+
+.topbar {
+  grid-template-columns: auto auto minmax(0, 1fr);
+  padding-right: clamp(280px, 24vw, 350px);
+}
+
+.topbar-actions {
+  position: fixed;
+  top: 28px;
+  right: 32px;
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  max-width: calc(100vw - 120px);
+}
+
+.theme-toggle,
+.topbar .theme-toggle {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  padding: 0 !important;
+  justify-content: center;
+  border-radius: 16px !important;
+  background: rgba(255, 250, 240, 0.96);
+}
+
+.account-menu {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: auto;
+}
+
+.account-trigger,
+.topbar .account-trigger {
+  height: 48px;
+  min-width: 0;
+  max-width: min(280px, 36vw);
+  padding: 0 16px !important;
+  border-radius: 16px !important;
+  justify-content: center;
+  background: rgba(255, 250, 240, 0.97) !important;
+}
+
+.account-trigger span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-dropdown {
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 150;
+}
+
+@media (min-width: 901px) {
+  .app-shell.sidebar-open .topbar {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    padding-left: 28px;
+    padding-right: clamp(280px, 24vw, 350px);
+  }
+
+  .app-shell.sidebar-closed .topbar {
+    padding-right: clamp(280px, 24vw, 350px);
+  }
+
+  .app-shell.sidebar-open .topbar > button:first-child,
+  .app-shell.sidebar-open .menu-toggle {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    flex: 0 0 auto;
+  }
+
+  .app-shell.sidebar-closed .topbar > button:first-child,
+  .app-shell.sidebar-closed .menu-toggle {
+    position: fixed;
+    left: 24px;
+    top: 24px;
+  }
+
+  .app-shell.sidebar-closed .sidebar-nav {
+    overflow: hidden;
+  }
+
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover .sidebar-nav {
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding-right: 76px;
+  }
+
+  .topbar > span {
+    display: none;
+  }
+
+  .topbar-actions {
+    top: 10px;
+    right: 10px;
+    max-width: calc(100vw - 78px);
+    gap: 8px;
+  }
+
+  .theme-toggle,
+  .topbar .theme-toggle,
+  .account-trigger,
+  .topbar .account-trigger {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 !important;
+    border-radius: 14px !important;
+  }
+
+  .account-trigger span {
+    display: none;
+  }
+
+  .account-dropdown {
+    width: min(286px, calc(100vw - 20px));
+    right: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .topbar {
+    padding-right: 112px;
+  }
+
+  .topbar-actions {
+    max-width: 96px;
+  }
+
+  .topbar > b {
+    font-size: 13px;
+  }
+}
+
+body.dark .theme-toggle,
+body.dark .topbar .theme-toggle,
+body.dark .account-trigger,
+body.dark .topbar .account-trigger {
+  background: rgba(20, 55, 48, 0.96) !important;
+  border-color: rgba(214, 181, 109, 0.38) !important;
+  color: #fff1ba;
+}
