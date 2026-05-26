@@ -724,10 +724,19 @@ body.dark .topbar > b{
 body.dark .card input,
 body.dark .card select,
 body.dark .card textarea,
-body.dark .topbar button{
+body.dark .topbar button,
+body.dark .account-dropdown{
   background:#0f1f1a;
   color:#f3e9d0;
   border-color:#35594e;
+}
+
+body.dark .account-dropdown button:hover {
+  background: #20352d;
+}
+
+body.dark .account-modal-body {
+  color: #f3e9d0;
 }
 
 body.dark .table-wrap{
@@ -950,6 +959,58 @@ table {
 .topbar {
   border-radius: 0;
   margin-bottom: 0;
+}
+
+.account-menu {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.account-trigger {
+  white-space: nowrap;
+}
+
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 120;
+  width: 240px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  background: #fffaf0;
+  border: 1px solid #d0b372;
+  border-radius: 16px;
+  box-shadow: 0 18px 42px rgba(53, 37, 11, 0.18);
+}
+
+.account-dropdown button {
+  width: 100%;
+  min-height: 40px;
+  justify-content: flex-start;
+  margin: 0 !important;
+  border-radius: 12px;
+  background: transparent;
+}
+
+.account-dropdown button:hover {
+  background: #f1dfb8;
+}
+
+.account-dropdown button.danger {
+  color: #7b221d;
+}
+
+.account-modal-body {
+  display: grid;
+  gap: 10px;
+  color: #073d31;
+}
+
+.account-modal-body button {
+  width: fit-content;
 }
 
 /* =========================
@@ -3299,6 +3360,14 @@ body.dark .pos-checkout .action-row button:first-child {
     display: none;
   }
 
+  .account-trigger span {
+    display: none;
+  }
+
+  .account-dropdown {
+    width: min(86vw, 260px);
+  }
+
   .product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     max-height: 44vh;
@@ -3465,6 +3534,7 @@ body.dark .pos-checkout .action-row button:first-child {
   :root {
     --sidebar-open-w: 238px;
     --sidebar-rail-w: 76px;
+    --sidebar-gap: 10px;
     --sidebar-w: var(--sidebar-open-w);
   }
 
@@ -3473,8 +3543,8 @@ body.dark .pos-checkout .action-row button:first-child {
   }
 
   .app-shell.sidebar-closed .main {
-    width: calc(100% - var(--sidebar-rail-w));
-    margin-left: var(--sidebar-rail-w);
+    width: calc(100% - var(--sidebar-rail-w) - var(--sidebar-gap) * 2);
+    margin-left: calc(var(--sidebar-rail-w) + var(--sidebar-gap) * 2);
   }
 
   .app-shell.sidebar-closed .sidebar {
@@ -3482,9 +3552,14 @@ body.dark .pos-checkout .action-row button:first-child {
     min-width: var(--sidebar-rail-w) !important;
     max-width: var(--sidebar-rail-w) !important;
     padding: 12px 10px !important;
-    border-radius: 0 22px 22px 0;
-    border-right: 1px solid rgba(214, 181, 109, 0.68);
+    left: var(--sidebar-gap);
+    top: var(--sidebar-gap);
+    bottom: var(--sidebar-gap);
+    height: calc(100vh - var(--sidebar-gap) * 2);
+    border-radius: 26px;
+    border: 1px solid rgba(214, 181, 109, 0.68);
     overflow: hidden !important;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16);
     transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, box-shadow 0.2s ease;
   }
 
@@ -3493,7 +3568,7 @@ body.dark .pos-checkout .action-row button:first-child {
     min-width: var(--sidebar-open-w) !important;
     max-width: var(--sidebar-open-w) !important;
     padding: 14px !important;
-    border-radius: 0 26px 26px 0;
+    border-radius: 28px;
     z-index: 75;
     box-shadow: 18px 0 42px rgba(0, 0, 0, 0.24);
   }
@@ -3568,8 +3643,8 @@ body.dark .pos-checkout .action-row button:first-child {
 
   .app-shell.sidebar-open .topbar > button:first-child {
     position: fixed;
-    left: calc(var(--sidebar-open-w) - 62px);
-    top: 14px;
+    left: calc(var(--sidebar-open-w) - 58px);
+    top: 22px;
     z-index: 90;
     background: rgba(255, 250, 240, 0.94);
     box-shadow: 0 8px 24px rgba(31, 23, 8, 0.14);
@@ -3577,8 +3652,8 @@ body.dark .pos-checkout .action-row button:first-child {
 
   .app-shell.sidebar-closed .topbar > button:first-child {
     position: fixed;
-    left: 14px;
-    top: 14px;
+    left: 23px;
+    top: 22px;
     z-index: 90;
     background: rgba(255, 250, 240, 0.94);
     box-shadow: 0 8px 24px rgba(31, 23, 8, 0.14);

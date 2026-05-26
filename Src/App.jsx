@@ -389,6 +389,44 @@ function LogOut(props) {
   );
 }
 
+function Settings(props) {
+  return (
+    <IconBase {...props}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 2-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20h-3v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2-2 .1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4v-3h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2-2 .1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V4h3v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2 2-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v3h-.1a1.7 1.7 0 0 0-1.5 1z" />
+    </IconBase>
+  );
+}
+
+function HelpCircle(props) {
+  return (
+    <IconBase {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9a2.8 2.8 0 0 1 5.2 1.4c0 1.8-2.7 2.1-2.7 4" />
+      <path d="M12 18h.01" />
+    </IconBase>
+  );
+}
+
+function UserCircle(props) {
+  return (
+    <IconBase {...props}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20a8 8 0 0 1 16 0" />
+    </IconBase>
+  );
+}
+
+function Info(props) {
+  return (
+    <IconBase {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 10v6" />
+      <path d="M12 7h.01" />
+    </IconBase>
+  );
+}
+
 function Menu(props) {
   return (
     <IconBase {...props}>
@@ -525,6 +563,7 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(null);
+  const [accountMenu, setAccountMenu] = useState(false);
 
   // Data state
   const [rows, setRows] = useState([]);
@@ -666,6 +705,47 @@ export default function App() {
       }
       return next;
     });
+  }
+
+  function openAccountModal(kind) {
+    const fullName = first(profile, ["fullname", "full_name", "username", "email"], "Tài khoản");
+    const email = first(profile, ["email"], session?.user?.email || "");
+    const role = roleName();
+    const bodies = {
+      account: (
+        <div className="account-modal-body">
+          <p><b>{fullName}</b></p>
+          <p>{email}</p>
+          <p>Quyền: {role}</p>
+        </div>
+      ),
+      info: (
+        <div className="account-modal-body">
+          <p>SilkRoad POS quản lý bán hàng, kho, nhập hàng, báo cáo và phân quyền.</p>
+          <p>Phiên đăng nhập: {email || "Chưa xác định"}</p>
+        </div>
+      ),
+      settings: (
+        <div className="account-modal-body">
+          <p>Giao diện: {dark ? "Chế độ tối" : "Chế độ sáng"}</p>
+          <button onClick={() => setDark(!dark)}>{dark ? "Chuyển sang sáng" : "Chuyển sang tối"}</button>
+        </div>
+      ),
+      help: (
+        <div className="account-modal-body">
+          <p>Quy trình nhanh: chọn chi nhánh, chọn sản phẩm, chọn biến thể, thêm giỏ rồi tạo hóa đơn.</p>
+          <p>Nếu hóa đơn lỗi, kiểm tra kênh bán, tồn kho và quyền tài khoản.</p>
+        </div>
+      ),
+    };
+    const titles = {
+      account: "Tài khoản",
+      info: "Thông tin tài khoản",
+      settings: "Cài đặt",
+      help: "Trợ giúp",
+    };
+    setAccountMenu(false);
+    setModal({ title: titles[kind], body: bodies[kind] });
   }
 
   useEffect(() => {
@@ -1548,9 +1628,30 @@ export default function App() {
           <b>{page.toUpperCase()}</b>
           <span />
           <button onClick={() => setDark(!dark)}>{dark ? <Sun /> : <Moon />}</button>
-          <button onClick={signOut}>
-            <LogOut /> Đăng xuất
-          </button>
+          <div className="account-menu">
+            <button className="account-trigger" onClick={() => setAccountMenu(!accountMenu)}>
+              <UserCircle /> <span>{first(profile, ["username", "fullname", "email"], "Tài khoản")}</span>
+            </button>
+            {accountMenu && (
+              <div className="account-dropdown">
+                <button onClick={() => openAccountModal("account")}>
+                  <UserCircle /> Tài khoản
+                </button>
+                <button onClick={() => openAccountModal("info")}>
+                  <Info /> Thông tin tài khoản
+                </button>
+                <button onClick={() => openAccountModal("settings")}>
+                  <Settings /> Cài đặt
+                </button>
+                <button onClick={() => openAccountModal("help")}>
+                  <HelpCircle /> Trợ giúp
+                </button>
+                <button className="danger" onClick={signOut}>
+                  <LogOut /> Đăng xuất
+                </button>
+              </div>
+            )}
+          </div>
         </header>
 
         {loading ? (
