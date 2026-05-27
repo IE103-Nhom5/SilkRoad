@@ -7305,3 +7305,156 @@ body,
     border-radius: 13px !important;
   }
 }
+
+/* =========================================================
+   FINAL OVERRIDE 7: sticky topbar pinned to top
+========================================================= */
+.main {
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+}
+
+.topbar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 320 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 86px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 14px clamp(18px, 2.2vw, 34px) !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(194, 161, 92, 0.42) !important;
+  background: rgba(255, 248, 235, 0.96) !important;
+  backdrop-filter: blur(16px) !important;
+  box-shadow: 0 10px 28px rgba(58, 43, 16, 0.08) !important;
+}
+
+.topbar > .mobile-menu-toggle {
+  display: none !important;
+}
+
+.topbar-title-block {
+  flex: 0 0 clamp(160px, 15vw, 230px) !important;
+  min-width: 0 !important;
+  max-width: 230px !important;
+}
+
+.topbar-title-block > b {
+  display: block !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.topbar-subtitle {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.topbar-search-shell {
+  flex: 1 1 580px !important;
+  min-width: 260px !important;
+  max-width: 720px !important;
+  width: auto !important;
+  justify-self: auto !important;
+}
+
+.topbar-search {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.topbar-actions {
+  flex: 0 0 auto !important;
+  margin-left: auto !important;
+  justify-content: flex-end !important;
+}
+
+.topbar .notification-trigger,
+.topbar .theme-toggle {
+  flex: 0 0 56px !important;
+}
+
+.topbar .account-trigger {
+  flex: 0 1 auto !important;
+  max-width: min(320px, 24vw) !important;
+}
+
+@media (max-width: 1280px) {
+  .topbar {
+    gap: 12px !important;
+    padding-inline: 18px !important;
+  }
+
+  .topbar-title-block {
+    flex-basis: 150px !important;
+    max-width: 170px !important;
+  }
+
+  .topbar-search-shell {
+    flex-basis: 420px !important;
+    max-width: 560px !important;
+  }
+
+  .topbar .account-trigger {
+    max-width: 230px !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .topbar {
+    position: sticky !important;
+    top: 0 !important;
+    flex-wrap: wrap !important;
+    min-height: auto !important;
+    padding: 12px !important;
+  }
+
+  .topbar > .mobile-menu-toggle {
+    display: inline-flex !important;
+    flex: 0 0 46px !important;
+  }
+
+  .topbar-title-block {
+    flex: 1 1 calc(100% - 190px) !important;
+    max-width: none !important;
+  }
+
+  .topbar-actions {
+    margin-left: auto !important;
+  }
+
+  .topbar-search-shell {
+    order: 5 !important;
+    flex: 1 0 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    gap: 10px !important;
+  }
+
+  .topbar-title-block {
+    flex-basis: calc(100% - 160px) !important;
+  }
+
+  .topbar .notification-trigger,
+  .topbar .theme-toggle,
+  .topbar > .mobile-menu-toggle {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    flex-basis: 44px !important;
+  }
+}
