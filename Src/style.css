@@ -6020,3 +6020,206 @@ body.dark .employee-profile-facts span {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   FINAL OVERRIDE 3: notifications + right aligned actions
+========================================================= */
+@media (min-width: 961px) {
+  .topbar {
+    width: 100% !important;
+    grid-template-columns: minmax(120px, 170px) minmax(520px, 820px) minmax(24px, 1fr) auto !important;
+    gap: 18px !important;
+  }
+
+  .topbar-title-block {
+    grid-column: 1 !important;
+  }
+
+  .topbar-search-shell {
+    grid-column: 2 !important;
+  }
+
+  .topbar-actions {
+    grid-column: 4 !important;
+    justify-self: end !important;
+    margin-left: auto !important;
+  }
+}
+
+.topbar-search {
+  padding: 0 8px 0 22px !important;
+  gap: 8px !important;
+}
+
+.topbar-search > svg:first-child {
+  display: none !important;
+}
+
+.notification-menu,
+.account-menu {
+  position: relative !important;
+}
+
+.topbar-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  white-space: nowrap !important;
+}
+
+.notification-trigger,
+.topbar .notification-trigger {
+  position: relative !important;
+  width: 52px !important;
+  min-width: 52px !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 18px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #9b1c1c;
+  color: #fff8e8;
+  border: 2px solid #fffaf0;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 160;
+  width: min(360px, calc(100vw - 28px));
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(194, 161, 92, 0.56);
+  background: rgba(255, 250, 240, 0.98);
+  box-shadow: 0 24px 54px rgba(37, 26, 7, 0.22);
+}
+
+.notification-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 4px 6px;
+}
+
+.notification-header span {
+  color: #7d6a43;
+  font-size: 13px;
+}
+
+.notification-item,
+.topbar .notification-item {
+  width: 100% !important;
+  min-height: 62px !important;
+  display: grid !important;
+  grid-template-columns: 10px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  align-items: start !important;
+  padding: 10px !important;
+  margin: 0 !important;
+  text-align: left !important;
+  border-radius: 14px !important;
+  background: rgba(255, 253, 247, 0.9) !important;
+}
+
+.notification-item > span {
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: #0d7a66;
+}
+
+.notification-item.danger > span {
+  background: #a03023;
+}
+
+.notification-item div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.notification-item b,
+.notification-item small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.notification-item small {
+  color: #766849;
+  font-weight: 500;
+}
+
+.notification-empty {
+  margin: 0;
+  padding: 14px 10px;
+  color: #7d6a43;
+}
+
+body.dark .notification-badge {
+  border-color: #082720;
+}
+
+body.dark .notification-dropdown,
+body.dark .notification-item {
+  background: rgba(8, 39, 32, 0.98) !important;
+  border-color: rgba(214, 181, 109, 0.34) !important;
+  color: #f6e7b0 !important;
+}
+
+body.dark .notification-header span,
+body.dark .notification-item small,
+body.dark .notification-empty {
+  color: #d8c491 !important;
+}
+
+@media (max-width: 1280px) and (min-width: 961px) {
+  .topbar {
+    grid-template-columns: minmax(100px, 150px) minmax(360px, 1fr) 12px auto !important;
+    gap: 12px !important;
+  }
+
+  .account-trigger,
+  .topbar .account-trigger {
+    min-width: 170px !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .topbar-search {
+    padding-left: 14px !important;
+  }
+
+  .notification-trigger,
+  .topbar .notification-trigger,
+  .theme-toggle,
+  .topbar .theme-toggle {
+    width: 46px !important;
+    min-width: 46px !important;
+    height: 46px !important;
+  }
+}

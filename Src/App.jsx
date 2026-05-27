@@ -865,6 +865,15 @@ function Upload(props) {
   );
 }
 
+function Bell(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+    </IconBase>
+  );
+}
+
 function roleIdOf(item) {
   return idStr(first(item, ["roleid", "role_id", "RoleID"], ""));
 }
@@ -900,6 +909,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(null);
   const [accountMenu, setAccountMenu] = useState(false);
+  const [notificationMenu, setNotificationMenu] = useState(false);
 
   // Data state
   const [rows, setRows] = useState([]);
@@ -1228,6 +1238,7 @@ export default function App() {
     setPage(nextPage);
     setModal(null);
     setAccountMenu(false);
+    setNotificationMenu(false);
     if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebar(false);
   }
 
@@ -3156,6 +3167,68 @@ export default function App() {
     return matchesSearchValues(values, normalizedKeyword);
   }
 
+  const lowStockItems = options.stock.filter((item) => {
+    const quantity = Number(first(item, ["quantity"], 0));
+    const min = Number(first(item, ["minstocklevel", "min_stock_level"], 5));
+    return quantity <= min;
+  });
+  const outOfStockItems = options.stock.filter((item) => availableStockOf(item) <= 0);
+  const inactiveProducts = options.products.filter((item) => first(item, ["status"], "active") !== "active");
+  const inactiveCustomers = options.customers.filter((item) => first(item, ["status"], "active") !== "active");
+  const notifications = [
+    lowStockItems.length
+      ? {
+          tone: "danger",
+          title: "Cảnh báo sắp hết hàng",
+          detail: `${lowStockItems.length} dòng tồn kho đang thấp hơn mức tối thiểu`,
+          page: "stock",
+          action: () => run(loadLowStock),
+        }
+      : null,
+    outOfStockItems.length
+      ? {
+          tone: "danger",
+          title: "Hết tồn khả dụng",
+          detail: `${outOfStockItems.length} biến thể không còn hàng khả dụng`,
+          page: "stock",
+          action: () => run(loadStockFriendly),
+        }
+      : null,
+    heldCarts.length
+      ? {
+          tone: "info",
+          title: "Đơn tạm chưa xử lý",
+          detail: `${heldCarts.length} giỏ hàng đang được lưu tạm`,
+          page: "orders",
+        }
+      : null,
+    inactiveProducts.length
+      ? {
+          tone: "info",
+          title: "Sản phẩm chưa active",
+          detail: `${inactiveProducts.length} sản phẩm đang ngưng bán hoặc chưa kích hoạt`,
+          page: "products",
+        }
+      : null,
+    inactiveCustomers.length
+      ? {
+          tone: "info",
+          title: "Khách hàng cần kiểm tra",
+          detail: `${inactiveCustomers.length} hồ sơ khách hàng đang inactive/blocked`,
+          page: "customers",
+        }
+      : null,
+  ].filter(Boolean);
+
+  function openNotification(notification) {
+    setNotificationMenu(false);
+    if (notification.action) {
+      notification.action();
+      return;
+    }
+    goToPage(notification.page);
+  }
+
   const searchSuggestions = buildSearchSuggestions(globalSearch, options, can);
   const visibleRows = rows.filter((row) => rowMatchesGlobalSearch(row, globalSearch));
 
@@ -3220,7 +3293,6 @@ export default function App() {
 
           <div className="topbar-search-shell" onBlur={() => window.setTimeout(() => setSearchOpen(false), 140)}>
             <div className="topbar-search" role="search">
-              <Search size={18} />
               <input
                 value={globalSearch}
                 placeholder="Tìm sản phẩm, biến thể, barcode, đơn hàng, khách hàng..."
@@ -3292,11 +3364,52 @@ export default function App() {
           </div>
 
           <div className="topbar-actions">
+            <div className="notification-menu">
+              <button
+                type="button"
+                className="notification-trigger"
+                title="Thông báo"
+                onClick={() => {
+                  setNotificationMenu(!notificationMenu);
+                  setAccountMenu(false);
+                }}
+              >
+                <Bell />
+                {notifications.length > 0 && <span className="notification-badge">{notifications.length}</span>}
+              </button>
+              {notificationMenu && (
+                <div className="notification-dropdown">
+                  <div className="notification-header">
+                    <b>Thông báo</b>
+                    <span>{notifications.length || 0} mục</span>
+                  </div>
+                  {notifications.length ? (
+                    notifications.map((item, index) => (
+                      <button key={`${item.title}-${index}`} type="button" className={`notification-item ${item.tone}`} onClick={() => openNotification(item)}>
+                        <span />
+                        <div>
+                          <b>{item.title}</b>
+                          <small>{item.detail}</small>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="notification-empty">Không có cảnh báo mới</p>
+                  )}
+                </div>
+              )}
+            </div>
             <button className="theme-toggle" title={dark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối"} onClick={() => setDark(!dark)}>
               {dark ? <Sun /> : <Moon />}
             </button>
             <div className="account-menu">
-              <button className="account-trigger" onClick={() => setAccountMenu(!accountMenu)}>
+              <button
+                className="account-trigger"
+                onClick={() => {
+                  setAccountMenu(!accountMenu);
+                  setNotificationMenu(false);
+                }}
+              >
                 <UserCircle /> <span>{first(profile, ["username", "fullname", "email"], "Tài khoản")}</span>
               </button>
               {accountMenu && (
