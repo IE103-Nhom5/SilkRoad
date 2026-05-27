@@ -3482,8 +3482,6 @@ export default function App() {
               <div
                 className={`sidebar-group ${active ? "active" : ""} ${expanded ? "open" : ""}`}
                 key={group.key}
-                onMouseEnter={() => setOpenMenuGroup(group.key)}
-                onMouseLeave={() => setOpenMenuGroup("")}
               >
                 <button
                   type="button"
@@ -3501,7 +3499,7 @@ export default function App() {
                   <span>{group.label}</span>
                   <small className="sidebar-parent-count">{groupItems.length}</small>
                 </button>
-                <div className="sidebar-flyout">
+                <div className="sidebar-submenu">
                   <b>{group.label}</b>
                   {groupItems.map(([key, label, ItemIcon]) => (
                     <button key={key} type="button" className={page === key ? "active" : ""} onClick={() => goToPage(key)}>
