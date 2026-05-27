@@ -1161,65 +1161,120 @@ export default function App() {
     const fullName = first(profile, ["fullname", "full_name", "username", "email"], "Tài khoản");
     const email = first(profile, ["email"], session?.user?.email || "");
     const role = roleName();
+    const rolePermissions = permissionsOf(profile?.role);
     const bodies = {
       account: (
         <div className="account-modal-body">
-          <div className="account-profile-card">
-            <UserCircle size={36} />
+          <div className="account-hero">
+            <div className="account-avatar-large">
+              <UserCircle size={44} />
+            </div>
             <div>
-              <b>{fullName}</b>
+              <small>Tài khoản đang đăng nhập</small>
+              <h3>{fullName}</h3>
               <span>{email}</span>
             </div>
+            <em>{role}</em>
           </div>
           <form className="account-form" onSubmit={saveCurrentProfile}>
-            <Field label="Họ tên">
-              <input name="fullname" defaultValue={profileForm.fullname} />
-            </Field>
-            <Field label="Username">
-              <input name="username" defaultValue={profileForm.username} />
-            </Field>
-            <Field label="Trạng thái">
-              <select name="status" defaultValue={profileForm.status}>
-                <option value="active">Đang hoạt động</option>
-                <option value="inactive">Ngưng hoạt động</option>
-              </select>
-            </Field>
-            <p>Quyền hiện tại: {role}</p>
-            <button type="submit">Lưu tài khoản</button>
+            <div className="account-form-grid">
+              <Field label="Họ tên">
+                <input name="fullname" defaultValue={profileForm.fullname} />
+              </Field>
+              <Field label="Username">
+                <input name="username" defaultValue={profileForm.username} />
+              </Field>
+              <Field label="Trạng thái">
+                <select name="status" defaultValue={profileForm.status}>
+                  <option value="active">Đang hoạt động</option>
+                  <option value="inactive">Ngưng hoạt động</option>
+                  <option value="locked">Khóa</option>
+                </select>
+              </Field>
+            </div>
+            <div className="account-modal-actions">
+              <button type="submit">Lưu tài khoản</button>
+              <button type="button" onClick={() => openAccountModal("info")}>Xem thông tin</button>
+            </div>
           </form>
         </div>
       ),
       info: (
         <div className="account-modal-body">
+          <div className="account-section-head">
+            <b>Thông tin tài khoản</b>
+            <span>Dữ liệu profile, auth và vai trò đang dùng</span>
+          </div>
           <div className="account-info-grid">
             <span>Email</span><b>{email || "Chưa xác định"}</b>
             <span>Vai trò</span><b>{role}</b>
+            <span>Trạng thái</span><b>{first(profile, ["status"], "active")}</b>
             <span>Auth ID</span><b>{session?.user?.id || "Chưa xác định"}</b>
             <span>Đăng nhập</span><b>{session?.user?.last_sign_in_at ? new Date(session.user.last_sign_in_at).toLocaleString("vi-VN") : "Chưa xác định"}</b>
+            <span>Số quyền</span><b>{rolePermissions.length}</b>
           </div>
-          <button onClick={() => run(loadOptions)}>Làm mới dữ liệu nền</button>
+          <div className="account-permission-preview">
+            {rolePermissions.slice(0, 16).map((permission) => (
+              <span key={permission}>{permission}</span>
+            ))}
+            {!rolePermissions.length && <span>Chưa có danh sách quyền</span>}
+          </div>
+          <div className="account-modal-actions">
+            <button onClick={() => run(loadOptions)}>Làm mới dữ liệu nền</button>
+            <button onClick={() => goToPage("users")}>Mở RBAC</button>
+          </div>
         </div>
       ),
       settings: (
         <div className="account-modal-body">
-          <p>Giao diện: {dark ? "Chế độ tối" : "Chế độ sáng"}</p>
+          <div className="account-section-head">
+            <b>Cài đặt nhanh</b>
+            <span>Điều chỉnh giao diện, menu và dữ liệu tạm</span>
+          </div>
+          <div className="settings-panel">
+            <button className={dark ? "" : "active"} onClick={() => setDark(false)}>
+              <Sun /> Sáng
+            </button>
+            <button className={dark ? "active" : ""} onClick={() => setDark(true)}>
+              <Moon /> Tối
+            </button>
+            <button className={sidebar ? "active" : ""} onClick={toggleSidebar}>
+              <Menu /> {sidebar ? "Menu mở" : "Menu rút gọn"}
+            </button>
+          </div>
           <div className="account-action-grid">
-            <button onClick={() => setDark(!dark)}>{dark ? "Chuyển sang sáng" : "Chuyển sang tối"}</button>
-            <button onClick={toggleSidebar}>{sidebar ? "Thu gọn menu" : "Mở rộng menu"}</button>
             <button onClick={() => { setHeldCarts([]); show("Đã xóa đơn tạm"); }}>Xóa đơn tạm</button>
             <button onClick={() => run(loadOptions)}>Tải lại tùy chọn</button>
+            <button onClick={() => { setGlobalSearch(""); setSearchSummary(null); show("Đã xóa bộ lọc tìm kiếm"); }}>Xóa tìm kiếm</button>
+            <button onClick={() => goToPage("dashboard")}>Về tổng quan</button>
           </div>
         </div>
       ),
       help: (
         <div className="account-modal-body">
-          <p>Quy trình nhanh: chọn chi nhánh, chọn sản phẩm, chọn biến thể, thêm giỏ rồi tạo hóa đơn.</p>
-          <p>Nếu hóa đơn lỗi, kiểm tra kênh bán, tồn kho và quyền tài khoản.</p>
-          <div className="account-action-grid">
-            <button onClick={() => goToPage("orders")}>Mở bán hàng</button>
-            <button onClick={() => goToPage("products")}>Mở hàng hóa</button>
-            <button onClick={() => goToPage("stock")}>Mở kho</button>
-            <button onClick={() => goToPage("reports")}>Mở báo cáo</button>
+          <div className="account-section-head">
+            <b>Trợ giúp nhanh</b>
+            <span>Mở nhanh các luồng xử lý thường dùng</span>
+          </div>
+          <div className="help-card-grid">
+            <button onClick={() => goToPage("orders")}>
+              <ShoppingCart /> <span><b>Bán hàng</b><small>Chọn sản phẩm, biến thể, tạo hóa đơn</small></span>
+            </button>
+            <button onClick={() => goToPage("products")}>
+              <PackagePlus /> <span><b>Hàng hóa</b><small>Sản phẩm, biến thể, ảnh và danh mục</small></span>
+            </button>
+            <button onClick={() => goToPage("stock")}>
+              <Boxes /> <span><b>Kho</b><small>Tồn kho, cảnh báo, lịch sử nhập xuất</small></span>
+            </button>
+            <button onClick={() => goToPage("users")}>
+              <Users /> <span><b>RBAC</b><small>Cấp quyền, khóa quyền, hồ sơ nhân viên</small></span>
+            </button>
+            <button onClick={() => goToPage("reports")}>
+              <BarChart3 /> <span><b>Báo cáo</b><small>Doanh thu, đơn hàng, biến động kho</small></span>
+            </button>
+            <button onClick={() => setSearchOpen(true)}>
+              <Search /> <span><b>Tìm kiếm</b><small>Tìm sản phẩm, đơn hàng, khách hàng</small></span>
+            </button>
           </div>
         </div>
       ),
@@ -1231,7 +1286,31 @@ export default function App() {
       help: "Trợ giúp",
     };
     setAccountMenu(false);
+    setNotificationMenu(false);
     setModal({ title: titles[kind], body: bodies[kind] });
+  }
+
+  function openSignOutConfirm() {
+    setAccountMenu(false);
+    setNotificationMenu(false);
+    setModal({
+      title: "Xác nhận đăng xuất",
+      body: (
+        <div className="logout-confirm">
+          <div className="logout-confirm-icon">
+            <LogOut size={34} />
+          </div>
+          <div>
+            <b>Đăng xuất khỏi SilkRoad?</b>
+            <span>Các thao tác chưa lưu sẽ không được gửi lên hệ thống. Đơn tạm đã lưu vẫn được giữ trên thiết bị này.</span>
+          </div>
+          <div className="logout-confirm-actions">
+            <button type="button" onClick={() => setModal(null)}>Hủy</button>
+            <button type="button" className="danger" onClick={() => run(signOut)}>Đăng xuất</button>
+          </div>
+        </div>
+      ),
+    });
   }
 
   function goToPage(nextPage) {
@@ -1469,6 +1548,9 @@ export default function App() {
   }
 
   async function signOut() {
+    setModal(null);
+    setAccountMenu(false);
+    setNotificationMenu(false);
     await supabase.auth.signOut();
     setRows([]);
   }
@@ -3426,7 +3508,7 @@ export default function App() {
                   <button onClick={() => openAccountModal("help")}>
                     <HelpCircle /> Trợ giúp
                   </button>
-                  <button className="danger" onClick={signOut}>
+                  <button className="danger" onClick={openSignOutConfirm}>
                     <LogOut /> Đăng xuất
                   </button>
                 </div>

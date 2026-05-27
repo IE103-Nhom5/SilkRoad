@@ -6223,3 +6223,280 @@ body.dark .notification-empty {
     height: 46px !important;
   }
 }
+
+/* =========================================================
+   FINAL OVERRIDE 4: true right edge actions + avatar screens
+========================================================= */
+@media (min-width: 961px) {
+  .topbar {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-left: 36px !important;
+    padding-right: 18px !important;
+    gap: 20px !important;
+  }
+
+  .topbar-title-block {
+    flex: 0 0 160px !important;
+    min-width: 140px !important;
+  }
+
+  .topbar-search-shell {
+    flex: 1 1 720px !important;
+    max-width: 760px !important;
+    min-width: 320px !important;
+  }
+
+  .topbar-actions {
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    transform: translateX(0) !important;
+    justify-content: flex-end !important;
+  }
+}
+
+.account-dropdown {
+  width: min(350px, calc(100vw - 28px)) !important;
+}
+
+.account-modal-body {
+  display: grid;
+  gap: 18px;
+}
+
+.account-hero {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid rgba(194, 161, 92, 0.42);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 248, 232, 0.98), rgba(246, 237, 216, 0.94));
+}
+
+.account-avatar-large {
+  width: 58px;
+  height: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: rgba(7, 88, 73, 0.1);
+  color: #075849;
+  border: 1px solid rgba(7, 88, 73, 0.2);
+}
+
+.account-hero div {
+  min-width: 0;
+}
+
+.account-hero small,
+.account-section-head span,
+.help-card-grid small {
+  color: #766849;
+}
+
+.account-hero h3 {
+  margin: 2px 0;
+  color: #033d33;
+  overflow-wrap: anywhere;
+}
+
+.account-hero span {
+  overflow-wrap: anywhere;
+}
+
+.account-hero em {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #edf6df;
+  border: 1px solid #b8d799;
+  color: #0d4b36;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.account-section-head {
+  display: grid;
+  gap: 4px;
+}
+
+.account-section-head b {
+  color: #033d33;
+  font-size: 18px;
+}
+
+.account-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.account-modal-actions,
+.logout-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.account-permission-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 150px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid rgba(194, 161, 92, 0.36);
+  border-radius: 14px;
+  background: rgba(255, 253, 247, 0.68);
+}
+
+.account-permission-preview span {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(7, 88, 73, 0.08);
+  color: #075849;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.settings-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-panel button {
+  justify-content: center;
+  min-height: 54px;
+}
+
+.settings-panel button.active {
+  background: #075849;
+  color: #fff1ba;
+  border-color: #075849;
+}
+
+.help-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.help-card-grid button {
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  text-align: left;
+  gap: 12px;
+}
+
+.help-card-grid span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.help-card-grid b,
+.help-card-grid small {
+  overflow-wrap: anywhere;
+}
+
+.logout-confirm {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.logout-confirm-icon {
+  width: 58px;
+  height: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: rgba(155, 28, 28, 0.1);
+  color: #9b1c1c;
+  border: 1px solid rgba(155, 28, 28, 0.25);
+}
+
+.logout-confirm > div:nth-child(2) {
+  display: grid;
+  gap: 6px;
+}
+
+.logout-confirm > div:nth-child(2) b {
+  color: #033d33;
+  font-size: 18px;
+}
+
+.logout-confirm > div:nth-child(2) span {
+  color: #766849;
+  line-height: 1.5;
+}
+
+.logout-confirm-actions {
+  grid-column: 1 / -1;
+}
+
+.logout-confirm-actions .danger,
+.account-dropdown .danger,
+.modal .danger {
+  border-color: rgba(155, 28, 28, 0.38) !important;
+  color: #9b1c1c !important;
+}
+
+body.dark .account-hero,
+body.dark .account-permission-preview {
+  background: rgba(8, 39, 32, 0.96);
+  border-color: rgba(214, 181, 109, 0.34);
+}
+
+body.dark .account-avatar-large,
+body.dark .logout-confirm-icon {
+  background: rgba(246, 231, 176, 0.08);
+  border-color: rgba(214, 181, 109, 0.28);
+  color: #f6e7b0;
+}
+
+body.dark .account-hero h3,
+body.dark .account-section-head b,
+body.dark .logout-confirm > div:nth-child(2) b {
+  color: #fff1ba;
+}
+
+body.dark .account-hero small,
+body.dark .account-section-head span,
+body.dark .help-card-grid small,
+body.dark .logout-confirm > div:nth-child(2) span {
+  color: #d8c491;
+}
+
+body.dark .account-permission-preview span {
+  background: rgba(214, 181, 109, 0.1);
+  color: #fff1ba;
+}
+
+@media (max-width: 960px) {
+  .account-form-grid,
+  .settings-panel,
+  .help-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-hero {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .account-hero em {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
