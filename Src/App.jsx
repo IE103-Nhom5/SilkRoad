@@ -865,6 +865,29 @@ function Upload(props) {
   );
 }
 
+function roleIdOf(item) {
+  return idStr(first(item, ["roleid", "role_id", "RoleID"], ""));
+}
+
+function roleLabel(item) {
+  return first(item, ["rolename", "role_name", "RoleName"], "Vai trò");
+}
+
+function permissionsOf(role) {
+  const permissions = first(role, ["permissions", "Permissions"], []);
+  if (Array.isArray(permissions)) return permissions;
+  if (!permissions) return [];
+  return str(permissions)
+    .replace(/[{}"]/g, "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function permissionsFromText(text) {
+  return [...new Set(str(text).split(/[\n,]+/).map((item) => item.trim()).filter(Boolean))];
+}
+
 export default function App() {
   // Auth + layout state
   const [session, setSession] = useState(null);
@@ -1070,7 +1093,13 @@ export default function App() {
     username: "",
     email: "",
     rolename: "sales_staff",
+    branchid: "",
     status: "active",
+  });
+  const [roleEditor, setRoleEditor] = useState({
+    rolename: "sales_staff",
+    description: "",
+    permissionsText: "",
   });
   const [profileForm, setProfileForm] = useState({
     fullname: "",
@@ -2670,6 +2699,22 @@ export default function App() {
     ]);
   }
 
+  function userIdOf(item) {
+    return idStr(first(item, ["userid", "user_id", "UserID"], ""));
+  }
+
+  function userEmailOf(item) {
+    return first(item, ["email", "Email"], "");
+  }
+
+  function userNameOf(item) {
+    return first(item, ["fullname", "full_name", "FullName", "Họ tên", "Nhân viên"], first(item, ["username", "Username"], "Nhân viên"));
+  }
+
+  function currentRoleEditorRole() {
+    return options.roles.find((role) => roleLabel(role) === roleEditor.rolename) || null;
+  }
+
   async function createOrUpdateUser() {
     if (!guard("users")) return;
     if (!userForm.fullname.trim() || !userForm.username.trim() || !userForm.email.trim()) {
@@ -2679,21 +2724,202 @@ export default function App() {
     if (role.error || !role.data) throw new Error("Không tìm thấy role");
 
     const hash = "$2b$10$abcdefghijklmnopqrstuvabcdefghijklmnopqrstuvabcdefghijkl";
+    const existing = await supabase.from("users").select("*").eq("email", trim(userForm.email)).maybeSingle();
+    if (existing.error) throw existing.error;
+
     const payload = {
-      userid: uuid(),
       fullname: userForm.fullname,
       username: userForm.username,
       email: userForm.email,
-      passwordhash: hash,
       roleid: role.data.roleid,
+      branchid: userForm.branchid || null,
       status: userForm.status,
+      updatedat: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from("users").upsert([payload], { onConflict: "email" });
+    const request = existing.data
+      ? supabase.from("users").update(payload).eq("userid", existing.data.userid)
+      : supabase.from("users").insert([{ ...payload, userid: uuid(), passwordhash: hash }]);
+    const { error } = await request;
     if (error) throw error;
     show("Đã lưu nhân viên + role");
+    setUserForm({ fullname: "", username: "", email: "", rolename: userForm.rolename, branchid: userForm.branchid, status: "active" });
     await loadOptions();
-    await selectTable("users");
+    await loadUsersFriendly();
+  }
+
+  async function loadUsersFriendly() {
+    if (!guard("users")) return;
+    const loadedOptions = await loadOptions();
+    const { data, error } = await supabase.from("users").select("*, role(*)").limit(500);
+    if (error) throw error;
+
+    setSearchSummary(null);
+    setRows((data || []).map((user) => {
+      const role = user.role || loadedOptions.roles.find((item) => sameId(roleIdOf(item), roleIdOf(user)));
+      const branch = loadedOptions.branches.find((item) => sameId(branchIdOf(item), branchIdOf(user)));
+      const permissions = permissionsOf(role);
+      return {
+        userid: userIdOf(user),
+        roleid: roleIdOf(role) || roleIdOf(user),
+        branchid: branchIdOf(user),
+        "Nhân viên": userNameOf(user),
+        "Username": first(user, ["username"], ""),
+        "Email": userEmailOf(user),
+        "Vai trò": role ? roleLabel(role) : "Chưa có role",
+        "Số quyền": permissions.length,
+        "Chi nhánh": branch ? branchLabel(branch) : "Toàn hệ thống",
+        "Trạng thái": first(user, ["status"], ""),
+        "Đăng nhập cuối": str(first(user, ["lastloginat", "last_login_at"], "")).slice(0, 19).replace("T", " "),
+        "Ngày tạo": str(first(user, ["createdat", "created_at"], "")).slice(0, 19).replace("T", " "),
+      };
+    }));
+  }
+
+  async function saveRolePermissions() {
+    if (!guard("users")) return;
+    if (!trim(roleEditor.rolename)) return show("Vui lòng nhập tên vai trò");
+    const permissions = permissionsFromText(roleEditor.permissionsText);
+    const existingRole = currentRoleEditorRole();
+    const payload = {
+      rolename: trim(roleEditor.rolename),
+      permissions,
+      description: trim(roleEditor.description) || null,
+    };
+
+    const request = existingRole
+      ? supabase.from("role").update(payload).eq("roleid", roleIdOf(existingRole))
+      : supabase.from("role").insert([{ ...payload, roleid: uuid() }]);
+    const { error } = await request;
+    if (error) throw error;
+    show(existingRole ? "Đã cập nhật quyền cho vai trò" : "Đã tạo vai trò mới");
+    await loadOptions();
+    await selectTable("role");
+  }
+
+  async function deleteRoleDefinition() {
+    if (!guard("users")) return;
+    const role = currentRoleEditorRole();
+    if (!role) return show("Không tìm thấy vai trò để xóa");
+    if (["admin", "branch_manager", "warehouse_staff", "sales_staff"].includes(roleLabel(role))) {
+      return show("Không xóa role hệ thống, hãy sửa danh sách quyền nếu cần");
+    }
+    if (!window.confirm(`Xóa vai trò ${roleLabel(role)}?`)) return;
+    const { error } = await supabase.from("role").delete().eq("roleid", roleIdOf(role));
+    if (error) throw error;
+    show("Đã xóa vai trò");
+    setRoleEditor({ rolename: "sales_staff", description: "", permissionsText: "" });
+    await loadOptions();
+    await selectTable("role");
+  }
+
+  async function revokeUserAccess(target = null) {
+    if (!guard("users")) return;
+    const email = target ? userEmailOf(target) : trim(userForm.email);
+    const userid = target ? userIdOf(target) : "";
+    if (!email && !userid) return show("Chọn nhân viên hoặc nhập email để thu hồi quyền");
+    if (!window.confirm(`Thu hồi quyền đăng nhập của ${email || userNameOf(target)}?`)) return;
+    let query = supabase.from("users").update({ status: "locked", updatedat: new Date().toISOString() });
+    query = userid ? query.eq("userid", userid) : query.eq("email", email);
+    const { error } = await query;
+    if (error) throw error;
+    show("Đã khóa quyền nhân viên");
+    await loadUsersFriendly();
+  }
+
+  async function deleteUserAccess(target = null) {
+    if (!guard("users")) return;
+    const email = target ? userEmailOf(target) : trim(userForm.email);
+    const userid = target ? userIdOf(target) : "";
+    if (!email && !userid) return show("Chọn nhân viên hoặc nhập email để xóa");
+    if (!window.confirm(`Xóa nhân viên ${email || userNameOf(target)}? Nếu có lịch sử liên kết, hệ thống sẽ khóa thay vì xóa.`)) return;
+
+    let deleteQuery = supabase.from("users").delete();
+    deleteQuery = userid ? deleteQuery.eq("userid", userid) : deleteQuery.eq("email", email);
+    const { error } = await deleteQuery;
+    if (error) {
+      let lockQuery = supabase.from("users").update({ status: "locked", updatedat: new Date().toISOString() });
+      lockQuery = userid ? lockQuery.eq("userid", userid) : lockQuery.eq("email", email);
+      const lock = await lockQuery;
+      if (lock.error) throw lock.error;
+      show("Nhân viên có dữ liệu liên kết nên đã khóa quyền thay vì xóa");
+    } else {
+      show("Đã xóa nhân viên");
+    }
+    await loadUsersFriendly();
+  }
+
+  async function openUserProfile(target) {
+    const userid = userIdOf(target);
+    const email = userEmailOf(target);
+    if (!userid && !email) return show("Không xác định được nhân viên");
+
+    let userQuery = supabase.from("users").select("*, role(*)");
+    userQuery = userid ? userQuery.eq("userid", userid) : userQuery.eq("email", email);
+    const userResult = await userQuery.maybeSingle();
+    if (userResult.error) throw userResult.error;
+    const user = userResult.data || target;
+    const realUserId = userIdOf(user);
+    const role = user.role || options.roles.find((item) => sameId(roleIdOf(item), roleIdOf(user)));
+    const branch = options.branches.find((item) => sameId(branchIdOf(item), branchIdOf(user)));
+
+    async function readUserRows(table, column, label, timeColumn = "createdat", limit = 20) {
+      if (!realUserId) return [];
+      const { data, error } = await supabase.from(table).select("*").eq(column, realUserId).limit(limit);
+      if (error) return [];
+      return (data || []).map((row) => ({
+        "Thời gian": str(first(row, [timeColumn, "createdat", "created_at", "timestamp", "orderdate", "return_date"], "")).slice(0, 19).replace("T", " "),
+        "Hoạt động": label,
+        "Đối tượng": first(row, ["orderid", "purchaseorderid", "transferid", "adjustmentid", "returnid", "historyid"], ""),
+        "Trạng thái": first(row, ["status", "orderstatus", "paymentstatus", "transactiontype"], ""),
+        "Ghi chú": first(row, ["note", "reason", "referencetype"], ""),
+      }));
+    }
+
+    const [stockLogs, orders, purchases, approvals, transfers, adjustments, returns] = await Promise.all([
+      readUserRows("stock_history", "performedby", "Thao tác kho", "timestamp", 30),
+      readUserRows("orders", "createdby", "Tạo đơn hàng", "orderdate", 30),
+      readUserRows("purchase_order", "createdby", "Tạo phiếu nhập", "createdat", 20),
+      readUserRows("purchase_order", "approvedby", "Duyệt phiếu nhập", "createdat", 20),
+      readUserRows("transfer_order", "createdby", "Tạo chuyển kho", "createdat", 20),
+      readUserRows("stock_adjustment", "createdby", "Kiểm kho", "createdat", 20),
+      readUserRows("return_order", "createdby", "Đổi trả", "returndate", 20),
+    ]);
+    const activityRows = [...stockLogs, ...orders, ...purchases, ...approvals, ...transfers, ...adjustments, ...returns]
+      .sort((a, b) => str(b["Thời gian"]).localeCompare(str(a["Thời gian"])))
+      .slice(0, 60);
+
+    setModal({
+      title: `Hồ sơ nhân viên - ${userNameOf(user)}`,
+      body: (
+        <div className="employee-profile">
+          <div className="employee-profile-grid">
+            <div className="employee-profile-main">
+              <UserCircle size={42} />
+              <div>
+                <b>{userNameOf(user)}</b>
+                <span>{userEmailOf(user) || "Chưa có email"}</span>
+              </div>
+            </div>
+            <div className="employee-profile-facts">
+              <span>Username</span><b>{first(user, ["username"], "")}</b>
+              <span>Vai trò</span><b>{role ? roleLabel(role) : "Chưa có role"}</b>
+              <span>Quyền</span><b>{permissionsOf(role).length}</b>
+              <span>Chi nhánh</span><b>{branch ? branchLabel(branch) : "Toàn hệ thống"}</b>
+              <span>Trạng thái</span><b>{first(user, ["status"], "")}</b>
+              <span>Đăng nhập cuối</span><b>{str(first(user, ["lastloginat", "last_login_at"], "")).slice(0, 19).replace("T", " ") || "Chưa có"}</b>
+            </div>
+          </div>
+          <ActionRow>
+            <button onClick={() => { setUserForm({ fullname: userNameOf(user), username: first(user, ["username"], ""), email: userEmailOf(user), rolename: role ? roleLabel(role) : "sales_staff", branchid: branchIdOf(user), status: first(user, ["status"], "active") }); setModal(null); }}>Đưa vào form sửa</button>
+            <button onClick={() => run(() => revokeUserAccess(user))}>Thu hồi quyền</button>
+            <button className="danger" onClick={() => run(() => deleteUserAccess(user))}>Xóa nhân viên</button>
+          </ActionRow>
+          <h3>Log hoạt động gần đây</h3>
+          <DataTable rows={activityRows} />
+        </div>
+      ),
+    });
   }
 
   async function runGlobalSearch(keyword = globalSearch) {
@@ -3231,9 +3457,27 @@ export default function App() {
                 rows={visibleRows}
               />
             )}
-            {page === "users" && <UsersPage run={run} userForm={userForm} setUserForm={setUserForm} createOrUpdateUser={createOrUpdateUser} selectTable={selectTable} rows={visibleRows} />}
+            {page === "users" && (
+              <UsersPage
+                run={run}
+                options={options}
+                userForm={userForm}
+                setUserForm={setUserForm}
+                roleEditor={roleEditor}
+                setRoleEditor={setRoleEditor}
+                createOrUpdateUser={createOrUpdateUser}
+                loadUsersFriendly={loadUsersFriendly}
+                saveRolePermissions={saveRolePermissions}
+                deleteRoleDefinition={deleteRoleDefinition}
+                revokeUserAccess={revokeUserAccess}
+                deleteUserAccess={deleteUserAccess}
+                openUserProfile={openUserProfile}
+                selectTable={selectTable}
+                rows={visibleRows}
+              />
+            )}
             {page === "reports" && <Reports run={run} buildReports={buildReports} selectTable={selectTable} exportRows={exportRows} rows={visibleRows} />}
-            {page === "query" && <Query run={run} queryTable={queryTable} setQueryTable={setQueryTable} selectTable={selectTable} exportRows={exportRows} rows={visibleRows} />}
+            {page === "query" && <Query run={run} queryTable={queryTable} setQueryTable={setQueryTable} selectTable={selectTable} exportRows={exportRows} searchSummary={searchSummary} rows={visibleRows} />}
           </div>
         )}
       </main>
@@ -3391,7 +3635,7 @@ function Grid({ children }) {
   return <div className="grid">{children}</div>;
 }
 
-function DataTable({ rows }) {
+function DataTable({ rows, onRowClick }) {
   if (!rows?.length) return <p className="muted">Chưa có dữ liệu</p>;
 
   const isIdColumn = (key) => {
@@ -3429,7 +3673,12 @@ function DataTable({ rows }) {
 
         <tbody>
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex}>
+            <tr
+              key={rowIndex}
+              className={onRowClick ? "clickable-row" : ""}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              title={onRowClick ? "Bấm để xem chi tiết" : undefined}
+            >
               {keys.map((key) => (
                 <td key={key}>{formatValue(row[key])}</td>
               ))}
@@ -4743,6 +4992,31 @@ function Channels(p) {
 }
 
 function UsersPage(p) {
+  const roleOptions = p.options.roles?.length ? p.options.roles : [
+    { rolename: "sales_staff", permissions: ROLE_FEATURES.sales_staff },
+    { rolename: "warehouse_staff", permissions: ROLE_FEATURES.warehouse_staff },
+    { rolename: "branch_manager", permissions: ROLE_FEATURES.branch_manager },
+    { rolename: "admin", permissions: ROLE_FEATURES.admin },
+  ];
+  const selectedRole = roleOptions.find((role) => roleLabel(role) === p.roleEditor.rolename) || roleOptions[0];
+  const knownPermissions = [...new Set(roleOptions.flatMap((role) => permissionsOf(role)))].sort();
+
+  function chooseRoleForEditor(roleName) {
+    const role = roleOptions.find((item) => roleLabel(item) === roleName);
+    p.setRoleEditor({
+      rolename: roleName,
+      description: first(role, ["description"], ""),
+      permissionsText: permissionsOf(role).join("\n"),
+    });
+  }
+
+  function togglePermission(permission) {
+    const current = new Set(permissionsFromText(p.roleEditor.permissionsText || permissionsOf(selectedRole).join("\n")));
+    if (current.has(permission)) current.delete(permission);
+    else current.add(permission);
+    p.setRoleEditor({ ...p.roleEditor, permissionsText: [...current].sort().join("\n") });
+  }
+
   return (
     <>
       <Card title="RBAC - tạo/cập nhật nhân viên">
@@ -4758,24 +5032,85 @@ function UsersPage(p) {
           </Field>
           <Field label="Vai trò">
             <select value={p.userForm.rolename} onChange={(e) => p.setUserForm({ ...p.userForm, rolename: e.target.value })}>
-              <option value="sales_staff">Nhân viên bán hàng</option>
-              <option value="warehouse_staff">Nhân viên kho</option>
-              <option value="branch_manager">Quản lý chi nhánh</option>
-              <option value="admin">Quản trị viên</option>
+              {roleOptions.map((role) => (
+                <option key={roleLabel(role)} value={roleLabel(role)}>
+                  {roleLabel(role)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Chi nhánh">
+            <select value={p.userForm.branchid} onChange={(e) => p.setUserForm({ ...p.userForm, branchid: e.target.value })}>
+              <option value="">Toàn hệ thống</option>
+              {p.options.branches.map((branch) => (
+                <option key={branchIdOf(branch)} value={branchIdOf(branch)}>
+                  {branchLabel(branch)}
+                </option>
+              ))}
             </select>
           </Field>
           <Field label="Trạng thái">
             <select value={p.userForm.status} onChange={(e) => p.setUserForm({ ...p.userForm, status: e.target.value })}>
               <option value="active">Đang hoạt động</option>
               <option value="inactive">Ngưng hoạt động</option>
+              <option value="locked">Khóa quyền</option>
             </select>
           </Field>
         </div>
-        <button onClick={() => p.run(p.createOrUpdateUser)}>Lưu role</button>
-        <button onClick={() => p.run(() => p.selectTable("users"))}>Xem users</button>
-        <button onClick={() => p.run(() => p.selectTable("role"))}>Xem role</button>
+        <ActionRow>
+          <button onClick={() => p.run(p.createOrUpdateUser)}>Lưu nhân viên + quyền</button>
+          <button onClick={() => p.run(() => p.revokeUserAccess())}>Thu hồi quyền theo email</button>
+          <button className="danger" onClick={() => p.run(() => p.deleteUserAccess())}>Xóa/khóa nhân viên</button>
+          <button onClick={() => p.run(p.loadUsersFriendly)}>Tải hồ sơ nhân viên</button>
+          <button onClick={() => p.run(() => p.selectTable("role"))}>Xem role gốc</button>
+        </ActionRow>
       </Card>
-      <DataTable rows={p.rows} />
+
+      <Card title="Cấp quyền theo vai trò">
+        <div className="sales-form-grid">
+          <Field label="Vai trò">
+            <select value={p.roleEditor.rolename} onChange={(e) => chooseRoleForEditor(e.target.value)}>
+              {roleOptions.map((role) => (
+                <option key={roleLabel(role)} value={roleLabel(role)}>
+                  {roleLabel(role)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Tên role mới hoặc hiện tại">
+            <input value={p.roleEditor.rolename} onChange={(e) => p.setRoleEditor({ ...p.roleEditor, rolename: e.target.value })} />
+          </Field>
+          <Field label="Mô tả">
+            <input value={p.roleEditor.description} placeholder="Mô tả quyền hạn" onChange={(e) => p.setRoleEditor({ ...p.roleEditor, description: e.target.value })} />
+          </Field>
+        </div>
+        <div className="permission-editor">
+          <textarea
+            value={p.roleEditor.permissionsText || permissionsOf(selectedRole).join("\n")}
+            placeholder="Mỗi dòng một quyền, ví dụ: product.view"
+            onChange={(e) => p.setRoleEditor({ ...p.roleEditor, permissionsText: e.target.value })}
+          />
+          <div className="permission-chip-list">
+            {knownPermissions.slice(0, 90).map((permission) => {
+              const active = permissionsFromText(p.roleEditor.permissionsText || permissionsOf(selectedRole).join("\n")).includes(permission);
+              return (
+                <button key={permission} type="button" className={active ? "active" : ""} onClick={() => togglePermission(permission)}>
+                  {permission}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <ActionRow>
+          <button onClick={() => p.run(p.saveRolePermissions)}>Lưu danh sách quyền</button>
+          <button className="danger" onClick={() => p.run(p.deleteRoleDefinition)}>Xóa role tùy chỉnh</button>
+        </ActionRow>
+      </Card>
+
+      <Card title="Danh sách nhân viên">
+        <p className="muted">Bấm vào một dòng để mở hồ sơ, quyền và log hoạt động gần đây.</p>
+        <DataTable rows={p.rows} onRowClick={(row) => p.run(() => p.openUserProfile(row))} />
+      </Card>
     </>
   );
 }
@@ -4801,53 +5136,33 @@ function Reports({ run, buildReports, selectTable, exportRows, rows }) {
   );
 }
 
-function Query({ run, queryTable, setQueryTable, selectTable, rows }) {
-  const allowedTables = [
-    "product",
-    "product_variant",
-    "product_image",
-    "product_category",
-    "attribute",
-    "supplier",
-    "supplier_product",
-    "branch",
-    "stock",
-    "stock_history",
-    "inventory_allocation",
-    "purchase_order",
-    "purchase_order_detail",
-    "transfer_order",
-    "transfer_order_detail",
-    "stock_adjustment",
-    "stock_adjustment_detail",
-    "sales_channel",
-    "channel_price",
-    "channel_sync_log",
-    "customer",
-    "orders",
-    "order_detail",
-    "payment",
-    "return_order",
-    "return_detail",
-    "users",
-    "role",
-    "vw_product_variant_catalog",
-    "vw_stock_by_branch",
-    "vw_low_stock_alert",
-    "vw_order_summary",
-    "vw_revenue_by_channel",
-    "vw_stock_movement_report",
-  ];
-
+function Query({ run, queryTable, setQueryTable, selectTable, searchSummary, rows }) {
   return (
     <>
       <Card title="Tra cứu bảng bất kỳ">
+        {searchSummary && (
+          <div className="search-result-summary">
+            <div>
+              <b>Kết quả tìm kiếm</b>
+              <span>
+                "{searchSummary.keyword}" - {searchSummary.total} kết quả
+              </span>
+            </div>
+            <div className="search-result-groups">
+              {Object.entries(searchSummary.groups || {}).map(([group, count]) => (
+                <span key={group}>
+                  {group}: <b>{count}</b>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="sales-form-grid">
           <Field label="Bảng dữ liệu">
             <select value={queryTable} onChange={(e) => setQueryTable(e.target.value)}>
-              {allowedTables.map((table) => (
+              {QUERY_TABLES.map((table) => (
                 <option key={table} value={table}>
-                  {table}
+                  {TABLE_LABELS[table] || table} ({table})
                 </option>
               ))}
             </select>
