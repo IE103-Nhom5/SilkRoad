@@ -61,6 +61,17 @@ const MENU = [
   ["query", "Tra bảng", Search],
 ];
 
+const MENU_GROUPS = [
+  { key: "overview", label: "Tổng quan", icon: BarChart3, items: ["dashboard", "reports"] },
+  { key: "goods", label: "Hàng hóa", icon: PackagePlus, items: ["products", "stock", "purchase"] },
+  { key: "operations", label: "Vận hành", icon: ClipboardList, items: ["orders", "transfer", "adjustment", "returns"] },
+  { key: "market", label: "Kinh doanh", icon: Users, items: ["customers", "channels"] },
+  { key: "system", label: "Hệ thống", icon: Settings, items: ["users"] },
+  { key: "tools", label: "Công cụ", icon: Search, items: ["query"] },
+];
+
+const MENU_BY_KEY = Object.fromEntries(MENU.map((item) => [item[0], item]));
+
 const QUERY_TABLES = [
   "product",
   "product_variant",
@@ -910,6 +921,7 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [accountMenu, setAccountMenu] = useState(false);
   const [notificationMenu, setNotificationMenu] = useState(false);
+  const [openMenuGroup, setOpenMenuGroup] = useState("");
 
   // Data state
   const [rows, setRows] = useState([]);
@@ -1318,6 +1330,7 @@ export default function App() {
     setModal(null);
     setAccountMenu(false);
     setNotificationMenu(false);
+    setOpenMenuGroup("");
     if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebar(false);
   }
 
@@ -1568,26 +1581,58 @@ export default function App() {
   }
 
   async function dashboardData() {
-    const [p, s, o, h] = await Promise.all([
-      supabase.from("product").select("*", { count: "exact", head: true }),
-      supabase.from("stock").select("quantity"),
-      supabase.from("orders").select("*"),
-      supabase.from("stock_history").select("*").limit(100),
+    const loadedOptions = await loadOptions();
+    const [orders, details, history, returns, payments] = await Promise.all([
+      supabase.from("orders").select("*").limit(1000),
+      supabase.from("order_detail").select("*").limit(2000),
+      supabase.from("stock_history").select("*").limit(500),
+      supabase.from("return_order").select("*").limit(500),
+      supabase.from("payment").select("*").limit(500),
     ]);
 
-    const totalStock = (s.data || []).reduce((sum, r) => sum + Number(r.quantity || 0), 0);
-    const revenue = (o.data || []).reduce(
-      (sum, r) => sum + Number(r.finalamount || r.final_amount || r.totalamount || r.total_amount || 0),
+    if (orders.error) throw orders.error;
+    if (details.error) throw details.error;
+    if (history.error) throw history.error;
+
+    const orderRows = orders.data || [];
+    const detailRows = details.data || [];
+    const historyRows = history.data || [];
+    const returnRows = returns.data || [];
+    const paymentRows = payments.data || [];
+    const stockRows = loadedOptions.stock || [];
+    const totalStock = stockRows.reduce((sum, r) => sum + stockQuantityOf(r), 0);
+    const reservedStock = stockRows.reduce((sum, r) => sum + reservedQuantityOf(r), 0);
+    const availableStock = stockRows.reduce((sum, r) => sum + availableStockOf(r), 0);
+    const lowStock = stockRows.filter((item) => stockQuantityOf(item) <= Number(first(item, ["minstocklevel", "min_stock_level"], 5))).length;
+    const outOfStock = stockRows.filter((item) => availableStockOf(item) <= 0).length;
+    const revenue = orderRows.reduce(
+      (sum, r) => sum + Number(first(r, ["finalamount", "final_amount", "totalamount", "total_amount"], 0)),
       0
     );
-    const todayOrders = (o.data || []).filter((r) => str(r.orderdate || r.createdat || r.created_at).startsWith(todayISO())).length;
+    const todayOrderRows = orderRows.filter((r) => str(r.orderdate || r.createdat || r.created_at).startsWith(todayISO()));
+    const todayOrders = todayOrderRows.length;
+    const todayRevenue = todayOrderRows.reduce((sum, r) => sum + Number(first(r, ["finalamount", "final_amount", "totalamount", "total_amount"], 0)), 0);
+    const processingOrders = orderRows.filter((r) => !["cancelled", "delivered"].includes(first(r, ["orderstatus", "order_status"], ""))).length;
+    const paidPayments = paymentRows.filter((r) => first(r, ["status"], "") === "success").length;
+    const soldUnits = detailRows.reduce((sum, r) => sum + Number(first(r, ["quantity"], 0)), 0);
 
+    setSearchSummary(null);
     setRows([
-      { metric: "Tổng sản phẩm", value: p.count || 0, rawValue: p.count || 0 },
-      { metric: "Tổng tồn kho", value: totalStock, rawValue: totalStock },
-      { metric: "Doanh thu", value: money(revenue), rawValue: revenue },
-      { metric: "Đơn hàng hôm nay", value: todayOrders, rawValue: todayOrders },
-      { metric: "Log nhập/xuất", value: (h.data || []).length, rawValue: (h.data || []).length },
+      { metric: "Sản phẩm gốc", value: loadedOptions.products.length, rawValue: loadedOptions.products.length, group: "Hàng hóa", detail: "Tổng sản phẩm đang quản lý" },
+      { metric: "Biến thể", value: loadedOptions.variants.length, rawValue: loadedOptions.variants.length, group: "Hàng hóa", detail: "Size, màu, barcode, giá bán" },
+      { metric: "Tồn khả dụng", value: availableStock, rawValue: availableStock, group: "Kho", detail: `${totalStock} tồn thực, ${reservedStock} đã giữ` },
+      { metric: "Sắp hết hàng", value: lowStock, rawValue: lowStock, group: "Kho", detail: "Dòng tồn dưới mức tối thiểu", tone: lowStock ? "danger" : "ok" },
+      { metric: "Hết tồn", value: outOfStock, rawValue: outOfStock, group: "Kho", detail: "Biến thể không còn tồn khả dụng", tone: outOfStock ? "danger" : "ok" },
+      { metric: "Doanh thu", value: money(revenue), rawValue: revenue, group: "Bán hàng", detail: "Tổng doanh thu theo đơn" },
+      { metric: "Doanh thu hôm nay", value: money(todayRevenue), rawValue: todayRevenue, group: "Bán hàng", detail: "Doanh thu trong ngày" },
+      { metric: "Đơn hôm nay", value: todayOrders, rawValue: todayOrders, group: "Bán hàng", detail: "Số đơn phát sinh hôm nay" },
+      { metric: "Đơn đang xử lý", value: processingOrders, rawValue: processingOrders, group: "Bán hàng", detail: "Chưa giao xong hoặc chưa hủy" },
+      { metric: "Sản phẩm đã bán", value: soldUnits, rawValue: soldUnits, group: "Bán hàng", detail: "Tổng số lượng trong chi tiết đơn" },
+      { metric: "Khách hàng", value: loadedOptions.customers.length, rawValue: loadedOptions.customers.length, group: "CRM", detail: "Hồ sơ khách hàng" },
+      { metric: "Đổi trả", value: returnRows.length, rawValue: returnRows.length, group: "Dịch vụ", detail: "Phiếu đổi trả/hoàn tiền" },
+      { metric: "Thanh toán thành công", value: paidPayments, rawValue: paidPayments, group: "Thanh toán", detail: "Giao dịch success" },
+      { metric: "Đơn tạm", value: heldCarts.length, rawValue: heldCarts.length, group: "POS", detail: "Giỏ hàng đang lưu tạm" },
+      { metric: "Log nhập/xuất", value: historyRows.length, rawValue: historyRows.length, group: "Kho", detail: "Lịch sử biến động kho gần đây" },
     ]);
   }
 
@@ -3343,21 +3388,49 @@ export default function App() {
           <img src={LOGO_SRC} alt="SilkRoad" className="sidebar-logo-img" />
           <small>{roleName()}</small>
         </div>
-        <nav className="sidebar-nav" aria-label="Điều hướng chính">
-          {MENU.filter(([key]) => can(key)).map(([key, label, Icon]) => (
-            <button
-              key={key}
-              className={page === key ? "active" : ""}
-              title={label}
-              onClick={() => {
-                setPage(key);
-                if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebar(false);
-              }}
-            >
-              <Icon size={18} />
-              <span>{label}</span>
-            </button>
-          ))}
+        <nav className="sidebar-nav sidebar-nav-grouped" aria-label="Điều hướng chính">
+          {MENU_GROUPS.map((group) => {
+            const groupItems = group.items.map((key) => MENU_BY_KEY[key]).filter(Boolean).filter(([key]) => can(key));
+            if (!groupItems.length) return null;
+            const Icon = group.icon;
+            const active = groupItems.some(([key]) => page === key);
+            const expanded = openMenuGroup === group.key;
+
+            return (
+              <div
+                className={`sidebar-group ${active ? "active" : ""} ${expanded ? "open" : ""}`}
+                key={group.key}
+                onMouseEnter={() => setOpenMenuGroup(group.key)}
+                onMouseLeave={() => setOpenMenuGroup("")}
+              >
+                <button
+                  type="button"
+                  className={`sidebar-parent ${active ? "active" : ""}`}
+                  title={group.label}
+                  onClick={() => {
+                    if (groupItems.length === 1) {
+                      goToPage(groupItems[0][0]);
+                      return;
+                    }
+                    setOpenMenuGroup((current) => (current === group.key ? "" : group.key));
+                  }}
+                >
+                  <Icon size={18} />
+                  <span>{group.label}</span>
+                  <small className="sidebar-parent-count">{groupItems.length}</small>
+                </button>
+                <div className="sidebar-flyout">
+                  <b>{group.label}</b>
+                  {groupItems.map(([key, label, ItemIcon]) => (
+                    <button key={key} type="button" className={page === key ? "active" : ""} onClick={() => goToPage(key)}>
+                      <ItemIcon size={17} />
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
       </aside>
       {sidebar && <button type="button" className="app-scrim" aria-label="Đóng menu" onClick={() => setSidebar(false)} />}
@@ -3521,7 +3594,7 @@ export default function App() {
           <Skeleton />
         ) : (
           <div className="content">
-            {page === "dashboard" && <Dashboard run={run} dashboardData={dashboardData} rows={visibleRows} />}
+            {page === "dashboard" && <Dashboard run={run} dashboardData={dashboardData} rows={visibleRows} goToPage={goToPage} notifications={notifications} can={can} />}
             {page === "products" && (
               <Products
                 options={options}
@@ -3909,7 +3982,7 @@ function Modal({ title, children, onClose }) {
   );
 }
 
-function Dashboard({ run, dashboardData, rows }) {
+function Dashboard({ run, dashboardData, rows, goToPage, notifications = [], can = () => true }) {
   const dashboardRows = (rows || []).filter((r) => r && Object.prototype.hasOwnProperty.call(r, "metric"));
   const displayRows = dashboardRows.length
     ? dashboardRows
@@ -3930,33 +4003,112 @@ function Dashboard({ run, dashboardData, rows }) {
     return Number(String(row.value || "").replace(/[^\d.-]/g, "")) || 0;
   };
   const max = Math.max(...displayRows.map(numberOf), 1);
+  const primaryRows = displayRows.slice(0, 8);
+  const riskRows = displayRows.filter((row) => row.tone === "danger" && numberOf(row) > 0).slice(0, 5);
+  const groupedRows = Object.entries(
+    displayRows.reduce((acc, row) => {
+      const group = row.group || "Tổng quan";
+      acc[group] = (acc[group] || 0) + numberOf(row);
+      return acc;
+    }, {})
+  ).sort((a, b) => b[1] - a[1]);
+  const quickActions = [
+    ["orders", "Bán hàng", ShoppingCart, "Tạo hóa đơn, quản lý đơn tạm"],
+    ["products", "Hàng hóa", PackagePlus, "Sản phẩm, biến thể, hình ảnh"],
+    ["stock", "Kho", Boxes, "Tồn kho, cảnh báo, lịch sử kho"],
+    ["purchase", "Nhập hàng", ClipboardList, "Phiếu nhập và nhận hàng"],
+    ["customers", "Khách hàng", Users, "CRM và lịch sử mua hàng"],
+    ["reports", "Báo cáo", BarChart3, "Doanh thu, đơn hàng, tồn kho"],
+  ].filter(([key]) => can(key));
 
   return (
-    <Card title="Dashboard">
-      <div className="dashboard-toolbar">
-        <button onClick={() => run(dashboardData)}>Tải thống kê</button>
-      </div>
-      <div className="dashboard-grid">
-        {displayRows.map((r, i) => (
-          <div className="metric" key={i}>
-            <b>{r.metric}</b>
-            <strong>{r.value}</strong>
-          </div>
-        ))}
-      </div>
-      <h3>Biểu đồ tổng quan</h3>
-      <div className="dashboard-chart">
-        {displayRows.map((r, i) => {
-          const width = Math.max((numberOf(r) / max) * 100, numberOf(r) > 0 ? 6 : 0);
-          return (
-            <div className="bar" key={i}>
-              <span>{r.metric}</span>
-              <i style={{ width: width + "%" }} />
+    <div className="dashboard-shell">
+      <Card title="Dashboard">
+        <div className="dashboard-toolbar">
+          <button onClick={() => run(dashboardData)}>Tải thống kê</button>
+          <span>Cập nhật KPI từ bán hàng, kho, khách hàng và thanh toán</span>
+        </div>
+        <div className="dashboard-grid">
+          {primaryRows.map((r, i) => (
+            <div className={`metric ${r.tone || ""}`} key={`${r.metric}-${i}`}>
+              <b>{r.metric}</b>
+              <strong>{r.value}</strong>
+              {r.detail && <small>{r.detail}</small>}
             </div>
-          );
-        })}
+          ))}
+        </div>
+      </Card>
+
+      <div className="dashboard-two-col">
+        <Card title="Điều hành nhanh">
+          <div className="dashboard-action-grid">
+            {quickActions.map(([key, label, Icon, detail]) => (
+              <button key={key} type="button" onClick={() => goToPage(key)}>
+                <Icon size={20} />
+                <span>
+                  <b>{label}</b>
+                  <small>{detail}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        <Card title="Cảnh báo cần xử lý">
+          <div className="dashboard-alert-list">
+            {notifications.length || riskRows.length ? (
+              <>
+                {notifications.slice(0, 4).map((item, index) => (
+                  <button key={`${item.title}-${index}`} type="button" className={item.tone || ""} onClick={() => goToPage(item.page)}>
+                    <span />
+                    <div>
+                      <b>{item.title}</b>
+                      <small>{item.detail}</small>
+                    </div>
+                  </button>
+                ))}
+                {riskRows.map((row, index) => (
+                  <button key={`${row.metric}-${index}`} type="button" className="danger" onClick={() => goToPage("stock")}>
+                    <span />
+                    <div>
+                      <b>{row.metric}</b>
+                      <small>{row.detail || row.value}</small>
+                    </div>
+                  </button>
+                ))}
+              </>
+            ) : (
+              <p className="muted">Chưa có cảnh báo cần xử lý.</p>
+            )}
+          </div>
+        </Card>
       </div>
-    </Card>
+
+      <Card title="Biểu đồ tổng quan">
+        <div className="dashboard-insight-grid">
+          <div className="dashboard-chart">
+            {displayRows.slice(0, 12).map((r, i) => {
+              const width = Math.max((numberOf(r) / max) * 100, numberOf(r) > 0 ? 6 : 0);
+              return (
+                <div className="bar" key={`${r.metric}-bar-${i}`}>
+                  <span>{r.metric}</span>
+                  <i style={{ width: width + "%" }} />
+                </div>
+              );
+            })}
+          </div>
+          <div className="dashboard-group-panel">
+            <b>Nhóm chỉ số</b>
+            {groupedRows.map(([group, value]) => (
+              <div key={group}>
+                <span>{group}</span>
+                <strong>{value.toLocaleString("vi-VN")}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+    </div>
   );
 }
 
