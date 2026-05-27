@@ -1615,24 +1615,106 @@ export default function App() {
     const processingOrders = orderRows.filter((r) => !["cancelled", "delivered"].includes(first(r, ["orderstatus", "order_status"], ""))).length;
     const paidPayments = paymentRows.filter((r) => first(r, ["status"], "") === "success").length;
     const soldUnits = detailRows.reduce((sum, r) => sum + Number(first(r, ["quantity"], 0)), 0);
+    const topByVariant = new Map();
+
+    detailRows.forEach((detail) => {
+      const variantid = variantIdOf(detail);
+      if (!variantid) return;
+      const quantity = Number(first(detail, ["quantity"], 0));
+      const unitPrice = Number(first(detail, ["unitprice", "unit_price"], 0));
+      const sales = Number(first(detail, ["subtotal", "sub_total"], 0)) || quantity * unitPrice;
+      const current = topByVariant.get(variantid) || { quantity: 0, sales: 0 };
+      topByVariant.set(variantid, { quantity: current.quantity + quantity, sales: current.sales + sales });
+    });
+
+    const bestSellerRows = [...topByVariant.entries()]
+      .map(([variantid, totals], index) => {
+        const variant = loadedOptions.variants.find((item) => sameId(variantIdOf(item), variantid));
+        const product = variant?.product;
+        const category = loadedOptions.categories.find((item) => sameId(categoryIdOf(item), categoryIdOf(product)));
+        const stockForVariant = stockRows.filter((item) => sameId(variantIdOf(item), variantid)).reduce((sum, item) => sum + availableStockOf(item), 0);
+        const price = Number(first(variant, ["sellingprice", "selling_price"], first(product, ["defaultsellingprice", "default_selling_price"], 0)));
+        return {
+          kind: "bestSeller",
+          rank: index + 1,
+          product: productLabel(product),
+          variant: variantLabel(variant),
+          category: category ? categoryLabel(category) : "Chưa phân loại",
+          brand: first(product, ["brand"], ""),
+          price,
+          priceText: money(price),
+          stock: stockForVariant,
+          orders: totals.quantity,
+          sales: totals.sales,
+          salesText: money(totals.sales),
+          imageurl: variant?.imageurl || product?.imageurl || "",
+          imagealt: variant?.imagealt || product?.imagealt || productLabel(product),
+        };
+      })
+      .sort((a, b) => b.sales - a.sales || b.orders - a.orders)
+      .map((row, index) => ({ ...row, rank: index + 1 }))
+      .slice(0, 30);
+
+    const recentOrderRows = orderRows
+      .slice()
+      .sort((a, b) => str(b.orderdate || b.createdat || b.created_at).localeCompare(str(a.orderdate || a.createdat || a.created_at)))
+      .slice(0, 10)
+      .map((order) => {
+        const branch = loadedOptions.branches.find((item) => sameId(branchIdOf(item), branchIdOf(order)));
+        const customer = loadedOptions.customers.find((item) => sameId(first(item, ["customerid", "customer_id"], ""), first(order, ["customerid", "customer_id"], "")));
+        const total = Number(first(order, ["finalamount", "final_amount", "totalamount", "total_amount"], 0));
+        return {
+          kind: "recentOrder",
+          time: str(order.orderdate || order.createdat || order.created_at).slice(0, 19).replace("T", " "),
+          branch: branch ? branchLabel(branch) : "Chưa xác định",
+          customer: customer ? first(customer, ["fullname", "full_name"], "") : first(order, ["shippingname", "shipping_name"], "Khách lẻ"),
+          status: first(order, ["orderstatus", "order_status"], ""),
+          payment: first(order, ["paymentstatus", "payment_status"], ""),
+          total,
+          totalText: money(total),
+        };
+      });
+
+    const trendMap = new Map();
+    orderRows.forEach((order) => {
+      const date = str(order.orderdate || order.createdat || order.created_at).slice(0, 10) || "Chưa rõ";
+      const current = trendMap.get(date) || { orders: 0, revenue: 0 };
+      trendMap.set(date, {
+        orders: current.orders + 1,
+        revenue: current.revenue + Number(first(order, ["finalamount", "final_amount", "totalamount", "total_amount"], 0)),
+      });
+    });
+    const trendRows = [...trendMap.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-7)
+      .map(([date, value]) => ({
+        kind: "trend",
+        date,
+        orders: value.orders,
+        revenue: value.revenue,
+        revenueText: money(value.revenue),
+      }));
 
     setSearchSummary(null);
     setRows([
-      { metric: "Sản phẩm gốc", value: loadedOptions.products.length, rawValue: loadedOptions.products.length, group: "Hàng hóa", detail: "Tổng sản phẩm đang quản lý" },
-      { metric: "Biến thể", value: loadedOptions.variants.length, rawValue: loadedOptions.variants.length, group: "Hàng hóa", detail: "Size, màu, barcode, giá bán" },
-      { metric: "Tồn khả dụng", value: availableStock, rawValue: availableStock, group: "Kho", detail: `${totalStock} tồn thực, ${reservedStock} đã giữ` },
-      { metric: "Sắp hết hàng", value: lowStock, rawValue: lowStock, group: "Kho", detail: "Dòng tồn dưới mức tối thiểu", tone: lowStock ? "danger" : "ok" },
-      { metric: "Hết tồn", value: outOfStock, rawValue: outOfStock, group: "Kho", detail: "Biến thể không còn tồn khả dụng", tone: outOfStock ? "danger" : "ok" },
-      { metric: "Doanh thu", value: money(revenue), rawValue: revenue, group: "Bán hàng", detail: "Tổng doanh thu theo đơn" },
-      { metric: "Doanh thu hôm nay", value: money(todayRevenue), rawValue: todayRevenue, group: "Bán hàng", detail: "Doanh thu trong ngày" },
-      { metric: "Đơn hôm nay", value: todayOrders, rawValue: todayOrders, group: "Bán hàng", detail: "Số đơn phát sinh hôm nay" },
-      { metric: "Đơn đang xử lý", value: processingOrders, rawValue: processingOrders, group: "Bán hàng", detail: "Chưa giao xong hoặc chưa hủy" },
-      { metric: "Sản phẩm đã bán", value: soldUnits, rawValue: soldUnits, group: "Bán hàng", detail: "Tổng số lượng trong chi tiết đơn" },
-      { metric: "Khách hàng", value: loadedOptions.customers.length, rawValue: loadedOptions.customers.length, group: "CRM", detail: "Hồ sơ khách hàng" },
-      { metric: "Đổi trả", value: returnRows.length, rawValue: returnRows.length, group: "Dịch vụ", detail: "Phiếu đổi trả/hoàn tiền" },
-      { metric: "Thanh toán thành công", value: paidPayments, rawValue: paidPayments, group: "Thanh toán", detail: "Giao dịch success" },
-      { metric: "Đơn tạm", value: heldCarts.length, rawValue: heldCarts.length, group: "POS", detail: "Giỏ hàng đang lưu tạm" },
-      { metric: "Log nhập/xuất", value: historyRows.length, rawValue: historyRows.length, group: "Kho", detail: "Lịch sử biến động kho gần đây" },
+      { kind: "metric", metric: "Sản phẩm gốc", value: loadedOptions.products.length, rawValue: loadedOptions.products.length, group: "Hàng hóa", detail: "Tổng sản phẩm đang quản lý" },
+      { kind: "metric", metric: "Biến thể", value: loadedOptions.variants.length, rawValue: loadedOptions.variants.length, group: "Hàng hóa", detail: "Size, màu, barcode, giá bán" },
+      { kind: "metric", metric: "Tồn khả dụng", value: availableStock, rawValue: availableStock, group: "Kho", detail: `${totalStock} tồn thực, ${reservedStock} đã giữ` },
+      { kind: "metric", metric: "Sắp hết hàng", value: lowStock, rawValue: lowStock, group: "Kho", detail: "Dòng tồn dưới mức tối thiểu", tone: lowStock ? "danger" : "ok" },
+      { kind: "metric", metric: "Hết tồn", value: outOfStock, rawValue: outOfStock, group: "Kho", detail: "Biến thể không còn tồn khả dụng", tone: outOfStock ? "danger" : "ok" },
+      { kind: "metric", metric: "Doanh thu", value: money(revenue), rawValue: revenue, group: "Bán hàng", detail: "Tổng doanh thu theo đơn" },
+      { kind: "metric", metric: "Doanh thu hôm nay", value: money(todayRevenue), rawValue: todayRevenue, group: "Bán hàng", detail: "Doanh thu trong ngày" },
+      { kind: "metric", metric: "Đơn hôm nay", value: todayOrders, rawValue: todayOrders, group: "Bán hàng", detail: "Số đơn phát sinh hôm nay" },
+      { kind: "metric", metric: "Đơn đang xử lý", value: processingOrders, rawValue: processingOrders, group: "Bán hàng", detail: "Chưa giao xong hoặc chưa hủy" },
+      { kind: "metric", metric: "Sản phẩm đã bán", value: soldUnits, rawValue: soldUnits, group: "Bán hàng", detail: "Tổng số lượng trong chi tiết đơn" },
+      { kind: "metric", metric: "Khách hàng", value: loadedOptions.customers.length, rawValue: loadedOptions.customers.length, group: "CRM", detail: "Hồ sơ khách hàng" },
+      { kind: "metric", metric: "Đổi trả", value: returnRows.length, rawValue: returnRows.length, group: "Dịch vụ", detail: "Phiếu đổi trả/hoàn tiền" },
+      { kind: "metric", metric: "Thanh toán thành công", value: paidPayments, rawValue: paidPayments, group: "Thanh toán", detail: "Giao dịch success" },
+      { kind: "metric", metric: "Đơn tạm", value: heldCarts.length, rawValue: heldCarts.length, group: "POS", detail: "Giỏ hàng đang lưu tạm" },
+      { kind: "metric", metric: "Log nhập/xuất", value: historyRows.length, rawValue: historyRows.length, group: "Kho", detail: "Lịch sử biến động kho gần đây" },
+      ...bestSellerRows,
+      ...recentOrderRows,
+      ...trendRows,
     ]);
   }
 
@@ -3984,6 +4066,11 @@ function Modal({ title, children, onClose }) {
 
 function Dashboard({ run, dashboardData, rows, goToPage, notifications = [], can = () => true }) {
   const dashboardRows = (rows || []).filter((r) => r && Object.prototype.hasOwnProperty.call(r, "metric"));
+  const bestSellerRows = (rows || []).filter((r) => r?.kind === "bestSeller");
+  const recentOrderRows = (rows || []).filter((r) => r?.kind === "recentOrder");
+  const trendRows = (rows || []).filter((r) => r?.kind === "trend");
+  const [sellerLimit, setSellerLimit] = useState(5);
+  const [sellerCategory, setSellerCategory] = useState("");
   const displayRows = dashboardRows.length
     ? dashboardRows
     : [
@@ -4005,6 +4092,11 @@ function Dashboard({ run, dashboardData, rows, goToPage, notifications = [], can
   const max = Math.max(...displayRows.map(numberOf), 1);
   const primaryRows = displayRows.slice(0, 8);
   const riskRows = displayRows.filter((row) => row.tone === "danger" && numberOf(row) > 0).slice(0, 5);
+  const sellerCategories = [...new Set(bestSellerRows.map((row) => row.category).filter(Boolean))];
+  const filteredSellerRows = bestSellerRows
+    .filter((row) => !sellerCategory || row.category === sellerCategory)
+    .slice(0, Number(sellerLimit));
+  const maxTrendRevenue = Math.max(...trendRows.map((row) => Number(row.revenue || 0)), 1);
   const groupedRows = Object.entries(
     displayRows.reduce((acc, row) => {
       const group = row.group || "Tổng quan";
@@ -4106,6 +4198,86 @@ function Dashboard({ run, dashboardData, rows, goToPage, notifications = [], can
               </div>
             ))}
           </div>
+        </div>
+      </Card>
+
+      <div className="dashboard-two-col dashboard-commerce-panels">
+        <Card title="Sản phẩm bán chạy">
+          <div className="dashboard-filter-row">
+            <select value={sellerLimit} onChange={(event) => setSellerLimit(Number(event.target.value))}>
+              <option value={5}>Hiện 5</option>
+              <option value={10}>Hiện 10</option>
+              <option value={20}>Hiện 20</option>
+            </select>
+            <select value={sellerCategory} onChange={(event) => setSellerCategory(event.target.value)}>
+              <option value="">Tất cả danh mục</option>
+              {sellerCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="dashboard-product-list">
+            {filteredSellerRows.length ? (
+              filteredSellerRows.map((row) => (
+                <div className="dashboard-product-row" key={`${row.product}-${row.variant}-${row.rank}`}>
+                  <span className="dashboard-rank">#{row.rank}</span>
+                  <ProductImage src={row.imageurl} alt={row.imagealt || row.product} className="dashboard-product-thumb" />
+                  <div>
+                    <b>{row.product}</b>
+                    <small>{row.variant}</small>
+                    <em>{row.category}</em>
+                  </div>
+                  <strong>{row.salesText}</strong>
+                  <span>{row.orders} bán</span>
+                  <span>{row.stock} tồn</span>
+                </div>
+              ))
+            ) : (
+              <p className="muted">Chưa có dữ liệu bán chạy.</p>
+            )}
+          </div>
+        </Card>
+
+        <Card title="Đơn hàng gần đây">
+          <div className="dashboard-order-list">
+            {recentOrderRows.length ? (
+              recentOrderRows.map((order, index) => (
+                <div className="dashboard-order-row" key={`${order.time}-${index}`}>
+                  <div>
+                    <b>{order.customer}</b>
+                    <small>{order.time} - {order.branch}</small>
+                  </div>
+                  <span>{order.status || "new"}</span>
+                  <em>{order.payment || "unpaid"}</em>
+                  <strong>{order.totalText}</strong>
+                </div>
+              ))
+            ) : (
+              <p className="muted">Chưa có đơn gần đây.</p>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      <Card title="Doanh thu 7 ngày gần nhất">
+        <div className="dashboard-trend">
+          {trendRows.length ? (
+            trendRows.map((row) => {
+              const height = Math.max((Number(row.revenue || 0) / maxTrendRevenue) * 100, row.revenue > 0 ? 8 : 2);
+              return (
+                <div key={row.date}>
+                  <span>{row.revenueText}</span>
+                  <i style={{ height: `${height}%` }} />
+                  <b>{row.date.slice(5)}</b>
+                  <small>{row.orders} đơn</small>
+                </div>
+              );
+            })
+          ) : (
+            <p className="muted">Chưa có dữ liệu doanh thu theo ngày.</p>
+          )}
         </div>
       </Card>
     </div>
