@@ -89,6 +89,20 @@ function str(v) {
   return v === null || v === undefined ? "" : String(v);
 }
 
+function normalizeSearchText(value) {
+  return str(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function matchesSearchValues(values, keyword) {
+  const needle = normalizeSearchText(keyword);
+  if (!needle) return true;
+  return values.some((value) => normalizeSearchText(value).includes(needle));
+}
+
 function idStr(v) {
   return str(v).trim();
 }
@@ -2476,25 +2490,178 @@ export default function App() {
     await selectTable("users");
   }
 
+  async function runGlobalSearch(keyword = globalSearch) {
+    const needle = normalizeSearchText(keyword);
+    if (!needle) {
+      show("Nhập từ khóa để tìm kiếm toàn hệ thống");
+      return;
+    }
+
+    async function readRows(table, limit = 300) {
+      const { data, error } = await supabase.from(table).select("*").limit(limit);
+      if (error) return [];
+      return data || [];
+    }
+
+    const loadedOptions = await loadOptions();
+    const [orders, purchases, stockHistory] = await Promise.all([
+      readRows("orders", 400),
+      readRows("purchase_order", 250),
+      readRows("stock_history", 400),
+    ]);
+
+    const results = [];
+    const addResult = (row) => {
+      if (results.length < 160) results.push(row);
+    };
+
+    loadedOptions.products.forEach((product) => {
+      const category = loadedOptions.categories.find((item) => sameId(categoryIdOf(item), categoryIdOf(product)));
+      const variants = loadedOptions.variants.filter((variant) => sameId(productIdOf(variant), productIdOf(product)));
+      const totalAvailable = variants.reduce((sum, variant) => {
+        const variantStock = loadedOptions.stock.filter((stockItem) => sameId(variantIdOf(stockItem), variantIdOf(variant)));
+        return sum + variantStock.reduce((stockSum, stockItem) => stockSum + availableStockOf(stockItem), 0);
+      }, 0);
+
+      if (
+        matchesSearchValues(
+          [productLabel(product), product.brand, product.gender, product.status, product.description, category ? categoryLabel(category) : ""],
+          needle
+        )
+      ) {
+        addResult({
+          "Nhóm": "Sản phẩm",
+          "Kết quả": productLabel(product),
+          "Chi tiết": category ? categoryLabel(category) : "Chưa có danh mục",
+          "Giá": money(first(product, ["defaultsellingprice", "default_selling_price"], 0)),
+          "Tồn khả dụng": totalAvailable,
+          "Trạng thái": product.status || "",
+        });
+      }
+    });
+
+    loadedOptions.variants.forEach((variant) => {
+      const product = variant.product || loadedOptions.products.find((item) => sameId(productIdOf(item), productIdOf(variant)));
+      const stockRows = loadedOptions.stock.filter((stockItem) => sameId(variantIdOf(stockItem), variantIdOf(variant)));
+      const totalAvailable = stockRows.reduce((sum, stockItem) => sum + availableStockOf(stockItem), 0);
+      const sellingPrice = first(variant, ["sellingprice", "selling_price"], first(product, ["defaultsellingprice", "default_selling_price"], 0));
+      const branches = stockRows
+        .filter((stockItem) => availableStockOf(stockItem) > 0)
+        .slice(0, 3)
+        .map((stockItem) => {
+          const branch = loadedOptions.branches.find((item) => sameId(branchIdOf(item), branchIdOf(stockItem)));
+          return branch ? branchLabel(branch) : "";
+        })
+        .filter(Boolean)
+        .join(", ");
+
+      if (matchesSearchValues([productLabel(product), variantLabel(variant), variant.size, variant.color, variant.barcode, variant.sku, product?.brand, branches], needle)) {
+        addResult({
+          "Nhóm": "Biến thể",
+          "Kết quả": productLabel(product),
+          "Biến thể": variantLabel(variant),
+          "Giá": money(sellingPrice),
+          "Tồn khả dụng": totalAvailable,
+          "Chi tiết": branches || "Chưa có tồn khả dụng",
+        });
+      }
+    });
+
+    loadedOptions.customers.forEach((customer) => {
+      const phone = first(customer, ["phonenumber", "phone_number", "phone"], "");
+      if (matchesSearchValues([first(customer, ["fullname", "full_name"], ""), phone, customer.email, customer.gender, customer.status], needle)) {
+        addResult({
+          "Nhóm": "Khách hàng",
+          "Kết quả": first(customer, ["fullname", "full_name"], "Khách hàng"),
+          "Chi tiết": [phone, customer.email].filter(Boolean).join(" | "),
+          "Giá trị": money(first(customer, ["totalspent", "total_spent"], 0)),
+          "Trạng thái": customer.status || "",
+        });
+      }
+    });
+
+    orders.forEach((order) => {
+      const branch = loadedOptions.branches.find((item) => sameId(branchIdOf(item), branchIdOf(order)));
+      const customer = loadedOptions.customers.find((item) => sameId(first(item, ["customerid", "customer_id"], ""), first(order, ["customerid", "customer_id"], "")));
+      const orderCode = first(order, ["ordercode", "order_code", "orderid", "order_id"], "");
+      const total = first(order, ["finalamount", "final_amount", "totalamount", "total_amount"], 0);
+
+      if (
+        matchesSearchValues(
+          [
+            orderCode,
+            branch ? branchLabel(branch) : "",
+            customer ? first(customer, ["fullname", "full_name"], "") : "",
+            first(order, ["orderstatus", "order_status", "status"], ""),
+            first(order, ["paymentstatus", "payment_status"], ""),
+            order.note,
+          ],
+          needle
+        )
+      ) {
+        addResult({
+          "Nhóm": "Đơn hàng",
+          "Kết quả": orderCode ? `Đơn ${orderCode}` : "Đơn hàng",
+          "Chi tiết": [branch ? branchLabel(branch) : "", customer ? first(customer, ["fullname", "full_name"], "") : ""].filter(Boolean).join(" | "),
+          "Giá trị": money(total),
+          "Trạng thái": first(order, ["orderstatus", "order_status", "status"], ""),
+        });
+      }
+    });
+
+    purchases.forEach((purchase) => {
+      const branch = loadedOptions.branches.find((item) => sameId(branchIdOf(item), branchIdOf(purchase)));
+      const supplier = loadedOptions.suppliers.find((item) => sameId(supplierIdOf(item), first(purchase, ["supplierid", "supplier_id"], "")));
+      const code = first(purchase, ["purchaseorderid", "purchase_order_id", "ponumber", "po_number"], "");
+
+      if (matchesSearchValues([code, branch ? branchLabel(branch) : "", supplier ? supplierLabel(supplier) : "", first(purchase, ["status", "purchase_status"], ""), purchase.note], needle)) {
+        addResult({
+          "Nhóm": "Phiếu nhập",
+          "Kết quả": code ? `Phiếu ${code}` : "Phiếu nhập",
+          "Chi tiết": [supplier ? supplierLabel(supplier) : "", branch ? branchLabel(branch) : ""].filter(Boolean).join(" | "),
+          "Giá trị": money(first(purchase, ["totalamount", "total_amount"], 0)),
+          "Trạng thái": first(purchase, ["status", "purchase_status"], ""),
+        });
+      }
+    });
+
+    stockHistory.forEach((item) => {
+      const branch = loadedOptions.branches.find((branchItem) => sameId(branchIdOf(branchItem), branchIdOf(item)));
+      const variant = loadedOptions.variants.find((variantItem) => sameId(variantIdOf(variantItem), variantIdOf(item)));
+      if (
+        matchesSearchValues(
+          [branch ? branchLabel(branch) : "", productLabel(variant?.product), variantLabel(variant), first(item, ["transactiontype", "transaction_type"], ""), item.note],
+          needle
+        )
+      ) {
+        addResult({
+          "Nhóm": "Tồn kho",
+          "Kết quả": productLabel(variant?.product),
+          "Biến thể": variantLabel(variant),
+          "Chi tiết": branch ? branchLabel(branch) : "",
+          "Thay đổi": first(item, ["quantitychange", "quantity_change"], 0),
+          "Trạng thái": first(item, ["transactiontype", "transaction_type"], ""),
+        });
+      }
+    });
+
+    setRows(results);
+    setPage("query");
+    show(results.length ? `Tìm thấy ${results.length} kết quả` : "Không tìm thấy dữ liệu phù hợp");
+  }
 
   function rowMatchesGlobalSearch(row, keyword) {
-    const normalizedKeyword = str(keyword).trim().toLowerCase();
+    const normalizedKeyword = normalizeSearchText(keyword);
     if (!normalizedKeyword) return true;
 
-    const text = Object.entries(row || {})
+    const values = Object.entries(row || {})
       .filter(([key]) => {
         const normalizedKey = String(key).toLowerCase().replace(/[\s_-]/g, "");
         return !(normalizedKey === "id" || normalizedKey.endsWith("id"));
       })
-      .map(([, value]) => {
-        if (value === null || value === undefined) return "";
-        if (typeof value === "object") return JSON.stringify(value);
-        return String(value);
-      })
-      .join(" ")
-      .toLowerCase();
+      .map(([, value]) => (typeof value === "object" ? JSON.stringify(value) : value));
 
-    return text.includes(normalizedKeyword);
+    return matchesSearchValues(values, normalizedKeyword);
   }
 
   const visibleRows = rows.filter((row) => rowMatchesGlobalSearch(row, globalSearch));
@@ -2549,6 +2716,10 @@ export default function App() {
 
       <main className="main">
         <header className="topbar">
+          <button type="button" className="mobile-menu-toggle" onClick={toggleSidebar} aria-label={sidebar ? "Đóng menu" : "Mở menu"}>
+            <Menu />
+          </button>
+
           <div className="topbar-title-block">
             <b>{page.toUpperCase()}</b>
             <span className="topbar-subtitle">SilkRoad Management</span>
@@ -2558,14 +2729,20 @@ export default function App() {
             <Search size={18} />
             <input
               value={globalSearch}
-              placeholder="Tìm trong bảng hiện tại: sản phẩm, SKU, barcode, chi nhánh..."
+              placeholder="Tìm sản phẩm, biến thể, barcode, đơn hàng, khách hàng..."
               onChange={(event) => setGlobalSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") run(() => runGlobalSearch(event.currentTarget.value));
+              }}
             />
             {globalSearch && (
               <button type="button" className="topbar-search-clear" onClick={() => setGlobalSearch("")} aria-label="Xóa tìm kiếm">
                 <X size={16} />
               </button>
             )}
+            <button type="button" className="topbar-search-submit" onClick={() => run(() => runGlobalSearch(globalSearch))} aria-label="Tìm toàn hệ thống">
+              <Search size={16} />
+            </button>
           </div>
 
           <div className="topbar-actions">
@@ -3677,7 +3854,7 @@ function Stock({ options, run, loadStockFriendly, loadStockHistoryFriendly, sele
           <button onClick={() => exportRows("stock")}>Xuất CSV</button>
         </ActionRow>
       </Card>
-      <DataTable rows={visibleRows} />
+      <DataTable rows={rows} />
     </>
   );
 }
@@ -4299,7 +4476,7 @@ function Reports({ run, buildReports, selectTable, exportRows, rows }) {
           <button onClick={() => exportRows("reports")}>Xuất CSV</button>
         </ActionRow>
       </Card>
-      <DataTable rows={visibleRows} />
+      <DataTable rows={rows} />
     </>
   );
 }
@@ -4361,7 +4538,7 @@ function Query({ run, queryTable, setQueryTable, selectTable, rows }) {
           <button onClick={() => downloadRowsAsCsv(rows, `silkroad-${queryTable}-${todayISO()}.csv`)}>Xuất CSV</button>
         </ActionRow>
       </Card>
-      <DataTable rows={visibleRows} />
+      <DataTable rows={rows} />
     </>
   );
 }
