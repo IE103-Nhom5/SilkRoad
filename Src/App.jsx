@@ -209,6 +209,103 @@ function matchesSearchValues(values, keyword) {
   return values.some((value) => normalizeSearchText(value).includes(needle));
 }
 
+function buildSearchSuggestions(keyword, options = {}, canFeature = () => true) {
+  const needle = normalizeSearchText(keyword);
+  const suggestions = [];
+
+  function rankSuggestion(label, values = []) {
+    if (!needle) return 2;
+    const normalizedValues = [label, ...values].map(normalizeSearchText);
+    if (normalizedValues.some((value) => value === needle || value.startsWith(needle))) return 0;
+    if (normalizedValues.some((value) => value.includes(needle))) return 1;
+    return 9;
+  }
+
+  function pushSuggestion(suggestion, values = []) {
+    const rank = rankSuggestion(suggestion.label, values);
+    if (rank > 2 && needle) return;
+    suggestions.push({ ...suggestion, rank });
+  }
+
+  MENU.filter(([key]) => canFeature(key)).forEach(([key, label]) => {
+    pushSuggestion(
+      {
+        type: "page",
+        label,
+        badge: "Chức năng",
+        detail: PAGE_DESCRIPTIONS[key] || "Mở chức năng",
+        page: key,
+        query: label,
+      },
+      [key, ...(PAGE_ALIASES[key] || []), PAGE_DESCRIPTIONS[key]]
+    );
+  });
+
+  if (canFeature("query")) {
+    QUERY_TABLES.forEach((table) => {
+      const label = TABLE_LABELS[table] || table;
+      pushSuggestion(
+        {
+          type: "table",
+          label,
+          badge: "Bảng DB",
+          detail: table,
+          table,
+          query: label,
+        },
+        [table, label]
+      );
+    });
+  }
+
+  (options.products || []).forEach((product) => {
+    const category = (options.categories || []).find((item) => sameId(categoryIdOf(item), categoryIdOf(product)));
+    pushSuggestion(
+      {
+        type: "search",
+        label: productLabel(product),
+        badge: "Sản phẩm",
+        detail: [product.brand, category ? categoryLabel(category) : "", product.status].filter(Boolean).join(" | "),
+        query: productLabel(product),
+      },
+      [productLabel(product), product.brand, category ? categoryLabel(category) : "", product.description, product.status]
+    );
+  });
+
+  (options.variants || []).forEach((variant) => {
+    const label = variantLabel(variant);
+    pushSuggestion(
+      {
+        type: "search",
+        label,
+        badge: "Biến thể",
+        detail: productLabel(variant.product),
+        query: [productLabel(variant.product), label].filter(Boolean).join(" "),
+      },
+      [label, productLabel(variant.product), variant.size, variant.color, variant.barcode, variant.sku, variant.product?.brand]
+    );
+  });
+
+  (options.customers || []).forEach((customer) => {
+    const name = first(customer, ["fullname", "full_name"], "Khách hàng");
+    const phone = first(customer, ["phonenumber", "phone_number", "phone"], "");
+    pushSuggestion(
+      {
+        type: "search",
+        label: name,
+        badge: "Khách hàng",
+        detail: [phone, customer.email].filter(Boolean).join(" | "),
+        query: [name, phone].filter(Boolean).join(" "),
+      },
+      [name, phone, customer.email, customer.status]
+    );
+  });
+
+  return suggestions
+    .sort((a, b) => a.rank - b.rank || a.badge.localeCompare(b.badge, "vi") || a.label.localeCompare(b.label, "vi"))
+    .slice(0, needle ? 12 : 8);
+}
+
 function idStr(v) {
   return str(v).trim();
 }
@@ -2624,6 +2721,33 @@ export default function App() {
       if (results.length < 160) results.push(row);
     };
 
+    MENU.filter(([key]) => can(key)).forEach(([key, label]) => {
+      if (matchesSearchValues([label, key, ...(PAGE_ALIASES[key] || []), PAGE_DESCRIPTIONS[key]], needle)) {
+        addResult({
+          "Nhóm": "Chức năng",
+          "Kết quả": label,
+          "Chi tiết": PAGE_DESCRIPTIONS[key] || "Mở chức năng",
+          "Trạng thái": page === key ? "Đang mở" : "Có trong menu",
+          "Gợi ý": "Bấm gợi ý trên ô tìm kiếm để mở nhanh",
+        });
+      }
+    });
+
+    if (can("query")) {
+      QUERY_TABLES.forEach((table) => {
+        const label = TABLE_LABELS[table] || table;
+        if (matchesSearchValues([table, label], needle)) {
+          addResult({
+            "Nhóm": "Bảng dữ liệu",
+            "Kết quả": label,
+            "Chi tiết": table,
+            "Trạng thái": "Có thể tải",
+            "Gợi ý": "Chọn gợi ý bảng để tải trực tiếp",
+          });
+        }
+      });
+    }
+
     loadedOptions.products.forEach((product) => {
       const category = loadedOptions.categories.find((item) => sameId(categoryIdOf(item), categoryIdOf(product)));
       const variants = loadedOptions.variants.filter((variant) => sameId(productIdOf(variant), productIdOf(product)));
@@ -2754,9 +2878,42 @@ export default function App() {
       }
     });
 
+    const groups = results.reduce((acc, row) => {
+      const group = row["Nhóm"] || "Khác";
+      acc[group] = (acc[group] || 0) + 1;
+      return acc;
+    }, {});
+
     setRows(results);
+    setSearchOpen(false);
+    setSearchSummary({ keyword: str(keyword).trim(), total: results.length, groups });
     setPage("query");
     show(results.length ? `Tìm thấy ${results.length} kết quả` : "Không tìm thấy dữ liệu phù hợp");
+  }
+
+  function handleSearchSuggestion(suggestion) {
+    setSearchOpen(false);
+
+    if (suggestion.type === "page") {
+      setGlobalSearch("");
+      setSearchSummary(null);
+      setPage(suggestion.page);
+      show(`Đã mở ${suggestion.label}`);
+      return;
+    }
+
+    if (suggestion.type === "table") {
+      setGlobalSearch("");
+      setSearchSummary(null);
+      setQueryTable(suggestion.table);
+      setPage("query");
+      run(() => selectTable(suggestion.table, 300));
+      return;
+    }
+
+    const query = suggestion.query || suggestion.label || globalSearch;
+    setGlobalSearch(query);
+    run(() => runGlobalSearch(query));
   }
 
   function rowMatchesGlobalSearch(row, keyword) {
@@ -2773,6 +2930,7 @@ export default function App() {
     return matchesSearchValues(values, normalizedKeyword);
   }
 
+  const searchSuggestions = buildSearchSuggestions(globalSearch, options, can);
   const visibleRows = rows.filter((row) => rowMatchesGlobalSearch(row, globalSearch));
 
   if (!session) {
@@ -2834,24 +2992,77 @@ export default function App() {
             <span className="topbar-subtitle">SilkRoad Management</span>
           </div>
 
-          <div className="topbar-search" role="search">
-            <Search size={18} />
-            <input
-              value={globalSearch}
-              placeholder="Tìm sản phẩm, biến thể, barcode, đơn hàng, khách hàng..."
-              onChange={(event) => setGlobalSearch(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") run(() => runGlobalSearch(event.currentTarget.value));
-              }}
-            />
-            {globalSearch && (
-              <button type="button" className="topbar-search-clear" onClick={() => setGlobalSearch("")} aria-label="Xóa tìm kiếm">
-                <X size={16} />
+          <div className="topbar-search-shell" onBlur={() => window.setTimeout(() => setSearchOpen(false), 140)}>
+            <div className="topbar-search" role="search">
+              <Search size={18} />
+              <input
+                value={globalSearch}
+                placeholder="Tìm sản phẩm, biến thể, barcode, đơn hàng, khách hàng..."
+                onFocus={() => setSearchOpen(true)}
+                onChange={(event) => {
+                  setGlobalSearch(event.target.value);
+                  setSearchOpen(true);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") run(() => runGlobalSearch(event.currentTarget.value));
+                  if (event.key === "Escape") setSearchOpen(false);
+                }}
+              />
+              {globalSearch && (
+                <button
+                  type="button"
+                  className="topbar-search-clear"
+                  onClick={() => {
+                    setGlobalSearch("");
+                    setSearchOpen(false);
+                  }}
+                  aria-label="Xóa tìm kiếm"
+                >
+                  <X size={16} />
+                </button>
+              )}
+              <button type="button" className="topbar-search-submit" onClick={() => run(() => runGlobalSearch(globalSearch))} aria-label="Tìm toàn hệ thống">
+                <Search size={16} />
               </button>
+            </div>
+
+            {searchOpen && (
+              <div className="topbar-suggest-panel">
+                <div className="topbar-suggest-header">
+                  <b>{globalSearch.trim() ? "Gợi ý tìm kiếm" : "Mở nhanh"}</b>
+                  <span>{searchSuggestions.length} gợi ý</span>
+                </div>
+                {searchSuggestions.length ? (
+                  searchSuggestions.map((suggestion, index) => (
+                    <button
+                      key={`${suggestion.type}-${suggestion.label}-${index}`}
+                      type="button"
+                      className="topbar-suggest-item"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => handleSearchSuggestion(suggestion)}
+                    >
+                      <span>
+                        <b>{suggestion.label}</b>
+                        <small>{suggestion.detail}</small>
+                      </span>
+                      <em>{suggestion.badge}</em>
+                    </button>
+                  ))
+                ) : (
+                  <p className="topbar-suggest-empty">Không có gợi ý nhanh phù hợp</p>
+                )}
+                {globalSearch.trim() && (
+                  <button
+                    type="button"
+                    className="topbar-suggest-run"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => run(() => runGlobalSearch(globalSearch))}
+                  >
+                    Tìm tất cả cho "{globalSearch.trim()}"
+                  </button>
+                )}
+              </div>
             )}
-            <button type="button" className="topbar-search-submit" onClick={() => run(() => runGlobalSearch(globalSearch))} aria-label="Tìm toàn hệ thống">
-              <Search size={16} />
-            </button>
           </div>
 
           <div className="topbar-actions">
