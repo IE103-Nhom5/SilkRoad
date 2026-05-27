@@ -61,6 +61,112 @@ const MENU = [
   ["query", "Tra bảng", Search],
 ];
 
+const QUERY_TABLES = [
+  "product",
+  "product_variant",
+  "product_image",
+  "product_category",
+  "attribute",
+  "supplier",
+  "supplier_product",
+  "branch",
+  "stock",
+  "stock_history",
+  "inventory_allocation",
+  "purchase_order",
+  "purchase_order_detail",
+  "transfer_order",
+  "transfer_order_detail",
+  "stock_adjustment",
+  "stock_adjustment_detail",
+  "sales_channel",
+  "channel_price",
+  "channel_sync_log",
+  "customer",
+  "orders",
+  "order_detail",
+  "payment",
+  "return_order",
+  "return_detail",
+  "users",
+  "role",
+  "vw_product_variant_catalog",
+  "vw_stock_by_branch",
+  "vw_low_stock_alert",
+  "vw_order_summary",
+  "vw_revenue_by_channel",
+  "vw_stock_movement_report",
+];
+
+const TABLE_LABELS = {
+  product: "Sản phẩm gốc",
+  product_variant: "Biến thể sản phẩm",
+  product_image: "Hình ảnh sản phẩm",
+  product_category: "Danh mục hàng hóa",
+  attribute: "Thuộc tính size màu",
+  supplier: "Nhà cung cấp",
+  supplier_product: "Bảng giá nhập nhà cung cấp",
+  branch: "Chi nhánh",
+  stock: "Tồn kho",
+  stock_history: "Lịch sử nhập xuất kho",
+  inventory_allocation: "Phân bổ tồn kho theo kênh",
+  purchase_order: "Phiếu nhập hàng",
+  purchase_order_detail: "Chi tiết phiếu nhập",
+  transfer_order: "Phiếu chuyển kho",
+  transfer_order_detail: "Chi tiết chuyển kho",
+  stock_adjustment: "Phiếu kiểm kho",
+  stock_adjustment_detail: "Chi tiết kiểm kho",
+  sales_channel: "Kênh bán",
+  channel_price: "Giá bán theo kênh",
+  channel_sync_log: "Log đồng bộ kênh bán",
+  customer: "Khách hàng",
+  orders: "Hóa đơn đơn hàng",
+  order_detail: "Chi tiết đơn hàng",
+  payment: "Thanh toán",
+  return_order: "Phiếu đổi trả",
+  return_detail: "Chi tiết đổi trả",
+  users: "Tài khoản nhân viên",
+  role: "Vai trò quyền hạn",
+  vw_product_variant_catalog: "View danh mục biến thể",
+  vw_stock_by_branch: "View tồn kho chi nhánh",
+  vw_low_stock_alert: "View cảnh báo tồn thấp",
+  vw_order_summary: "View tổng hợp đơn hàng",
+  vw_revenue_by_channel: "View doanh thu theo kênh",
+  vw_stock_movement_report: "View biến động kho",
+};
+
+const PAGE_ALIASES = {
+  dashboard: ["tong quan", "dashboard", "thong ke", "bao cao nhanh"],
+  products: ["hang hoa", "san pham", "mat hang", "bien the", "sku", "barcode", "danh muc"],
+  purchase: ["nhap hang", "phieu nhap", "nha cung cap", "mua hang"],
+  stock: ["kho", "ton kho", "sap het hang", "lich su kho"],
+  transfer: ["chuyen kho", "dieu chuyen", "xuat kho noi bo"],
+  adjustment: ["kiem kho", "dieu chinh kho", "chenh lech"],
+  orders: ["ban hang", "pos", "hoa don", "don hang", "gio hang"],
+  customers: ["khach hang", "crm", "sdt", "dien thoai"],
+  returns: ["doi tra", "tra hang", "hoan tien"],
+  channels: ["kenh ban", "gia kenh", "online", "san thuong mai"],
+  users: ["rbac", "phan quyen", "nhan vien", "tai khoan"],
+  reports: ["bao cao", "doanh thu", "loi nhuan", "report"],
+  query: ["tra bang", "truy van", "database", "tim kiem"],
+};
+
+const PAGE_DESCRIPTIONS = {
+  dashboard: "Mở bảng tổng quan và thống kê nhanh",
+  products: "Quản lý sản phẩm gốc, biến thể, ảnh, danh mục",
+  purchase: "Tạo phiếu nhập và nhận hàng vào kho",
+  stock: "Xem tồn kho, lịch sử kho, cảnh báo sắp hết",
+  transfer: "Chuyển hàng giữa các chi nhánh",
+  adjustment: "Kiểm kho và điều chỉnh số lượng",
+  orders: "Bán hàng, giỏ hàng, tạo hóa đơn",
+  customers: "Quản lý hồ sơ và lịch sử khách hàng",
+  returns: "Lập phiếu đổi trả và hoàn hàng",
+  channels: "Quản lý kênh bán, giá kênh, phân bổ tồn",
+  users: "Quản lý nhân viên, vai trò, quyền truy cập",
+  reports: "Xem báo cáo doanh thu, đơn hàng, tồn kho",
+  query: "Tra cứu dữ liệu trực tiếp từ các bảng/view",
+};
+
 function money(n) {
   return Number(n || 0).toLocaleString("vi-VN") + " đ";
 }
@@ -678,6 +784,8 @@ export default function App() {
   // Data state
   const [rows, setRows] = useState([]);
   const [globalSearch, setGlobalSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchSummary, setSearchSummary] = useState(null);
   const [queryTable, setQueryTable] = useState("product");
   const [options, setOptions] = useState({
     products: [],
@@ -1231,6 +1339,7 @@ export default function App() {
   async function selectTable(table, limit = 100) {
     const { data, error } = await supabase.from(table).select("*").limit(limit);
     if (error) throw error;
+    setSearchSummary(null);
     setRows(data || []);
   }
 
