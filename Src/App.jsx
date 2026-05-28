@@ -944,6 +944,33 @@ function permissionsFromText(text) {
   return [...new Set(str(text).split(/[\n,]+/).map((item) => item.trim()).filter(Boolean))];
 }
 
+// User helpers are shared by App and the standalone UsersPage component.
+// Keep them outside App so RBAC tables, profile modals and actions resolve
+// the same columns from raw DB rows or friendly Vietnamese table rows.
+function userIdOf(item) {
+  return idStr(first(item, ["userid", "user_id", "UserID"], ""));
+}
+
+function userEmailOf(item) {
+  return first(item, ["email", "Email"], "");
+}
+
+function userNameOf(item) {
+  return first(item, ["fullname", "full_name", "FullName", "Họ tên", "Nhân viên"], first(item, ["username", "Username"], "Nhân viên"));
+}
+
+function userStatusOf(item) {
+  return first(item, ["status", "Status", "Trạng thái"], "active");
+}
+
+function userRoleNameOf(item) {
+  return first(item?.role, ["rolename", "role_name"], first(item, ["rolename", "role_name", "Vai trò"], ""));
+}
+
+function userBranchLabelOf(item) {
+  return first(item, ["Chi nhánh"], "");
+}
+
 // Main application shell: owns auth, data loading, RBAC checks, feature forms,
 // global search, notifications, sidebar/topbar state and current page routing.
 export default function App() {
@@ -2990,32 +3017,6 @@ export default function App() {
       { "Nhóm": "Kho", "Chỉ số": "Số log nhập/xuất", "Giá trị": historyRows.length, "Chi tiết": "" },
       ...topRows,
     ]);
-  }
-
-  // RBAC/user helpers: user rows hide ids in tables but keep technical ids for
-  // click-through profile, locking and delete operations.
-  function userIdOf(item) {
-    return idStr(first(item, ["userid", "user_id", "UserID"], ""));
-  }
-
-  function userEmailOf(item) {
-    return first(item, ["email", "Email"], "");
-  }
-
-  function userNameOf(item) {
-    return first(item, ["fullname", "full_name", "FullName", "Họ tên", "Nhân viên"], first(item, ["username", "Username"], "Nhân viên"));
-  }
-
-  function userStatusOf(item) {
-    return first(item, ["status", "Status", "Trạng thái"], "active");
-  }
-
-  function userRoleNameOf(item) {
-    return first(item?.role, ["rolename", "role_name"], first(item, ["rolename", "role_name", "Vai trò"], ""));
-  }
-
-  function userBranchLabelOf(item) {
-    return first(item, ["Chi nhánh"], "");
   }
 
   function currentRoleEditorRole() {
