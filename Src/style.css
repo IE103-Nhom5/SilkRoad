@@ -7770,3 +7770,282 @@ body.dark .page-surface-actions button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* =========================================================
+   FINAL OVERRIDE 10: dark-mode contrast pass
+   Many earlier components use fixed light-theme colors. Keep this block last
+   so dark mode always gets readable text, controls and table contrast.
+========================================================= */
+body.dark {
+  --ink: #fff1ba;
+  --muted: #d8c491;
+  --surface: #0b241f;
+  --surface-strong: #102f28;
+  --soft-border: rgba(214, 181, 109, 0.34);
+  color: #f6ebc9 !important;
+  background:
+    radial-gradient(circle at top left, rgba(214, 181, 109, 0.08), transparent 34%),
+    linear-gradient(135deg, #081713, #10231e 48%, #07120f) !important;
+}
+
+body.dark .main,
+body.dark .content {
+  color: #f6ebc9 !important;
+}
+
+body.dark .topbar,
+body.dark .card,
+body.dark .modal,
+body.dark .account-dropdown,
+body.dark .notification-dropdown,
+body.dark .topbar-suggest-panel,
+body.dark .table-wrap,
+body.dark .page-surface,
+body.dark .pos-product-panel,
+body.dark .pos-checkout,
+body.dark .product-preview,
+body.dark .variant-panel,
+body.dark .held-cart-list,
+body.dark .cart-total,
+body.dark .search-result-summary,
+body.dark .employee-profile-main,
+body.dark .employee-profile-facts,
+body.dark .permission-chip-list,
+body.dark .account-hero,
+body.dark .account-permission-preview,
+body.dark .logout-confirm {
+  background: rgba(8, 35, 30, 0.96) !important;
+  border-color: rgba(214, 181, 109, 0.34) !important;
+  color: #f6ebc9 !important;
+}
+
+body.dark h1,
+body.dark h2,
+body.dark h3,
+body.dark h4,
+body.dark label,
+body.dark .card h2,
+body.dark .card h3,
+body.dark .field label,
+body.dark .topbar-title-block > b,
+body.dark .topbar > b,
+body.dark .page-surface-main h1,
+body.dark .page-surface-stats b,
+body.dark .metric strong,
+body.dark .dashboard-grid .metric strong,
+body.dark .dashboard-group-panel > b,
+body.dark .dashboard-product-row b,
+body.dark .dashboard-product-row strong,
+body.dark .dashboard-order-row b,
+body.dark .dashboard-order-row strong,
+body.dark .dashboard-trend b,
+body.dark .product-tile-name,
+body.dark .product-preview h3,
+body.dark .variant-panel-title b,
+body.dark .variant-option-body b,
+body.dark .held-cart-list > b,
+body.dark .held-cart-item span,
+body.dark .qty-stepper span,
+body.dark .account-hero h3,
+body.dark .account-section-head b,
+body.dark .logout-confirm b,
+body.dark .employee-profile-main b,
+body.dark .topbar-suggest-item b,
+body.dark .notification-item b {
+  color: #fff1ba !important;
+}
+
+body.dark p,
+body.dark small,
+body.dark em,
+body.dark .muted,
+body.dark .topbar-subtitle,
+body.dark .page-surface-main p,
+body.dark .page-surface-main span,
+body.dark .page-surface-stats span,
+body.dark .dashboard-toolbar span,
+body.dark .dashboard-grid .metric small,
+body.dark .dashboard-action-grid small,
+body.dark .dashboard-alert-list small,
+body.dark .dashboard-group-panel span,
+body.dark .dashboard-product-row small,
+body.dark .dashboard-product-row em,
+body.dark .dashboard-product-row > span:not(.dashboard-rank),
+body.dark .dashboard-order-row small,
+body.dark .dashboard-order-row em,
+body.dark .dashboard-trend span,
+body.dark .dashboard-trend small,
+body.dark .product-tile-meta,
+body.dark .product-preview-kicker,
+body.dark .product-image-empty,
+body.dark .product-grid-empty,
+body.dark .variant-panel-title span,
+body.dark .variant-option-body small,
+body.dark .variant-empty,
+body.dark .held-cart-item small,
+body.dark .account-hero small,
+body.dark .account-section-head span,
+body.dark .account-info-grid span,
+body.dark .help-card-grid small,
+body.dark .logout-confirm span,
+body.dark .topbar-suggest-item small,
+body.dark .notification-header span,
+body.dark .notification-item small,
+body.dark .notification-empty,
+body.dark .search-result-summary span,
+body.dark .employee-profile-facts span {
+  color: #d8c491 !important;
+}
+
+body.dark input,
+body.dark select,
+body.dark textarea,
+body.dark .card input,
+body.dark .card select,
+body.dark .card textarea,
+body.dark .field input,
+body.dark .field select,
+body.dark .field textarea,
+body.dark .modal input,
+body.dark .modal select,
+body.dark .modal textarea,
+body.dark .topbar-search,
+body.dark .topbar-search input,
+body.dark .pos-searchbar,
+body.dark .pos-searchbar input,
+body.dark .permission-editor textarea,
+body.dark .smart-picker-button,
+body.dark .smart-picker-panel,
+body.dark .smart-picker-search,
+body.dark .smart-picker-item {
+  background: rgba(3, 22, 19, 0.92) !important;
+  border-color: rgba(214, 181, 109, 0.38) !important;
+  color: #fff1ba !important;
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder,
+body.dark .topbar-search input::placeholder,
+body.dark .pos-searchbar input::placeholder {
+  color: rgba(216, 196, 145, 0.72) !important;
+}
+
+body.dark button,
+body.dark .card button,
+body.dark .topbar button,
+body.dark .account-trigger,
+body.dark .notification-trigger,
+body.dark .theme-toggle,
+body.dark .account-dropdown button,
+body.dark .notification-item,
+body.dark .topbar-suggest-item,
+body.dark .topbar-suggest-run,
+body.dark .page-surface-actions button,
+body.dark .dashboard-action-grid button,
+body.dark .dashboard-alert-list button,
+body.dark .payment-tabs button,
+body.dark .held-cart-item,
+body.dark .qty-stepper button,
+body.dark .permission-chip-list button,
+body.dark .settings-panel button,
+body.dark .help-card-grid button {
+  background: rgba(14, 55, 47, 0.96) !important;
+  border-color: rgba(214, 181, 109, 0.38) !important;
+  color: #fff1ba !important;
+}
+
+body.dark button:hover,
+body.dark .card button:hover,
+body.dark .topbar button:hover,
+body.dark .account-dropdown button:hover,
+body.dark .notification-item:hover,
+body.dark .topbar-suggest-item:hover,
+body.dark .page-surface-actions button:hover,
+body.dark .dashboard-action-grid button:hover,
+body.dark .dashboard-alert-list button:hover,
+body.dark .payment-tabs button:hover,
+body.dark .permission-chip-list button:hover,
+body.dark .settings-panel button:hover,
+body.dark .help-card-grid button:hover {
+  background: rgba(25, 82, 70, 0.98) !important;
+  border-color: rgba(242, 212, 138, 0.62) !important;
+}
+
+body.dark table {
+  color: #f6ebc9 !important;
+}
+
+body.dark thead th,
+body.dark th {
+  background: #043d33 !important;
+  color: #fff1ba !important;
+  border-color: rgba(214, 181, 109, 0.28) !important;
+}
+
+body.dark tbody tr,
+body.dark td {
+  background: rgba(7, 31, 27, 0.72) !important;
+  color: #f6ebc9 !important;
+  border-color: rgba(214, 181, 109, 0.18) !important;
+}
+
+body.dark tbody tr:nth-child(even) td {
+  background: rgba(11, 43, 37, 0.72) !important;
+}
+
+body.dark tbody tr:hover td,
+body.dark tr.clickable-row:hover td {
+  background: rgba(214, 181, 109, 0.11) !important;
+  color: #fff8dc !important;
+}
+
+body.dark .metric,
+body.dark .dashboard-grid .metric,
+body.dark .page-surface-stats div,
+body.dark .dashboard-group-panel,
+body.dark .dashboard-product-row,
+body.dark .dashboard-order-row,
+body.dark .product-tile,
+body.dark .variant-option,
+body.dark .product-image-empty,
+body.dark .product-grid-empty,
+body.dark .variant-empty,
+body.dark .account-info-grid,
+body.dark .account-action-grid button {
+  background: rgba(11, 43, 37, 0.88) !important;
+  border-color: rgba(214, 181, 109, 0.28) !important;
+  color: #f6ebc9 !important;
+}
+
+body.dark .metric b,
+body.dark .dashboard-grid .metric b,
+body.dark .dashboard-rank,
+body.dark .dashboard-trend span {
+  color: #f0d58f !important;
+}
+
+body.dark .danger,
+body.dark .account-dropdown button.danger,
+body.dark .logout-confirm .danger {
+  color: #ffc8b8 !important;
+  border-color: rgba(224, 132, 101, 0.46) !important;
+}
+
+body.dark .product-stock-pill {
+  background: rgba(28, 76, 51, 0.88) !important;
+  border-color: rgba(155, 190, 122, 0.42) !important;
+  color: #daf0bd !important;
+}
+
+body.dark .product-stock-pill.pending {
+  background: rgba(82, 65, 31, 0.88) !important;
+  border-color: rgba(214, 181, 109, 0.42) !important;
+  color: #f4d990 !important;
+}
+
+body.dark .product-stock-pill.empty,
+body.dark .dashboard-grid .metric.danger {
+  background: rgba(84, 36, 28, 0.88) !important;
+  border-color: rgba(224, 132, 101, 0.42) !important;
+  color: #ffc7b5 !important;
+}
