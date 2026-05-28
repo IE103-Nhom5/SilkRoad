@@ -8229,3 +8229,487 @@ body.dark .data-table-footer span {
     flex: 1;
   }
 }
+
+/* =========================================================
+   FINAL OVERRIDE 12: employee profile + help page + footer
+========================================================= */
+.employee-profile-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(194, 161, 92, 0.42);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 253, 247, 0.98), rgba(246, 237, 216, 0.9)),
+    radial-gradient(circle at top right, rgba(7, 88, 73, 0.12), transparent 38%);
+}
+
+.employee-profile-hero .employee-profile-main {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.employee-avatar {
+  width: 58px;
+  height: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 58px;
+  border-radius: 18px;
+  border: 1px solid rgba(7, 88, 73, 0.22);
+  background: rgba(7, 88, 73, 0.08);
+}
+
+.employee-status {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(194, 161, 92, 0.44);
+  background: rgba(255, 250, 240, 0.82);
+  color: #0b4d40;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.employee-status-active {
+  border-color: rgba(7, 88, 73, 0.28);
+  background: rgba(222, 243, 216, 0.9);
+}
+
+.employee-status-locked,
+.employee-status-inactive {
+  border-color: rgba(155, 28, 28, 0.28);
+  background: rgba(255, 232, 220, 0.9);
+  color: #84251f;
+}
+
+.employee-profile-stats,
+.employee-activity-summary,
+.help-diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.employee-profile-stats div,
+.employee-activity-summary div,
+.help-diagnostic-grid div {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(194, 161, 92, 0.36);
+  border-radius: 18px;
+  background: rgba(255, 250, 240, 0.78);
+}
+
+.employee-profile-stats b,
+.employee-activity-summary b,
+.help-diagnostic-grid b {
+  display: block;
+  color: #003d33;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.employee-profile-stats span,
+.employee-activity-summary span,
+.help-diagnostic-grid span {
+  color: #745c2a;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.employee-permission-panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(194, 161, 92, 0.42);
+  border-radius: 16px;
+  background: rgba(255, 253, 247, 0.82);
+}
+
+.employee-permission-panel > b {
+  color: #003d33;
+  font-size: 16px;
+}
+
+.employee-permission-panel > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.employee-permission-panel span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(7, 88, 73, 0.08);
+  color: #075849;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.employee-timeline {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(194, 161, 92, 0.38);
+  border-radius: 18px;
+  background: rgba(255, 253, 247, 0.62);
+}
+
+.employee-timeline h3 {
+  margin: 0;
+}
+
+.employee-timeline-item {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.employee-timeline-item > span {
+  width: 12px;
+  height: 12px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: #0b4d40;
+  box-shadow: 0 0 0 5px rgba(7, 88, 73, 0.12);
+}
+
+.employee-timeline-item div {
+  min-width: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(194, 161, 92, 0.22);
+}
+
+.employee-timeline-item b,
+.employee-timeline-item p,
+.employee-timeline-item small {
+  overflow-wrap: anywhere;
+}
+
+.employee-timeline-item p {
+  margin: 4px 0 0;
+  color: #5f5132;
+}
+
+.help-page {
+  display: grid;
+  gap: 22px;
+}
+
+.help-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 22px;
+}
+
+.help-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 280px);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.help-hero > div:first-child {
+  display: grid;
+  gap: 8px;
+}
+
+.help-hero span {
+  color: #8a6a28;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.help-hero h2 {
+  margin: 0;
+  max-width: 820px;
+  font-size: clamp(26px, 2.2vw, 38px);
+  line-height: 1.12;
+}
+
+.help-hero p {
+  max-width: 820px;
+  color: #665a3e;
+  line-height: 1.55;
+}
+
+.help-role-card {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid rgba(194, 161, 92, 0.4);
+  border-radius: 18px;
+  background: rgba(246, 237, 216, 0.78);
+}
+
+.help-role-card b {
+  color: #003d33;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.help-workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.help-workflow-grid button,
+.help-alert-list button {
+  width: 100%;
+  min-height: 94px;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.help-workflow-grid span,
+.help-alert-list span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.help-workflow-grid b,
+.help-alert-list b,
+.help-workflow-grid small,
+.help-alert-list small {
+  overflow-wrap: anywhere;
+}
+
+.help-faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.help-faq-list details {
+  border: 1px solid rgba(194, 161, 92, 0.36);
+  border-radius: 16px;
+  background: rgba(255, 253, 247, 0.72);
+  overflow: hidden;
+}
+
+.help-faq-list summary {
+  min-height: 48px;
+  padding: 14px 16px;
+  color: #003d33;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.help-faq-list p {
+  margin: 0;
+  padding: 0 16px 16px;
+  color: #665a3e;
+  line-height: 1.55;
+}
+
+.help-alert-list {
+  display: grid;
+  gap: 10px;
+}
+
+.help-alert-list button.danger,
+.help-alert-list button.warning {
+  border-color: rgba(155, 28, 28, 0.28);
+}
+
+.app-footer {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(260px, 1fr) auto minmax(190px, auto);
+  gap: 16px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 18px;
+  border: 1px solid rgba(194, 161, 92, 0.42);
+  border-radius: 22px;
+  background: rgba(255, 250, 240, 0.86);
+  box-shadow: 0 16px 40px rgba(58, 43, 16, 0.08);
+}
+
+.app-footer > div:first-child {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 6px 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.app-footer img {
+  width: 72px;
+  height: auto;
+  grid-row: span 2;
+}
+
+.app-footer span,
+.app-footer b {
+  color: #003d33;
+  font-weight: 900;
+}
+
+.app-footer small {
+  color: #75623b;
+  overflow-wrap: anywhere;
+}
+
+.app-footer-stats,
+.app-footer nav,
+.app-footer-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app-footer-stats span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(7, 88, 73, 0.08);
+  color: #075849;
+  font-size: 12px;
+}
+
+.app-footer nav {
+  justify-content: flex-end;
+}
+
+.app-footer nav button {
+  min-height: 36px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(194, 161, 92, 0.42);
+  background: rgba(255, 253, 247, 0.82);
+  color: #003d33;
+  font-weight: 800;
+}
+
+.app-footer-user {
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.app-footer-user span,
+.app-footer-user small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.dark .employee-profile-hero,
+body.dark .employee-profile-stats div,
+body.dark .employee-activity-summary div,
+body.dark .employee-permission-panel,
+body.dark .employee-timeline,
+body.dark .help-role-card,
+body.dark .help-diagnostic-grid div,
+body.dark .help-faq-list details,
+body.dark .app-footer {
+  background: rgba(8, 35, 30, 0.96) !important;
+  border-color: rgba(214, 181, 109, 0.34) !important;
+  color: #f6ebc9 !important;
+}
+
+body.dark .employee-avatar,
+body.dark .employee-permission-panel span,
+body.dark .app-footer-stats span {
+  background: rgba(214, 181, 109, 0.1) !important;
+  border-color: rgba(214, 181, 109, 0.28) !important;
+  color: #fff1ba !important;
+}
+
+body.dark .employee-status {
+  background: rgba(14, 55, 47, 0.96) !important;
+  border-color: rgba(214, 181, 109, 0.38) !important;
+  color: #fff1ba !important;
+}
+
+body.dark .employee-status-locked,
+body.dark .employee-status-inactive {
+  border-color: rgba(224, 132, 101, 0.46) !important;
+  color: #ffc8b8 !important;
+}
+
+body.dark .employee-profile-stats b,
+body.dark .employee-activity-summary b,
+body.dark .employee-permission-panel > b,
+body.dark .help-diagnostic-grid b,
+body.dark .help-role-card b,
+body.dark .help-hero h2,
+body.dark .help-faq-list summary,
+body.dark .app-footer span {
+  color: #fff1ba !important;
+}
+
+body.dark .employee-profile-stats span,
+body.dark .employee-activity-summary span,
+body.dark .help-diagnostic-grid span,
+body.dark .help-hero span,
+body.dark .help-hero p,
+body.dark .help-faq-list p,
+body.dark .employee-timeline-item p,
+body.dark .app-footer small {
+  color: #d8c491 !important;
+}
+
+body.dark .app-footer nav button {
+  background: rgba(14, 55, 47, 0.96) !important;
+  border-color: rgba(214, 181, 109, 0.38) !important;
+  color: #fff1ba !important;
+}
+
+@media (max-width: 1180px) {
+  .help-layout,
+  .help-hero,
+  .app-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .app-footer nav,
+  .app-footer-user {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .employee-profile-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .employee-profile-main {
+    width: 100%;
+  }
+
+  .help-workflow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .help-workflow-grid button,
+  .help-alert-list button {
+    min-height: 82px;
+  }
+
+  .app-footer > div:first-child {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .app-footer img {
+    width: 56px;
+  }
+}

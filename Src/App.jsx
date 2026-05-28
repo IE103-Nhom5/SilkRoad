@@ -26,6 +26,7 @@ const ROLE_FEATURES = {
     "users",
     "reports",
     "query",
+    "help",
   ],
   branch_manager: [
     "dashboard",
@@ -40,9 +41,10 @@ const ROLE_FEATURES = {
     "channels",
     "reports",
     "query",
+    "help",
   ],
-  warehouse_staff: ["dashboard", "purchase", "stock", "transfer", "adjustment", "reports", "query"],
-  sales_staff: ["dashboard", "products", "stock", "orders", "customers", "returns", "query"],
+  warehouse_staff: ["dashboard", "purchase", "stock", "transfer", "adjustment", "reports", "query", "help"],
+  sales_staff: ["dashboard", "products", "stock", "orders", "customers", "returns", "query", "help"],
 };
 
 const MENU = [
@@ -59,6 +61,7 @@ const MENU = [
   ["users", "RBAC", Users],
   ["reports", "Báo cáo", BarChart3],
   ["query", "Tra bảng", Search],
+  ["help", "Trợ giúp", HelpCircle],
 ];
 
 const MENU_GROUPS = [
@@ -67,7 +70,7 @@ const MENU_GROUPS = [
   { key: "operations", label: "Vận hành", icon: ClipboardList, items: ["orders", "transfer", "adjustment", "returns"] },
   { key: "market", label: "Kinh doanh", icon: Users, items: ["customers", "channels"] },
   { key: "system", label: "Hệ thống", icon: Settings, items: ["users"] },
-  { key: "tools", label: "Công cụ", icon: Search, items: ["query"] },
+  { key: "tools", label: "Công cụ", icon: Search, items: ["query", "help"] },
 ];
 
 const MENU_BY_KEY = Object.fromEntries(MENU.map((item) => [item[0], item]));
@@ -160,6 +163,7 @@ const PAGE_ALIASES = {
   users: ["rbac", "phan quyen", "nhan vien", "tai khoan"],
   reports: ["bao cao", "doanh thu", "loi nhuan", "report"],
   query: ["tra bang", "truy van", "database", "tim kiem"],
+  help: ["tro giup", "huong dan", "support", "faq", "quy trinh"],
 };
 
 const PAGE_DESCRIPTIONS = {
@@ -176,6 +180,7 @@ const PAGE_DESCRIPTIONS = {
   users: "Quản lý nhân viên, vai trò, quyền truy cập",
   reports: "Xem báo cáo doanh thu, đơn hàng, tồn kho",
   query: "Tra cứu dữ liệu trực tiếp từ các bảng/view",
+  help: "Trợ giúp thao tác, quy trình và xử lý lỗi thường gặp",
 };
 
 // ===== Core formatting and normalization helpers =====
@@ -3114,6 +3119,19 @@ export default function App() {
     await loadUsersFriendly();
   }
 
+  async function restoreUserAccess(target = null) {
+    if (!guard("users")) return;
+    const email = target ? userEmailOf(target) : trim(userForm.email);
+    const userid = target ? userIdOf(target) : "";
+    if (!email && !userid) return show("Chọn nhân viên hoặc nhập email để kích hoạt");
+    let query = supabase.from("users").update({ status: "active", updatedat: new Date().toISOString() });
+    query = userid ? query.eq("userid", userid) : query.eq("email", email);
+    const { error } = await query;
+    if (error) throw error;
+    show("Đã kích hoạt lại tài khoản nhân viên");
+    await loadUsersFriendly();
+  }
+
   async function deleteUserAccess(target = null) {
     if (!guard("users")) return;
     const email = target ? userEmailOf(target) : trim(userForm.email);
@@ -3177,34 +3195,87 @@ export default function App() {
     const activityRows = [...stockLogs, ...orders, ...purchases, ...approvals, ...transfers, ...adjustments, ...returns]
       .sort((a, b) => str(b["Thời gian"]).localeCompare(str(a["Thời gian"])))
       .slice(0, 60);
+    const activityGroups = activityRows.reduce((acc, row) => {
+      const key = row["Hoạt động"] || "Khác";
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    const permissionList = permissionsOf(role);
+    const lastActivity = activityRows[0]?.["Thời gian"] || "Chưa có log";
+    const status = first(user, ["status"], "active");
 
     setModal({
       title: `Hồ sơ nhân viên - ${userNameOf(user)}`,
       body: (
         <div className="employee-profile">
-          <div className="employee-profile-grid">
+          <div className="employee-profile-hero">
             <div className="employee-profile-main">
-              <UserCircle size={42} />
+              <div className="employee-avatar">
+                <UserCircle size={42} />
+              </div>
               <div>
                 <b>{userNameOf(user)}</b>
                 <span>{userEmailOf(user) || "Chưa có email"}</span>
+                <small>{branch ? branchLabel(branch) : "Toàn hệ thống"}</small>
               </div>
             </div>
+            <div className={`employee-status employee-status-${status}`}>
+              {status || "active"}
+            </div>
+          </div>
+          <div className="employee-profile-stats">
+            <div><b>{permissionList.length}</b><span>Quyền</span></div>
+            <div><b>{activityRows.length}</b><span>Log gần đây</span></div>
+            <div><b>{orders.length}</b><span>Đơn đã tạo</span></div>
+            <div><b>{stockLogs.length}</b><span>Thao tác kho</span></div>
+          </div>
+          <div className="employee-profile-grid">
             <div className="employee-profile-facts">
               <span>Username</span><b>{first(user, ["username"], "")}</b>
               <span>Vai trò</span><b>{role ? roleLabel(role) : "Chưa có role"}</b>
-              <span>Quyền</span><b>{permissionsOf(role).length}</b>
+              <span>Quyền</span><b>{permissionList.length}</b>
               <span>Chi nhánh</span><b>{branch ? branchLabel(branch) : "Toàn hệ thống"}</b>
-              <span>Trạng thái</span><b>{first(user, ["status"], "")}</b>
+              <span>Trạng thái</span><b>{status}</b>
               <span>Đăng nhập cuối</span><b>{str(first(user, ["lastloginat", "last_login_at"], "")).slice(0, 19).replace("T", " ") || "Chưa có"}</b>
+              <span>Hoạt động mới</span><b>{lastActivity}</b>
             </div>
+            <div className="employee-permission-panel">
+              <b>Quyền đang có</b>
+              <div>
+                {permissionList.length ? permissionList.map((permission) => <span key={permission}>{permission}</span>) : <span>Chưa có quyền</span>}
+              </div>
+            </div>
+          </div>
+          <div className="employee-activity-summary">
+            {Object.entries(activityGroups).map(([label, count]) => (
+              <div key={label}>
+                <span>{label}</span>
+                <b>{count}</b>
+              </div>
+            ))}
+            {!Object.keys(activityGroups).length && <p className="muted">Chưa có hoạt động được ghi nhận.</p>}
           </div>
           <ActionRow>
             <button onClick={() => { setUserForm({ fullname: userNameOf(user), username: first(user, ["username"], ""), email: userEmailOf(user), rolename: role ? roleLabel(role) : "sales_staff", branchid: branchIdOf(user), status: first(user, ["status"], "active") }); setModal(null); }}>Đưa vào form sửa</button>
+            {status !== "active" && <button onClick={() => run(() => restoreUserAccess(user))}>Kích hoạt lại</button>}
             <button onClick={() => run(() => revokeUserAccess(user))}>Thu hồi quyền</button>
             <button className="danger" onClick={() => run(() => deleteUserAccess(user))}>Xóa nhân viên</button>
           </ActionRow>
-          <h3>Log hoạt động gần đây</h3>
+          <div className="employee-timeline">
+            <h3>Timeline gần đây</h3>
+            {activityRows.slice(0, 8).map((row, index) => (
+              <div key={`${row["Thời gian"]}-${index}`} className="employee-timeline-item">
+                <span />
+                <div>
+                  <b>{row["Hoạt động"]}</b>
+                  <small>{row["Thời gian"] || "Chưa có thời gian"} · {row["Trạng thái"] || "Không trạng thái"}</small>
+                  <p>{[row["Đối tượng"], row["Ghi chú"]].filter(Boolean).join(" - ") || "Không có ghi chú"}</p>
+                </div>
+              </div>
+            ))}
+            {!activityRows.length && <p className="muted">Chưa có timeline hoạt động.</p>}
+          </div>
+          <h3>Bảng log hoạt động</h3>
           <DataTable rows={activityRows} />
         </div>
       ),
@@ -3733,7 +3804,7 @@ export default function App() {
                   <button onClick={() => openAccountModal("settings")}>
                     <Settings /> Cài đặt
                   </button>
-                  <button onClick={() => openAccountModal("help")}>
+                  <button onClick={() => goToPage("help")}>
                     <HelpCircle /> Trợ giúp
                   </button>
                   <button className="danger" onClick={openSignOutConfirm}>
@@ -3906,6 +3977,7 @@ export default function App() {
                 saveRolePermissions={saveRolePermissions}
                 deleteRoleDefinition={deleteRoleDefinition}
                 revokeUserAccess={revokeUserAccess}
+                restoreUserAccess={restoreUserAccess}
                 deleteUserAccess={deleteUserAccess}
                 openUserProfile={openUserProfile}
                 selectTable={selectTable}
@@ -3914,6 +3986,8 @@ export default function App() {
             )}
             {page === "reports" && <Reports run={run} buildReports={buildReports} selectTable={selectTable} exportRows={exportRows} rows={visibleRows} />}
             {page === "query" && <Query run={run} queryTable={queryTable} setQueryTable={setQueryTable} selectTable={selectTable} exportRows={exportRows} searchSummary={searchSummary} rows={visibleRows} />}
+            {page === "help" && <HelpPage goToPage={goToPage} notifications={notifications} options={options} searchSummary={searchSummary} role={roleName()} />}
+            <AppFooter page={page} profile={profile} options={options} notifications={notifications} goToPage={goToPage} role={roleName()} />
           </div>
         )}
       </main>
@@ -4255,6 +4329,7 @@ function PageSurface({ page, options, rows, cart, heldCarts, notifications, sear
     users: { title: "RBAC", kicker: "Access Control", text: "Quản lý nhân viên, vai trò, quyền truy cập và log hoạt động.", tone: "blue" },
     reports: { title: "Báo cáo", kicker: "Management Insight", text: "Tổng hợp doanh thu, tồn kho, đơn hàng và biến động vận hành.", tone: "emerald" },
     query: { title: "Tra bảng", kicker: "Data Explorer", text: "Tra cứu bảng/view, xem kết quả tìm kiếm toàn hệ thống và xuất dữ liệu.", tone: "amber" },
+    help: { title: "Trợ giúp", kicker: "Support Center", text: "Hướng dẫn quy trình, thao tác nhanh và xử lý lỗi thường gặp trong hệ thống.", tone: "blue" },
   };
   const meta = metaMap[page] || { title: page, kicker: "SilkRoad", text: PAGE_DESCRIPTIONS[page] || "Quản lý dữ liệu hệ thống.", tone: "emerald" };
   const totalAvailable = (options.stock || []).reduce((sum, item) => sum + availableStockOf(item), 0);
@@ -4272,6 +4347,7 @@ function PageSurface({ page, options, rows, cart, heldCarts, notifications, sear
     users: [["Vai trò", options.roles.length], ["Nhân viên", rows.length], ["Chi nhánh", options.branches.length], ["Cảnh báo", notifications.length]],
     reports: [["Sản phẩm", options.products.length], ["Tồn khả dụng", totalAvailable], ["Dòng báo cáo", rows.length], ["Cảnh báo", notifications.length]],
     query: [["Kết quả", searchSummary?.total ?? rows.length], ["Bảng hỗ trợ", QUERY_TABLES.length], ["Nhóm tìm", Object.keys(searchSummary?.groups || {}).length], ["Dòng bảng", rows.length]],
+    help: [["Quy trình", 6], ["FAQ", 8], ["Bảng DB", QUERY_TABLES.length], ["Cảnh báo", notifications.length]],
   };
   const navMap = {
     products: [["Kho", "stock"], ["Bán hàng", "orders"], ["Báo cáo", "reports"]],
@@ -4286,6 +4362,7 @@ function PageSurface({ page, options, rows, cart, heldCarts, notifications, sear
     users: [["Tra bảng", "query"], ["Báo cáo", "reports"], ["Tổng quan", "dashboard"]],
     reports: [["Tổng quan", "dashboard"], ["Kho", "stock"], ["Tra bảng", "query"]],
     query: [["Hàng hóa", "products"], ["Kho", "stock"], ["Báo cáo", "reports"]],
+    help: [["Bán hàng", "orders"], ["Kho", "stock"], ["RBAC", "users"]],
   };
   const stats = statMap[page] || [["Dòng dữ liệu", rows.length], ["Cảnh báo", notifications.length]];
   const navItems = navMap[page] || [["Tổng quan", "dashboard"], ["Tra bảng", "query"]];
@@ -5851,6 +5928,7 @@ function UsersPage(p) {
         <ActionRow>
           <button onClick={() => p.run(p.createOrUpdateUser)}>Lưu nhân viên + quyền</button>
           <button onClick={() => p.run(() => p.revokeUserAccess())}>Thu hồi quyền theo email</button>
+          <button onClick={() => p.run(() => p.restoreUserAccess())}>Kích hoạt lại theo email</button>
           <button className="danger" onClick={() => p.run(() => p.deleteUserAccess())}>Xóa/khóa nhân viên</button>
           <button onClick={() => p.run(p.loadUsersFriendly)}>Tải hồ sơ nhân viên</button>
           <button onClick={() => p.run(() => p.selectTable("role"))}>Xem role gốc</button>
@@ -5968,5 +6046,154 @@ function Query({ run, queryTable, setQueryTable, selectTable, searchSummary, row
       </Card>
       <DataTable rows={rows} />
     </>
+  );
+}
+
+// Page: help center with workflow guidance, FAQ and support diagnostics.
+function HelpPage({ goToPage, notifications = [], options = {}, searchSummary, role }) {
+  const workflowCards = [
+    ["Bán hàng POS", ShoppingCart, "Chọn chi nhánh, sản phẩm gốc, biến thể, thêm giỏ, giữ đơn và tạo hóa đơn.", "orders"],
+    ["Hàng hóa", PackagePlus, "Tạo sản phẩm, biến thể, ảnh, danh mục, nhà cung cấp và bảng giá nhập.", "products"],
+    ["Kho hàng", Boxes, "Theo dõi tồn khả dụng, tồn giữ chỗ, cảnh báo thấp và lịch sử nhập xuất.", "stock"],
+    ["Nhập hàng", ClipboardList, "Tạo phiếu nhập, duyệt phiếu, nhận hàng và cập nhật tồn theo chi nhánh.", "purchase"],
+    ["RBAC nhân viên", Users, "Tạo tài khoản, đổi vai trò, cấp quyền, khóa/mở quyền và xem log hoạt động.", "users"],
+    ["Báo cáo", BarChart3, "Tổng hợp doanh thu, đơn hàng, khách hàng, tồn kho và biến động vận hành.", "reports"],
+  ];
+  const faqItems = [
+    ["Không tạo được hóa đơn", "Kiểm tra chi nhánh bán, kênh bán mặc định, tồn khả dụng và biến thể đã chọn đúng sản phẩm gốc."],
+    ["Có tồn nhưng không bán được", "Vào Kho hàng xem tồn khả dụng. Nếu tồn đang bị giữ, kiểm tra đơn tạm hoặc phân bổ tồn theo kênh."],
+    ["Biến thể khó phân biệt", "Tên biến thể ưu tiên size, màu, chất liệu, form và giá. SKU kỹ thuật đã được ẩn khỏi lựa chọn bán hàng."],
+    ["Nhân viên mất quyền", "Vào RBAC, nhập email nhân viên rồi dùng Kích hoạt lại, hoặc mở hồ sơ nhân viên từ bảng để thao tác trực tiếp."],
+    ["Tìm dữ liệu nhanh", "Dùng ô tìm kiếm trên thanh đầu cho sản phẩm, biến thể, barcode, đơn hàng, khách hàng và bảng dữ liệu."],
+    ["Xuất báo cáo", "Mở Báo cáo hoặc Tra bảng, tải dữ liệu cần xem rồi dùng Xuất CSV để tải file."],
+  ];
+  const diagnostics = [
+    ["Sản phẩm gốc", options.products?.length || 0],
+    ["Biến thể", options.variants?.length || 0],
+    ["Chi nhánh", options.branches?.length || 0],
+    ["Khách hàng", options.customers?.length || 0],
+    ["Cảnh báo", notifications.length],
+    ["Kết quả tìm kiếm", searchSummary?.total || 0],
+  ];
+
+  return (
+    <div className="help-page">
+      <Card title="Trung tâm trợ giúp">
+        <div className="help-hero">
+          <div>
+            <span>SilkRoad Support</span>
+            <h2>Hướng dẫn thao tác và xử lý nhanh sự cố vận hành</h2>
+            <p>Trang này gom các quy trình chính, câu hỏi thường gặp và chỉ số kiểm tra nhanh để nhân viên tự xử lý trước khi cần can thiệp kỹ thuật.</p>
+          </div>
+          <div className="help-role-card">
+            <UserCircle size={34} />
+            <span>Vai trò hiện tại</span>
+            <b>{role || "Chưa xác định"}</b>
+          </div>
+        </div>
+      </Card>
+
+      <div className="help-layout">
+        <Card title="Quy trình thao tác">
+          <div className="help-workflow-grid">
+            {workflowCards.map(([title, Icon, detail, target]) => (
+              <button key={target} type="button" onClick={() => goToPage(target)}>
+                <Icon size={22} />
+                <span>
+                  <b>{title}</b>
+                  <small>{detail}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        <Card title="Kiểm tra nhanh">
+          <div className="help-diagnostic-grid">
+            {diagnostics.map(([label, value]) => (
+              <div key={label}>
+                <span>{label}</span>
+                <b>{Number(value || 0).toLocaleString("vi-VN")}</b>
+              </div>
+            ))}
+          </div>
+          <ActionRow>
+            <button type="button" onClick={() => goToPage("query")}>Mở tra bảng</button>
+            <button type="button" onClick={() => goToPage("reports")}>Mở báo cáo</button>
+          </ActionRow>
+        </Card>
+      </div>
+
+      <div className="help-layout">
+        <Card title="Câu hỏi thường gặp">
+          <div className="help-faq-list">
+            {faqItems.map(([question, answer]) => (
+              <details key={question} open={question === "Không tạo được hóa đơn"}>
+                <summary>{question}</summary>
+                <p>{answer}</p>
+              </details>
+            ))}
+          </div>
+        </Card>
+
+        <Card title="Cảnh báo cần xử lý">
+          <div className="help-alert-list">
+            {notifications.length ? (
+              notifications.slice(0, 8).map((item, index) => (
+                <button key={`${item.title}-${index}`} type="button" className={item.tone || ""} onClick={() => goToPage(item.page)}>
+                  <AlertTriangle size={18} />
+                  <span>
+                    <b>{item.title}</b>
+                    <small>{item.detail}</small>
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="muted">Chưa có cảnh báo hệ thống.</p>
+            )}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// Footer stays visible after every page so users always have context, quick
+// links and operational totals without scrolling back to dashboard.
+function AppFooter({ page, profile, options = {}, notifications = [], goToPage, role }) {
+  const year = new Date().getFullYear();
+  const userName = first(profile, ["fullname", "full_name", "username", "email"], "Tài khoản");
+  const quickLinks = [
+    ["Tổng quan", "dashboard"],
+    ["Bán hàng", "orders"],
+    ["Kho", "stock"],
+    ["Trợ giúp", "help"],
+  ];
+
+  return (
+    <footer className="app-footer">
+      <div>
+        <img src={LOGO_SRC} alt="SilkRoad" />
+        <span>SilkRoad Management</span>
+        <small>© {year} · Trang hiện tại: {PAGE_DESCRIPTIONS[page] || page}</small>
+      </div>
+      <div className="app-footer-stats">
+        <span>{(options.products?.length || 0).toLocaleString("vi-VN")} sản phẩm</span>
+        <span>{(options.variants?.length || 0).toLocaleString("vi-VN")} biến thể</span>
+        <span>{notifications.length.toLocaleString("vi-VN")} cảnh báo</span>
+      </div>
+      <nav aria-label="Liên kết nhanh footer">
+        {quickLinks.map(([label, target]) => (
+          <button key={target} type="button" onClick={() => goToPage(target)}>
+            {label}
+          </button>
+        ))}
+      </nav>
+      <div className="app-footer-user">
+        <UserCircle size={18} />
+        <span>{userName}</span>
+        <small>{role || "user"}</small>
+      </div>
+    </footer>
   );
 }
