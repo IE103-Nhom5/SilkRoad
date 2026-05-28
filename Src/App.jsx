@@ -178,6 +178,9 @@ const PAGE_DESCRIPTIONS = {
   query: "Tra cứu dữ liệu trực tiếp từ các bảng/view",
 };
 
+// ===== Core formatting and normalization helpers =====
+// These small utilities keep currency, ids, dates and Vietnamese search text
+// consistent across dashboard, POS, stock and RBAC screens.
 function money(n) {
   return Number(n || 0).toLocaleString("vi-VN") + " đ";
 }
@@ -206,6 +209,10 @@ function str(v) {
   return v === null || v === undefined ? "" : String(v);
 }
 
+function trim(v) {
+  return str(v).trim();
+}
+
 function normalizeSearchText(value) {
   return str(value)
     .normalize("NFD")
@@ -220,6 +227,9 @@ function matchesSearchValues(values, keyword) {
   return values.some((value) => normalizeSearchText(value).includes(needle));
 }
 
+// Builds the topbar suggestion list from accessible pages, DB tables,
+// products, variants and customers. Permission filtering happens here so the
+// search box never suggests screens the active role cannot open.
 function buildSearchSuggestions(keyword, options = {}, canFeature = () => true) {
   const needle = normalizeSearchText(keyword);
   const suggestions = [];
@@ -317,6 +327,9 @@ function buildSearchSuggestions(keyword, options = {}, canFeature = () => true) 
     .slice(0, needle ? 12 : 8);
 }
 
+// ===== Database shape adapters =====
+// The SQL files use mostly lowercase column names, but some views or manual
+// rows can differ. These accessors make the UI tolerant to both styles.
 function idStr(v) {
   return str(v).trim();
 }
@@ -450,6 +463,9 @@ function primaryVariantImage(variant, images = []) {
   );
 }
 
+// ===== Inventory and cart calculations =====
+// Keep all quantity math here so POS, stock, reports and dashboard use the
+// same definition of "available" stock: physical quantity minus reserved.
 function availableStock(stockRows = [], branchid, variantid) {
   if (!branchid || !variantid) return null;
   const stock = stockRows.find((item) => sameId(branchIdOf(item), branchid) && sameId(variantIdOf(item), variantid));
@@ -493,6 +509,9 @@ function cartTotals(cartRows = [], meta = {}) {
   return { subtotal, discount, shipping, final };
 }
 
+// ===== Read-model builders for tables =====
+// These convert raw Supabase rows into user-facing table rows with friendly
+// labels and without exposing technical ids in the main UI.
 function stockViewRows(stockRows, options, onlyLowStock = false) {
   return (stockRows || [])
     .filter((stockItem) => {
@@ -631,6 +650,8 @@ function stockHistoryViewRows(historyRows, options) {
     });
 }
 
+// ===== Export helpers =====
+// CSV exports add a UTF-8 BOM so Vietnamese labels open correctly in Excel.
 function csvEscape(value) {
   return `"${str(value).replace(/"/g, '""')}"`;
 }
@@ -651,6 +672,8 @@ function downloadRowsAsCsv(rows, filename) {
   return true;
 }
 
+// ===== Local icon set =====
+// Icons are kept inline to avoid adding another dependency for small UI glyphs.
 function IconBase({ size = 24, children, ...props }) {
   return (
     <svg
@@ -885,6 +908,9 @@ function Bell(props) {
   );
 }
 
+// ===== RBAC helpers =====
+// Role data can store permissions as arrays, JSON strings or comma-separated
+// text; these helpers normalize it before permission checks and editing.
 function roleIdOf(item) {
   return idStr(first(item, ["roleid", "role_id", "RoleID"], ""));
 }
@@ -908,6 +934,8 @@ function permissionsFromText(text) {
   return [...new Set(str(text).split(/[\n,]+/).map((item) => item.trim()).filter(Boolean))];
 }
 
+// Main application shell: owns auth, data loading, RBAC checks, feature forms,
+// global search, notifications, sidebar/topbar state and current page routing.
 export default function App() {
   // Auth + layout state
   const [session, setSession] = useState(null);
@@ -1129,11 +1157,13 @@ export default function App() {
     status: "active",
   });
 
+  // Persist the dark/light mode choice and keep the body class in sync.
   useEffect(() => {
     document.body.className = dark ? "dark" : "";
     localStorage.setItem("dark", dark ? "1" : "0");
   }, [dark]);
 
+  // Keep sidebar state responsive when the viewport switches desktop/mobile.
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     let lastIsDesktop = window.innerWidth > 960;
@@ -1158,6 +1188,8 @@ export default function App() {
     localStorage.setItem("silkroad-held-carts", JSON.stringify(heldCarts.slice(0, 10)));
   }, [heldCarts]);
 
+  // Layout control: collapses the sidebar and briefly disables hover reopen so
+  // closing the menu does not immediately reopen because the cursor is over it.
   function toggleSidebar() {
     setSidebar((current) => {
       const next = !current;
@@ -1169,6 +1201,8 @@ export default function App() {
     });
   }
 
+  // Account dropdown actions are modal-driven so profile, settings, help and
+  // logout flows share the same overlay behavior.
   function openAccountModal(kind) {
     const fullName = first(profile, ["fullname", "full_name", "username", "email"], "Tài khoản");
     const email = first(profile, ["email"], session?.user?.email || "");
@@ -1302,6 +1336,7 @@ export default function App() {
     setModal({ title: titles[kind], body: bodies[kind] });
   }
 
+  // Logout uses a confirmation popup instead of instantly signing the user out.
   function openSignOutConfirm() {
     setAccountMenu(false);
     setNotificationMenu(false);
@@ -1325,6 +1360,7 @@ export default function App() {
     });
   }
 
+  // Central page navigation: closes transient UI and hides the sidebar on mobile.
   function goToPage(nextPage) {
     setPage(nextPage);
     setModal(null);
@@ -1334,6 +1370,7 @@ export default function App() {
     if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebar(false);
   }
 
+  // Saves editable account fields back to the users table for the active user.
   async function saveCurrentProfile(event) {
     event.preventDefault();
     if (!profile?.email) return show("Không tìm thấy email tài khoản để cập nhật");
@@ -1365,6 +1402,7 @@ export default function App() {
     }
   }
 
+  // Bootstraps Supabase auth and reloads the user profile whenever auth changes.
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
@@ -1380,11 +1418,13 @@ export default function App() {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  // Toast helper with a short auto-dismiss timeout.
   function show(message) {
     setToast(message);
     setTimeout(() => setToast(""), 2600);
   }
 
+  // Shared async wrapper for buttons: toggles loading and surfaces errors.
   async function run(fn) {
     setLoading(true);
     try {
@@ -1396,6 +1436,7 @@ export default function App() {
     }
   }
 
+  // Permission checks use role names from the profile and the local feature map.
   function roleName(p = profile) {
     return first(p?.role, ["rolename", "role_name"], first(p, ["rolename", "role_name"], "sales_staff"));
   }
@@ -1412,6 +1453,7 @@ export default function App() {
     return true;
   }
 
+  // Loads all lookup data used by forms, selectors, dashboard, search and POS.
   async function loadOptions() {
     async function read(table, columns, fallbackColumns, orderColumn) {
       let query = supabase.from(table).select(columns);
@@ -1524,6 +1566,8 @@ export default function App() {
     return loadedOptions;
   }
 
+  // Auth/profile flows: profile is stored in public.users while Supabase auth
+  // owns the session.
   async function loadProfile(email) {
     const { data, error } = await supabase.from("users").select("*, role(*)").eq("email", email).maybeSingle();
     if (error || !data) {
@@ -1580,6 +1624,8 @@ export default function App() {
     show(exported ? "Đã xuất CSV" : "Không có dữ liệu để xuất");
   }
 
+  // Dashboard aggregator: combines product, stock, order, return and payment
+  // data into KPI cards, best sellers, recent orders and 7-day revenue trends.
   async function dashboardData() {
     const loadedOptions = await loadOptions();
     const [orders, details, history, returns, payments] = await Promise.all([
@@ -1718,6 +1764,8 @@ export default function App() {
     ]);
   }
 
+  // Product catalog management: product master data, variants, categories,
+  // attributes, suppliers and product images.
   async function addProduct() {
     if (!guard("products")) return;
     if (!productForm.productname.trim()) return show("Vui lòng nhập tên sản phẩm");
@@ -1883,6 +1931,8 @@ export default function App() {
     setRows(productViewRows(loadedOptions.products, loadedOptions.variants, loadedOptions.images));
   }
 
+  // Purchase receiving: prefer the database procedure, then fall back to a
+  // frontend stock update when the procedure is not available.
   async function receivePurchaseOrderLocally(purchaseorderid) {
     const order = await supabase.from("purchase_order").select("*").eq("purchaseorderid", purchaseorderid).maybeSingle();
     if (order.error) throw order.error;
@@ -2039,6 +2089,7 @@ export default function App() {
     await loadStockFriendly();
   }
 
+  // Stock management: readable stock table, low-stock warnings and movement log.
   async function loadStockFriendly() {
     if (!guard("stock")) return;
     const loadedOptions = await loadOptions();
@@ -2073,6 +2124,7 @@ export default function App() {
     setRows(stockHistoryViewRows(data || [], loadedOptions));
   }
 
+  // Internal stock movement between branches with stock_history audit rows.
   async function transferStock() {
     if (!guard("transfer")) return;
     if (!transferForm.frombranchid || !transferForm.tobranchid || !transferForm.variantid) {
@@ -2203,6 +2255,7 @@ export default function App() {
     await loadStockFriendly();
   }
 
+  // Stock count adjustment: records both adjustment tables and stock_history.
   async function adjustStock() {
     if (!guard("adjustment")) return;
     if (!adjustForm.branchid || !adjustForm.variantid) return show("Vui lòng chọn chi nhánh, sản phẩm và biến thể");
@@ -2271,6 +2324,7 @@ export default function App() {
     await loadStockFriendly();
   }
 
+  // POS cart: validates same-branch sales and available stock before adding.
   function addCart() {
     if (!cartItem.branchid || !cartItem.productid || !cartItem.variantid) {
       return show("Vui lòng chọn chi nhánh, sản phẩm và biến thể");
@@ -2394,6 +2448,8 @@ export default function App() {
     setHeldCarts(heldCarts.filter((item) => item.id !== id));
   }
 
+  // Customer link for POS: reuse a known customer by phone or create a quick
+  // profile when an invoice includes customer info.
   async function findOrCreateCustomerFromOrder() {
     const phone = trim(orderMeta.customerphone);
     const name = trim(orderMeta.customername);
@@ -2437,6 +2493,7 @@ export default function App() {
     await supabase.from("customer").update({ totalspent, loyaltypoints, updatedat: new Date().toISOString() }).eq("customerid", customerid);
   }
 
+  // Customer CRM: create/update profile and list customer rows for review.
   async function createOrUpdateCustomer() {
     if (!guard("customers")) return;
     const fullname = trim(customerForm.fullname);
@@ -2486,6 +2543,8 @@ export default function App() {
     setRows(customerViewRows(data || []));
   }
 
+  // Channel/branch operations: prices by channel, branch setup, sales channels
+  // and allocation quantities.
   async function saveChannelPrice() {
     if (!guard("channels")) return;
     if (!channelForm.channelid || !channelForm.variantid) return show("Vui lòng chọn kênh bán, sản phẩm và biến thể");
@@ -2608,6 +2667,7 @@ export default function App() {
     setRows(allocationViewRows(data || [], loadedOptions));
   }
 
+  // Returns flow: creates return headers/details and optionally returns stock.
   async function createReturnOrder() {
     if (!guard("returns")) return;
     if (!returnForm.orderid.trim() || !returnForm.branchid || !returnForm.variantid) return show("Vui lòng nhập đơn gốc, chi nhánh và biến thể đổi trả");
@@ -2707,6 +2767,8 @@ export default function App() {
     );
   }
 
+  // Invoice creation: validates stock/allocation, writes orders, details,
+  // payments, stock decrements, stock_history and customer spend.
   async function createInvoice() {
     if (!guard("orders")) return;
     if (!cart.length) return show("Giỏ hàng trống");
@@ -2863,6 +2925,7 @@ export default function App() {
     setRows(orderViewRows(data || [], loadedOptions.branches));
   }
 
+  // Reporting: lightweight management summary from live tables.
   async function buildReports() {
     if (!guard("reports")) return;
     const loadedOptions = await loadOptions();
@@ -2919,6 +2982,8 @@ export default function App() {
     ]);
   }
 
+  // RBAC/user helpers: user rows hide ids in tables but keep technical ids for
+  // click-through profile, locking and delete operations.
   function userIdOf(item) {
     return idStr(first(item, ["userid", "user_id", "UserID"], ""));
   }
@@ -2935,6 +3000,7 @@ export default function App() {
     return options.roles.find((role) => roleLabel(role) === roleEditor.rolename) || null;
   }
 
+  // Employee management: create/update users and assign a role from role table.
   async function createOrUpdateUser() {
     if (!guard("users")) return;
     if (!userForm.fullname.trim() || !userForm.username.trim() || !userForm.email.trim()) {
@@ -2996,6 +3062,7 @@ export default function App() {
     }));
   }
 
+  // Role permission editor: writes permission arrays back to the role table.
   async function saveRolePermissions() {
     if (!guard("users")) return;
     if (!trim(roleEditor.rolename)) return show("Vui lòng nhập tên vai trò");
@@ -3069,6 +3136,8 @@ export default function App() {
     await loadUsersFriendly();
   }
 
+  // Employee profile modal: gathers recent activity logs from sales, stock,
+  // purchases, transfers, adjustments and returns for one employee.
   async function openUserProfile(target) {
     const userid = userIdOf(target);
     const email = userEmailOf(target);
@@ -3142,6 +3211,8 @@ export default function App() {
     });
   }
 
+  // Global search: one search box covers pages, DB tables, products, variants,
+  // customers, orders, purchases and stock movement logs.
   async function runGlobalSearch(keyword = globalSearch) {
     const needle = normalizeSearchText(keyword);
     if (!needle) {
@@ -3337,6 +3408,8 @@ export default function App() {
     show(results.length ? `Tìm thấy ${results.length} kết quả` : "Không tìm thấy dữ liệu phù hợp");
   }
 
+  // Handles suggestion clicks from topbar search: page open, DB table load, or
+  // full global search depending on suggestion type.
   function handleSearchSuggestion(suggestion) {
     setSearchOpen(false);
 
@@ -3362,6 +3435,7 @@ export default function App() {
     run(() => runGlobalSearch(query));
   }
 
+  // Current table rows can be filtered by global search without exposing ids.
   function rowMatchesGlobalSearch(row, keyword) {
     const normalizedKeyword = normalizeSearchText(keyword);
     if (!normalizedKeyword) return true;
@@ -3376,6 +3450,7 @@ export default function App() {
     return matchesSearchValues(values, normalizedKeyword);
   }
 
+  // Notification model for topbar badge and dashboard warning panel.
   const lowStockItems = options.stock.filter((item) => {
     const quantity = Number(first(item, ["quantity"], 0));
     const min = Number(first(item, ["minstocklevel", "min_stock_level"], 5));
@@ -3833,6 +3908,7 @@ export default function App() {
   );
 }
 
+// Login screen with remember-email, password visibility and reset-password entry.
 function Login({ login, setLogin, signIn, signUp, resetPassword, toast }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
@@ -3970,6 +4046,7 @@ function Login({ login, setLogin, signIn, signUp, resetPassword, toast }) {
   );
 }
 
+// Generic framed section used across all pages.
 function Card({ title, children }) {
   return (
     <section className="card">
@@ -3983,6 +4060,7 @@ function Grid({ children }) {
   return <div className="grid">{children}</div>;
 }
 
+// Generic data table: hides technical id columns and supports optional row click.
 function DataTable({ rows, onRowClick }) {
   if (!rows?.length) return <p className="muted">Chưa có dữ liệu</p>;
 
@@ -4062,6 +4140,8 @@ function Modal({ title, children, onClose }) {
   );
 }
 
+// Dashboard UI: KPI cards, quick actions, warning panel, charts, best sellers
+// and recent order widgets.
 function Dashboard({ run, dashboardData, rows, goToPage, notifications = [], can = () => true }) {
   const dashboardRows = (rows || []).filter((r) => r && Object.prototype.hasOwnProperty.call(r, "metric"));
   const bestSellerRows = (rows || []).filter((r) => r?.kind === "bestSeller");
@@ -4296,6 +4376,7 @@ function ActionRow({ children }) {
   return <div className="action-row">{children}</div>;
 }
 
+// Shared product/variant selector used by inventory, purchase, transfer and POS.
 function ProductVariantSelector({
   products,
   variants,
@@ -4352,6 +4433,7 @@ function ProductVariantSelector({
   );
 }
 
+// Product images fall back to a consistent empty state when URL is missing/bad.
 function ProductImage({ src, alt, className = "" }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
@@ -4366,6 +4448,7 @@ function ProductImage({ src, alt, className = "" }) {
   return <img className={className} src={src} alt={alt || "Ảnh sản phẩm"} loading="lazy" onError={() => setFailed(true)} />;
 }
 
+// POS product browser: search, stock filter, sorting, card grid and barcode pick.
 function ProductPickerGrid({ products, variants, stockRows, branchid, selectedProductId, productSearch, setProductSearch, onSelectProduct, onSelectVariant }) {
   const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [sortMode, setSortMode] = useState("name");
@@ -4478,6 +4561,7 @@ function ProductPickerGrid({ products, variants, stockRows, branchid, selectedPr
   );
 }
 
+// POS variant panel shown after selecting a product.
 function VariantChoicePanel({ product, variants, selectedVariantId, branchid, stockRows, onSelectVariant }) {
   if (!product) {
     return <div className="variant-empty">Chọn sản phẩm trước để xem biến thể</div>;
@@ -4523,6 +4607,7 @@ function VariantChoicePanel({ product, variants, selectedVariantId, branchid, st
   );
 }
 
+// POS preview card for the currently selected product/variant.
 function ProductPreview({ product, variant, variants, stockRows, branchid }) {
   const productVariants = product ? variants.filter((item) => sameId(productIdOf(item), productIdOf(product))) : [];
   const previewImage = imageUrlOf(variant) || imageUrlOf(product);
@@ -4555,6 +4640,7 @@ function ProductPreview({ product, variant, variants, stockRows, branchid }) {
   );
 }
 
+// Page: product master data, variants, categories, attributes, suppliers and images.
 function Products(p) {
   const imageVariants = p.imageForm.productid ? p.options.variants.filter((item) => sameId(productIdOf(item), p.imageForm.productid)) : [];
   const sizeAttributes = (p.options.attributes || []).filter((item) => first(item, ["attributetype", "attribute_type"], "") === "size");
@@ -4829,6 +4915,7 @@ function Products(p) {
   );
 }
 
+// Page: purchase orders, supplier selection and manual stock receiving.
 function Purchase(p) {
   return (
     <>
@@ -4901,6 +4988,7 @@ function Purchase(p) {
   );
 }
 
+// Page: stock lookup, low-stock warnings and stock history views.
 function Stock({ options, run, loadStockFriendly, loadStockHistoryFriendly, selectTable, loadLowStock, stockFilter, setStockFilter, exportRows, rows }) {
   return (
     <>
@@ -4945,6 +5033,7 @@ function Stock({ options, run, loadStockFriendly, loadStockHistoryFriendly, sele
   );
 }
 
+// Page: transfer stock between branches with product-first variant picking.
 function Transfer(p) {
   return (
     <Card title="Chuyển kho">
@@ -4992,6 +5081,7 @@ function Transfer(p) {
   );
 }
 
+// Page: stock count adjustment for one branch and one variant.
 function Adjustment(p) {
   return (
     <Card title="Kiểm kho">
@@ -5032,6 +5122,7 @@ function Adjustment(p) {
   );
 }
 
+// Page: POS sales workflow with product grid, variant selector, cart and invoice.
 function Orders(p) {
   const [productSearch, setProductSearch] = useState("");
   const totals = cartTotals(p.cart, p.orderMeta);
@@ -5202,6 +5293,7 @@ function Orders(p) {
   );
 }
 
+// POS helper: restore or remove locally saved carts.
 function HeldCartList({ rows, onRestore, onDelete }) {
   if (!rows?.length) return null;
 
@@ -5222,6 +5314,7 @@ function HeldCartList({ rows, onRestore, onDelete }) {
   );
 }
 
+// POS helper: editable cart table with quantity changes and remove action.
 function CartTable({ rows, onRemove, onQuantityChange }) {
   if (!rows?.length) return <p className="muted">Giỏ hàng trống</p>;
 
@@ -5272,6 +5365,7 @@ function CartTable({ rows, onRemove, onQuantityChange }) {
   );
 }
 
+// Page: customer CRM create/update and customer table.
 function Customers(p) {
   return (
     <>
@@ -5314,6 +5408,7 @@ function Customers(p) {
   );
 }
 
+// Page: returns and refunds tied to original orders.
 function Returns(p) {
   return (
     <>
@@ -5392,6 +5487,7 @@ function Returns(p) {
   );
 }
 
+// Page: branch, sales channel, channel price and allocation management.
 function Channels(p) {
   return (
     <>
@@ -5508,6 +5604,7 @@ function Channels(p) {
   );
 }
 
+// Page: RBAC users, role permissions, access lock/delete and profile logs.
 function UsersPage(p) {
   const roleOptions = p.options.roles?.length ? p.options.roles : [
     { rolename: "sales_staff", permissions: ROLE_FEATURES.sales_staff },
@@ -5632,6 +5729,7 @@ function UsersPage(p) {
   );
 }
 
+// Page: management reports and raw reporting views.
 function Reports({ run, buildReports, selectTable, exportRows, rows }) {
   return (
     <>
@@ -5653,6 +5751,7 @@ function Reports({ run, buildReports, selectTable, exportRows, rows }) {
   );
 }
 
+// Page: controlled table/view browser plus global search results.
 function Query({ run, queryTable, setQueryTable, selectTable, searchSummary, rows }) {
   return (
     <>
