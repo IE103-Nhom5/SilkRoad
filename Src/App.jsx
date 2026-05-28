@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
+import { callProcedure, isProcedureUnavailable, readFirstAvailableTable, readRows } from "./lib/dbService";
+import { PAGE_ALIASES, PAGE_DESCRIPTIONS, QUERY_TABLES, ROLE_FEATURES, TABLE_LABELS } from "./lib/featureConfig";
 import bg from "./assets/silkroad-bg.png";
 import loginBg from "./assets/login-bg.png";
 import loginFrameImg from "./assets/login-frame.png";
@@ -10,44 +12,6 @@ const LOGO_SRC = logoImg;
 const LOGIN_FRAME_SRC = loginFrameImg;
 const LOGIN_BENEFITS_SRC = loginBenefitsImg;
 
-
-const ROLE_FEATURES = {
-  admin: [
-    "dashboard",
-    "products",
-    "purchase",
-    "stock",
-    "transfer",
-    "adjustment",
-    "orders",
-    "customers",
-    "returns",
-    "channels",
-    "system",
-    "users",
-    "reports",
-    "query",
-    "help",
-  ],
-  branch_manager: [
-    "dashboard",
-    "products",
-    "purchase",
-    "stock",
-    "transfer",
-    "adjustment",
-    "orders",
-    "customers",
-    "returns",
-    "channels",
-    "system",
-    "reports",
-    "query",
-    "help",
-  ],
-  warehouse_staff: ["dashboard", "purchase", "stock", "transfer", "adjustment", "system", "reports", "query", "help"],
-  sales_staff: ["dashboard", "products", "stock", "orders", "customers", "returns", "system", "query", "help"],
-};
 
 const MENU = [
   ["dashboard", "Tổng quan", BarChart3],
@@ -77,116 +41,6 @@ const MENU_GROUPS = [
 ];
 
 const MENU_BY_KEY = Object.fromEntries(MENU.map((item) => [item[0], item]));
-
-const QUERY_TABLES = [
-  "product",
-  "product_variant",
-  "product_image",
-  "product_category",
-  "attribute",
-  "supplier",
-  "supplier_product",
-  "branch",
-  "stock",
-  "stock_history",
-  "inventory_allocation",
-  "purchase_order",
-  "purchase_order_detail",
-  "transfer_order",
-  "transfer_order_detail",
-  "stock_adjustment",
-  "stock_adjustment_detail",
-  "sales_channel",
-  "channel_price",
-  "channel_sync_log",
-  "customer",
-  "orders",
-  "order_detail",
-  "payment",
-  "return_order",
-  "return_detail",
-  "users",
-  "role",
-  "vw_product_variant_catalog",
-  "vw_stock_by_branch",
-  "vw_low_stock_alert",
-  "vw_order_summary",
-  "vw_revenue_by_channel",
-  "vw_stock_movement_report",
-];
-
-const TABLE_LABELS = {
-  product: "Sản phẩm gốc",
-  product_variant: "Biến thể sản phẩm",
-  product_image: "Hình ảnh sản phẩm",
-  product_category: "Danh mục hàng hóa",
-  attribute: "Thuộc tính size màu",
-  supplier: "Nhà cung cấp",
-  supplier_product: "Bảng giá nhập nhà cung cấp",
-  branch: "Chi nhánh",
-  stock: "Tồn kho",
-  stock_history: "Lịch sử nhập xuất kho",
-  inventory_allocation: "Phân bổ tồn kho theo kênh",
-  purchase_order: "Phiếu nhập hàng",
-  purchase_order_detail: "Chi tiết phiếu nhập",
-  transfer_order: "Phiếu chuyển kho",
-  transfer_order_detail: "Chi tiết chuyển kho",
-  stock_adjustment: "Phiếu kiểm kho",
-  stock_adjustment_detail: "Chi tiết kiểm kho",
-  sales_channel: "Kênh bán",
-  channel_price: "Giá bán theo kênh",
-  channel_sync_log: "Log đồng bộ kênh bán",
-  customer: "Khách hàng",
-  orders: "Hóa đơn đơn hàng",
-  order_detail: "Chi tiết đơn hàng",
-  payment: "Thanh toán",
-  return_order: "Phiếu đổi trả",
-  return_detail: "Chi tiết đổi trả",
-  users: "Tài khoản nhân viên",
-  role: "Vai trò quyền hạn",
-  vw_product_variant_catalog: "View danh mục biến thể",
-  vw_stock_by_branch: "View tồn kho chi nhánh",
-  vw_low_stock_alert: "View cảnh báo tồn thấp",
-  vw_order_summary: "View tổng hợp đơn hàng",
-  vw_revenue_by_channel: "View doanh thu theo kênh",
-  vw_stock_movement_report: "View biến động kho",
-};
-
-const PAGE_ALIASES = {
-  dashboard: ["tong quan", "dashboard", "thong ke", "bao cao nhanh"],
-  products: ["hang hoa", "san pham", "mat hang", "bien the", "sku", "barcode", "danh muc"],
-  purchase: ["nhap hang", "phieu nhap", "nha cung cap", "mua hang"],
-  stock: ["kho", "ton kho", "sap het hang", "lich su kho"],
-  transfer: ["chuyen kho", "dieu chuyen", "xuat kho noi bo"],
-  adjustment: ["kiem kho", "dieu chinh kho", "chenh lech"],
-  orders: ["ban hang", "pos", "hoa don", "don hang", "gio hang"],
-  customers: ["khach hang", "crm", "sdt", "dien thoai"],
-  returns: ["doi tra", "tra hang", "hoan tien"],
-  channels: ["kenh ban", "gia kenh", "online", "san thuong mai"],
-  system: ["he thong", "cai dat", "system", "settings", "trang thai", "bao tri"],
-  users: ["rbac", "phan quyen", "nhan vien", "tai khoan"],
-  reports: ["bao cao", "doanh thu", "loi nhuan", "report"],
-  query: ["tra bang", "truy van", "database", "tim kiem"],
-  help: ["tro giup", "huong dan", "support", "faq", "quy trinh"],
-};
-
-const PAGE_DESCRIPTIONS = {
-  dashboard: "Mở bảng tổng quan và thống kê nhanh",
-  products: "Quản lý sản phẩm gốc, biến thể, ảnh, danh mục",
-  purchase: "Tạo phiếu nhập và nhận hàng vào kho",
-  stock: "Xem tồn kho, lịch sử kho, cảnh báo sắp hết",
-  transfer: "Chuyển hàng giữa các chi nhánh",
-  adjustment: "Kiểm kho và điều chỉnh số lượng",
-  orders: "Bán hàng, giỏ hàng, tạo hóa đơn",
-  customers: "Quản lý hồ sơ và lịch sử khách hàng",
-  returns: "Lập phiếu đổi trả và hoàn hàng",
-  channels: "Quản lý kênh bán, giá kênh, phân bổ tồn",
-  system: "Cài đặt hệ thống, trạng thái dữ liệu và lối tắt bảo trì",
-  users: "Quản lý nhân viên, vai trò, quyền truy cập",
-  reports: "Xem báo cáo doanh thu, đơn hàng, tồn kho",
-  query: "Tra cứu dữ liệu trực tiếp từ các bảng/view",
-  help: "Trợ giúp thao tác, quy trình và xử lý lỗi thường gặp",
-};
 
 // ===== Core formatting and normalization helpers =====
 // These small utilities keep currency, ids, dates and Vietnamese search text
@@ -990,6 +844,7 @@ export default function App() {
 
   // Data state
   const [rows, setRows] = useState([]);
+  const [pageRows, setPageRows] = useState({});
   const [globalSearch, setGlobalSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchSummary, setSearchSummary] = useState(null);
@@ -1399,12 +1254,21 @@ export default function App() {
 
   // Central page navigation: closes transient UI and hides the sidebar on mobile.
   function goToPage(nextPage) {
+    setRows(pageRows[nextPage] || []);
     setPage(nextPage);
     setModal(null);
     setAccountMenu(false);
     setNotificationMenu(false);
     setOpenMenuGroup("");
     if (typeof window !== "undefined" && window.innerWidth <= 900) setSidebar(false);
+  }
+
+  // Rows are cached per screen so raw query/report/system data does not leak
+  // into RBAC, POS, stock or dashboard tables when navigating between pages.
+  function commitRows(nextRows, targetPage = page) {
+    const safeRows = Array.isArray(nextRows) ? nextRows : [];
+    setRows(safeRows);
+    setPageRows((current) => ({ ...current, [targetPage]: safeRows }));
   }
 
   // Saves editable account fields back to the users table for the active user.
@@ -1492,30 +1356,12 @@ export default function App() {
 
   // Loads all lookup data used by forms, selectors, dashboard, search and POS.
   async function loadOptions() {
-    async function read(table, columns, fallbackColumns, orderColumn) {
-      let query = supabase.from(table).select(columns);
-      if (orderColumn) query = query.order(orderColumn);
-      let result = await query;
-
-      if (result.error && fallbackColumns) {
-        let fallbackQuery = supabase.from(table).select(fallbackColumns);
-        if (orderColumn) fallbackQuery = fallbackQuery.order(orderColumn);
-        result = await fallbackQuery;
-      }
-
-      return result;
-    }
-
     async function readFirstExisting(tables) {
-      for (const table of tables) {
-        const result = await supabase.from(table).select("*").limit(100);
-        if (!result.error) return result;
-      }
-      return { data: [], error: null };
+      return readFirstAvailableTable(supabase, tables, { limit: 100 });
     }
 
     async function readAll(table, limit = 2000) {
-      return supabase.from(table).select("*").limit(limit);
+      return readRows(supabase, table, { limit });
     }
 
     const [products, variants, branches, roles, channels, categories, attributes, suppliers, customers, channelPrices, allocations, images, stock] = await Promise.all([
@@ -1573,7 +1419,7 @@ export default function App() {
     let channelRows = channels.data || [];
 
     if (!channelRows.length) {
-      const existingOrders = await supabase.from("orders").select("channelid").limit(50);
+      const existingOrders = await readRows(supabase, "orders", { columns: "channelid", limit: 50 });
       channelRows = [...new Set((existingOrders.data || []).map((order) => str(order.channelid)).filter(Boolean))].map((channelid) => ({
         channelid,
         channelname: `Kênh ${channelid}`,
@@ -1647,13 +1493,15 @@ export default function App() {
     setNotificationMenu(false);
     await supabase.auth.signOut();
     setRows([]);
+    setPageRows({});
   }
 
-  async function selectTable(table, limit = 100) {
-    const { data, error } = await supabase.from(table).select("*").limit(limit);
+  async function selectTable(table, limit = 100, targetPage = page) {
+    const { data, error } = await readRows(supabase, table, { limit });
     if (error) throw error;
     setSearchSummary(null);
-    setRows(data || []);
+    if (QUERY_TABLES.includes(table)) setQueryTable(table);
+    commitRows(data || [], targetPage);
   }
 
   function exportRows(label = page) {
@@ -1666,11 +1514,11 @@ export default function App() {
   async function dashboardData() {
     const loadedOptions = await loadOptions();
     const [orders, details, history, returns, payments] = await Promise.all([
-      supabase.from("orders").select("*").limit(1000),
-      supabase.from("order_detail").select("*").limit(2000),
-      supabase.from("stock_history").select("*").limit(500),
-      supabase.from("return_order").select("*").limit(500),
-      supabase.from("payment").select("*").limit(500),
+      readRows(supabase, "orders", { limit: 1000 }),
+      readRows(supabase, "order_detail", { limit: 2000 }),
+      readRows(supabase, "stock_history", { limit: 500 }),
+      readRows(supabase, "return_order", { limit: 500 }),
+      readRows(supabase, "payment", { limit: 500 }),
     ]);
 
     if (orders.error) throw orders.error;
@@ -1779,7 +1627,7 @@ export default function App() {
       }));
 
     setSearchSummary(null);
-    setRows([
+    commitRows([
       { kind: "metric", metric: "Sản phẩm gốc", value: loadedOptions.products.length, rawValue: loadedOptions.products.length, group: "Hàng hóa", detail: "Tổng sản phẩm đang quản lý" },
       { kind: "metric", metric: "Biến thể", value: loadedOptions.variants.length, rawValue: loadedOptions.variants.length, group: "Hàng hóa", detail: "Size, màu, barcode, giá bán" },
       { kind: "metric", metric: "Tồn khả dụng", value: availableStock, rawValue: availableStock, group: "Kho", detail: `${totalStock} tồn thực, ${reservedStock} đã giữ` },
@@ -1798,7 +1646,7 @@ export default function App() {
       ...bestSellerRows,
       ...recentOrderRows,
       ...trendRows,
-    ]);
+    ], "dashboard");
   }
 
   // Product catalog management: product master data, variants, categories,
@@ -1965,7 +1813,7 @@ export default function App() {
   async function loadProductCatalog() {
     if (!guard("products")) return;
     const loadedOptions = await loadOptions();
-    setRows(productViewRows(loadedOptions.products, loadedOptions.variants, loadedOptions.images));
+    commitRows(productViewRows(loadedOptions.products, loadedOptions.variants, loadedOptions.images), "products");
   }
 
   // Purchase receiving: prefer the database procedure, then fall back to a
@@ -2017,8 +1865,9 @@ export default function App() {
   }
 
   async function confirmPurchaseOrderById(purchaseorderid) {
-    const rpc = await supabase.rpc("sp_confirm_purchase_order", { p_purchase_order_id: purchaseorderid });
+    const rpc = await callProcedure(supabase, "sp_confirm_purchase_order", { p_purchase_order_id: purchaseorderid });
     if (!rpc.error) return;
+    if (!isProcedureUnavailable(rpc.error)) throw rpc.error;
     await receivePurchaseOrderLocally(purchaseorderid);
   }
 
@@ -2141,7 +1990,7 @@ export default function App() {
       const matchesKeyword = !keyword || text.includes(keyword);
       return matchesBranch && matchesProduct && matchesKeyword;
     });
-    setRows(stockViewRows(filteredStock, loadedOptions));
+    commitRows(stockViewRows(filteredStock, loadedOptions), "stock");
   }
 
   async function loadLowStock() {
@@ -2149,7 +1998,7 @@ export default function App() {
     const loadedOptions = await loadOptions();
     const { data, error } = await supabase.from("stock").select("*").order("quantity", { ascending: true });
     if (error) throw error;
-    setRows(stockViewRows(data || [], loadedOptions, true));
+    commitRows(stockViewRows(data || [], loadedOptions, true), "stock");
     show("Đã lọc cảnh báo sắp hết hàng");
   }
 
@@ -2158,7 +2007,7 @@ export default function App() {
     const loadedOptions = await loadOptions();
     const { data, error } = await supabase.from("stock_history").select("*").limit(300);
     if (error) throw error;
-    setRows(stockHistoryViewRows(data || [], loadedOptions));
+    commitRows(stockHistoryViewRows(data || [], loadedOptions), "stock");
   }
 
   // Internal stock movement between branches with stock_history audit rows.
@@ -2577,7 +2426,7 @@ export default function App() {
     if (!guard("customers")) return;
     const { data, error } = await supabase.from("customer").select("*").order("createdat", { ascending: false }).limit(500);
     if (error) throw error;
-    setRows(customerViewRows(data || []));
+    commitRows(customerViewRows(data || []), "customers");
   }
 
   // Channel/branch operations: prices by channel, branch setup, sales channels
@@ -2693,7 +2542,7 @@ export default function App() {
     const loadedOptions = await loadOptions();
     const { data, error } = await supabase.from("channel_price").select("*").limit(1000);
     if (error) throw error;
-    setRows(channelPriceViewRows(data || [], loadedOptions));
+    commitRows(channelPriceViewRows(data || [], loadedOptions), "channels");
   }
 
   async function loadAllocationsFriendly() {
@@ -2701,7 +2550,7 @@ export default function App() {
     const loadedOptions = await loadOptions();
     const { data, error } = await supabase.from("inventory_allocation").select("*").limit(1000);
     if (error) throw error;
-    setRows(allocationViewRows(data || [], loadedOptions));
+    commitRows(allocationViewRows(data || [], loadedOptions), "channels");
   }
 
   // Returns flow: creates return headers/details and optionally returns stock.
@@ -2791,7 +2640,7 @@ export default function App() {
     if (!guard("returns")) return;
     const { data, error } = await supabase.from("return_order").select("*").order("returndate", { ascending: false }).limit(300);
     if (error) throw error;
-    setRows(
+    commitRows(
       (data || []).map((item) => ({
         "Ngày": str(item.returndate || item.return_date).slice(0, 19).replace("T", " "),
         "Đơn gốc": item.orderid || "",
@@ -2800,12 +2649,75 @@ export default function App() {
         "Trạng thái": item.status || "",
         "Lý do": item.reason || "",
         "Ghi chú": item.note || "",
-      }))
+      })),
+      "returns"
     );
   }
 
+  function shouldFallbackOrderConfirm(error) {
+    const message = String(error?.message || "").toLowerCase();
+    return isProcedureUnavailable(error) || message.includes("inventory allocation not found");
+  }
+
+  async function confirmOrderLocally(orderid, stockChecks, channelid) {
+    for (const { item } of stockChecks) {
+      const beforeQuantity = stockQuantityOf(old);
+      const nextQuantity = beforeQuantity - item.quantity;
+      const now = new Date().toISOString();
+      const { error: stockError } = await supabase
+        .from("stock")
+        .update({ quantity: nextQuantity, lastupdated: now })
+        .eq("branchid", branchIdOf(old))
+        .eq("variantid", variantIdOf(old));
+      if (stockError) throw stockError;
+
+      if (allocation) {
+        const allocationUpdate = await supabase
+          .from("inventory_allocation")
+          .update({
+            soldquantity: Number(first(allocation, ["soldquantity", "sold_quantity"], 0)) + item.quantity,
+            updatedat: now,
+          })
+          .eq("branchid", item.branchid)
+          .eq("variantid", item.variantid)
+          .eq("channelid", channelid);
+        if (allocationUpdate.error) throw allocationUpdate.error;
+      }
+
+      const { error: historyError } = await supabase.from("stock_history").insert([
+        {
+          historyid: uuid(),
+          branchid: item.branchid,
+          variantid: item.variantid,
+          transactiontype: "sales",
+          referencetype: "ORDERS",
+          referenceid: orderid,
+          quantitychange: -item.quantity,
+          quantitybefore: beforeQuantity,
+          quantityafter: nextQuantity,
+          performedby: profile?.userid || null,
+          timestamp: now,
+          note: allocation ? "Bán hàng từ POS" : "Bán hàng POS, chưa có phân bổ kênh",
+        },
+      ]);
+      if (historyError) throw historyError;
+    }
+
+    const { error } = await supabase.from("orders").update({ orderstatus: "confirmed" }).eq("orderid", orderid);
+    if (error) throw error;
+  }
+
+  async function confirmOrderById(orderid, stockChecks, channelid) {
+    const rpc = await callProcedure(supabase, "sp_confirm_order", { p_order_id: orderid });
+    if (!rpc.error) return;
+    if (!shouldFallbackOrderConfirm(rpc.error)) throw rpc.error;
+    await confirmOrderLocally(orderid, stockChecks, channelid);
+  }
+
   // Invoice creation: validates stock/allocation, writes orders, details,
-  // payments, stock decrements, stock_history and customer spend.
+  // payments, customer spend and delegates stock deduction to DB procedure
+  // sp_confirm_order. A local fallback is kept for Supabase procedure exposure
+  // gaps and optional channel allocation rows.
   async function createInvoice() {
     if (!guard("orders")) return;
     if (!cart.length) return show("Giỏ hàng trống");
@@ -2861,7 +2773,7 @@ export default function App() {
         channelid,
         createdby: profile?.userid || null,
         orderdate: new Date().toISOString(),
-        orderstatus: orderMeta.status,
+        orderstatus: "new",
         paymentstatus: orderMeta.paymentstatus,
         totalamount: totals.subtotal,
         discountamount: totals.discount,
@@ -2889,49 +2801,9 @@ export default function App() {
         },
       ]);
       if (detailError) throw detailError;
-
-      if (old) {
-        const beforeQuantity = stockQuantityOf(old);
-        const nextQuantity = beforeQuantity - item.quantity;
-        const { error: stockError } = await supabase
-          .from("stock")
-          .update({ quantity: nextQuantity, lastupdated: new Date().toISOString() })
-          .eq("branchid", branchIdOf(old))
-          .eq("variantid", variantIdOf(old));
-        if (stockError) throw stockError;
-
-        if (allocation) {
-          const allocationUpdate = await supabase
-            .from("inventory_allocation")
-            .update({
-              soldquantity: Number(first(allocation, ["soldquantity", "sold_quantity"], 0)) + item.quantity,
-              updatedat: new Date().toISOString(),
-            })
-            .eq("branchid", item.branchid)
-            .eq("variantid", item.variantid)
-            .eq("channelid", channelid);
-          if (allocationUpdate.error) throw allocationUpdate.error;
-        }
-
-        const { error: historyError } = await supabase.from("stock_history").insert([
-          {
-            historyid: uuid(),
-            branchid: item.branchid,
-            variantid: item.variantid,
-            transactiontype: "sales",
-            referencetype: "ORDERS",
-            referenceid: orderid,
-            quantitychange: -item.quantity,
-            quantitybefore: beforeQuantity,
-            quantityafter: nextQuantity,
-            performedby: profile?.userid || null,
-            timestamp: new Date().toISOString(),
-            note: "Bán hàng demo",
-          },
-        ]);
-        if (historyError) throw historyError;
-      }
     }
+
+    await confirmOrderById(orderid, stockChecks, channelid);
 
     if (totals.final > 0) {
       const { error: paymentError } = await supabase.from("payment").insert([
@@ -2957,9 +2829,9 @@ export default function App() {
   async function loadOrdersFriendly() {
     if (!guard("orders")) return;
     const loadedOptions = await loadOptions();
-    const { data, error } = await supabase.from("orders").select("*").limit(200);
+    const { data, error } = await readRows(supabase, "orders", { limit: 200 });
     if (error) throw error;
-    setRows(orderViewRows(data || [], loadedOptions.branches));
+    commitRows(orderViewRows(data || [], loadedOptions.branches), "orders");
   }
 
   // Reporting: lightweight management summary from live tables.
@@ -2967,10 +2839,10 @@ export default function App() {
     if (!guard("reports")) return;
     const loadedOptions = await loadOptions();
     const [stock, orders, details, history] = await Promise.all([
-      supabase.from("stock").select("*").limit(2000),
-      supabase.from("orders").select("*").limit(1000),
-      supabase.from("order_detail").select("*").limit(2000),
-      supabase.from("stock_history").select("*").limit(1000),
+      readRows(supabase, "stock", { limit: 2000 }),
+      readRows(supabase, "orders", { limit: 1000 }),
+      readRows(supabase, "order_detail", { limit: 2000 }),
+      readRows(supabase, "stock_history", { limit: 1000 }),
     ]);
 
     if (stock.error) throw stock.error;
@@ -3006,7 +2878,7 @@ export default function App() {
         };
       });
 
-    setRows([
+    commitRows([
       { "Nhóm": "Tổng quan", "Chỉ số": "Số sản phẩm gốc", "Giá trị": loadedOptions.products.length, "Chi tiết": "" },
       { "Nhóm": "Tổng quan", "Chỉ số": "Số biến thể", "Giá trị": loadedOptions.variants.length, "Chi tiết": "" },
       { "Nhóm": "Kho", "Chỉ số": "Tổng tồn kho", "Giá trị": totalStock, "Chi tiết": "" },
@@ -3016,7 +2888,7 @@ export default function App() {
       { "Nhóm": "Bán hàng", "Chỉ số": "Doanh thu", "Giá trị": money(revenue), "Chi tiết": "" },
       { "Nhóm": "Kho", "Chỉ số": "Số log nhập/xuất", "Giá trị": historyRows.length, "Chi tiết": "" },
       ...topRows,
-    ]);
+    ], "reports");
   }
 
   function currentRoleEditorRole() {
@@ -3064,7 +2936,7 @@ export default function App() {
     if (error) throw error;
 
     setSearchSummary(null);
-    setRows((data || []).map((user) => {
+    commitRows((data || []).map((user) => {
       const role = user.role || loadedOptions.roles.find((item) => sameId(roleIdOf(item), roleIdOf(user)));
       const branch = loadedOptions.branches.find((item) => sameId(branchIdOf(item), branchIdOf(user)));
       const permissions = permissionsOf(role);
@@ -3082,7 +2954,7 @@ export default function App() {
         "Đăng nhập cuối": str(first(user, ["lastloginat", "last_login_at"], "")).slice(0, 19).replace("T", " "),
         "Ngày tạo": str(first(user, ["createdat", "created_at"], "")).slice(0, 19).replace("T", " "),
       };
-    }));
+    }), "users");
   }
 
   // Role permission editor: writes permission arrays back to the role table.
@@ -3104,7 +2976,7 @@ export default function App() {
     if (error) throw error;
     show(existingRole ? "Đã cập nhật quyền cho vai trò" : "Đã tạo vai trò mới");
     await loadOptions();
-    await selectTable("role");
+    await loadUsersFriendly();
   }
 
   async function deleteRoleDefinition() {
@@ -3120,7 +2992,7 @@ export default function App() {
     show("Đã xóa vai trò");
     setRoleEditor({ rolename: "sales_staff", description: "", permissionsText: "" });
     await loadOptions();
-    await selectTable("role");
+    await loadUsersFriendly();
   }
 
   async function revokeUserAccess(target = null) {
@@ -3504,7 +3376,7 @@ export default function App() {
       return acc;
     }, {});
 
-    setRows(results);
+    commitRows(results, "query");
     setSearchOpen(false);
     setSearchSummary({ keyword: str(keyword).trim(), total: results.length, groups });
     setPage("query");
@@ -3519,7 +3391,7 @@ export default function App() {
     if (suggestion.type === "page") {
       setGlobalSearch("");
       setSearchSummary(null);
-      setPage(suggestion.page);
+      goToPage(suggestion.page);
       show(`Đã mở ${suggestion.label}`);
       return;
     }
@@ -3528,8 +3400,8 @@ export default function App() {
       setGlobalSearch("");
       setSearchSummary(null);
       setQueryTable(suggestion.table);
-      setPage("query");
-      run(() => selectTable(suggestion.table, 300));
+      goToPage("query");
+      run(() => selectTable(suggestion.table, 300, "query"));
       return;
     }
 
@@ -4038,6 +3910,7 @@ export default function App() {
                 deleteUserAccess={deleteUserAccess}
                 openUserProfile={openUserProfile}
                 selectTable={selectTable}
+                goToPage={goToPage}
                 rows={visibleRows}
               />
             )}
@@ -6043,7 +5916,7 @@ function SystemPage({
         <Card title="Bảng dữ liệu quan trọng">
           <div className="system-table-grid">
             {tableShortcuts.map(([label, table]) => (
-              <button key={table} type="button" onClick={() => run(async () => { await selectTable(table, 500); goToPage("query"); })}>
+              <button key={table} type="button" onClick={() => { goToPage("query"); run(() => selectTable(table, 500, "query")); }}>
                 <Search size={18} />
                 <span><b>{label}</b><small>{table}</small></span>
               </button>
@@ -6136,8 +6009,8 @@ function UsersPage(p) {
           </div>
           <ActionRow>
             <button onClick={() => p.run(p.loadUsersFriendly)}>Tải nhân viên</button>
-            <button onClick={() => p.run(() => p.selectTable("users"))}>Bảng users gốc</button>
-            <button onClick={() => p.run(() => p.selectTable("role"))}>Bảng role gốc</button>
+            <button onClick={() => { p.goToPage("query"); p.run(() => p.selectTable("users", 500, "query")); }}>Bảng users gốc</button>
+            <button onClick={() => { p.goToPage("query"); p.run(() => p.selectTable("role", 500, "query")); }}>Bảng role gốc</button>
           </ActionRow>
         </div>
 
@@ -6337,7 +6210,14 @@ function Query({ run, queryTable, setQueryTable, selectTable, searchSummary, row
         )}
         <div className="sales-form-grid">
           <Field label="Bảng dữ liệu">
-            <select value={queryTable} onChange={(e) => setQueryTable(e.target.value)}>
+            <select
+              value={queryTable}
+              onChange={(e) => {
+                const table = e.target.value;
+                setQueryTable(table);
+                run(() => selectTable(table, 300, "query"));
+              }}
+            >
               {QUERY_TABLES.map((table) => (
                 <option key={table} value={table}>
                   {TABLE_LABELS[table] || table} ({table})
