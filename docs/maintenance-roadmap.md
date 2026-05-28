@@ -12,6 +12,7 @@
 - Chuyển đổi trả sang mô hình tạo phiếu pending, gọi `fn_complete_return_order_app` để hoàn kho/ghi log, fallback local nếu DB chưa cập nhật.
 - Chặn đổi trả vượt số đã bán qua nhiều phiếu, kiểm ở cả app và routine DB.
 - Khi đổi trả có hoàn tiền, routine/fallback cập nhật đơn gốc `paymentstatus = refunded` và ghi payment refund cho `cash`/`bank_transfer`.
+- Thêm `partially_refunded` cho đơn hoàn tiền một phần; UI hiển thị "Hoàn một phần" thay vì raw enum.
 - Chuẩn hóa topbar/sidebar bằng block CSS cuối để sidebar quyết định width main, topbar sticky và action bám phải.
 - Trang tra bảng tự tải dữ liệu khi chọn bảng mới.
 - Tách vendor chunk trong `vite.config.js` để build không còn cảnh báo JS chunk vượt 500 kB.
@@ -27,7 +28,7 @@
 ## Nâng cấp tiếp theo
 
 - Tách `App.jsx` thành các feature pages riêng: `pages/orders`, `pages/stock`, `pages/rbac`, `pages/query`.
-- Bổ sung trạng thái hoàn tiền một phần nếu business cần phân biệt `refunded` và `partial_refund`.
+- Bổ sung báo cáo hoàn tiền theo ngày/kênh để tách doanh thu thuần và tiền hoàn.
 - Sau khi deploy SQL mới, refresh schema cache Supabase để RPC thấy các `fn_*_app`.
 - Tách page/component khỏi `App.jsx` để giảm bundle app chính thêm nữa và dễ review từng module.
 - Thêm test tự động cho POS: chọn sản phẩm gốc, chọn biến thể, thêm giỏ, tạo hóa đơn, kiểm tra tồn kho giảm đúng.

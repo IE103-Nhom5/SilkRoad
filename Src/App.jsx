@@ -49,6 +49,17 @@ function money(n) {
   return Number(n || 0).toLocaleString("vi-VN") + " đ";
 }
 
+function paymentStatusLabel(status) {
+  const normalized = str(status);
+  const labels = {
+    unpaid: "Chưa thanh toán",
+    paid: "Đã thanh toán",
+    partially_refunded: "Hoàn một phần",
+    refunded: "Đã hoàn tiền",
+  };
+  return labels[normalized] || normalized;
+}
+
 function slugify(value) {
   return trim(value)
     .normalize("NFD")
@@ -434,7 +445,7 @@ function orderViewRows(orders, branches) {
         "Ngày": str(order.orderdate || order.order_date || order.createdat || order.created_at).slice(0, 19).replace("T", " "),
         "Chi nhánh": branch ? branchLabel(branch) : "Chưa xác định",
         "Trạng thái đơn": first(order, ["orderstatus", "order_status", "status"], ""),
-        "Thanh toán": first(order, ["paymentstatus", "payment_status"], ""),
+        "Thanh toán": paymentStatusLabel(first(order, ["paymentstatus", "payment_status"], "")),
         "Tổng tiền": money(total),
         "Ghi chú": order.note || "",
       };
@@ -1600,7 +1611,7 @@ export default function App() {
           branch: branch ? branchLabel(branch) : "Chưa xác định",
           customer: customer ? first(customer, ["fullname", "full_name"], "") : first(order, ["shippingname", "shipping_name"], "Khách lẻ"),
           status: first(order, ["orderstatus", "order_status"], ""),
-          payment: first(order, ["paymentstatus", "payment_status"], ""),
+          payment: paymentStatusLabel(first(order, ["paymentstatus", "payment_status"], "")),
           total,
           totalText: money(total),
         };
@@ -2640,14 +2651,54 @@ export default function App() {
     return (details.data || []).reduce((sum, item) => sum + Number(first(item, ["returnquantity", "return_quantity"], 0)), 0);
   }
 
+  async function getCompletedRefundAmount(orderid, excludeReturnId = "") {
+    const returns = await supabase
+      .from("return_order")
+      .select("returnid,status,actiontype,refundamount")
+      .eq("orderid", orderid);
+    if (returns.error) throw returns.error;
+    return (returns.data || [])
+      .filter((item) => !sameId(item.returnid, excludeReturnId))
+      .filter((item) => first(item, ["status"], "") === "completed")
+      .filter((item) => first(item, ["actiontype", "action_type"], "") === "refund")
+      .reduce((sum, item) => sum + Number(first(item, ["refundamount", "refund_amount"], 0)), 0);
+  }
+
+  function finalAmountOfOrder(order) {
+    const generated = first(order, ["finalamount", "final_amount"], null);
+    if (generated !== null && generated !== undefined && generated !== "") return Number(generated || 0);
+    return Number(first(order, ["totalamount", "total_amount"], 0)) - Number(first(order, ["discountamount", "discount_amount"], 0)) + Number(first(order, ["shippingfee", "shipping_fee"], 0));
+  }
+
+  async function updateOrderRefundStatus(orderid, status) {
+    const update = await supabase.from("orders").update({ paymentstatus: status }).eq("orderid", orderid);
+    if (!update.error) return;
+    const message = String(update.error.message || "").toLowerCase();
+    if (status === "partially_refunded" && message.includes("invalid input value for enum")) {
+      const fallback = await supabase.from("orders").update({ paymentstatus: "refunded" }).eq("orderid", orderid);
+      if (fallback.error) throw fallback.error;
+      return;
+    }
+    throw update.error;
+  }
+
   async function syncRefundLocally(returnOrder) {
     const actionType = first(returnOrder, ["actiontype", "action_type"], "");
     const refundAmount = Number(first(returnOrder, ["refundamount", "refund_amount"], 0));
     if (actionType !== "refund" || refundAmount <= 0) return;
 
     const orderid = first(returnOrder, ["orderid", "order_id"], "");
-    const paymentUpdate = await supabase.from("orders").update({ paymentstatus: "refunded" }).eq("orderid", orderid);
-    if (paymentUpdate.error) throw paymentUpdate.error;
+    const order = await supabase.from("orders").select("*").eq("orderid", orderid).maybeSingle();
+    if (order.error) throw order.error;
+    if (!order.data) throw new Error("Không tìm thấy đơn gốc để đồng bộ hoàn tiền");
+    const finalAmount = finalAmountOfOrder(order.data);
+    const existingRefundAmount = await getCompletedRefundAmount(orderid, returnOrder.returnid);
+    const totalRefundAmount = existingRefundAmount + refundAmount;
+    if (totalRefundAmount > finalAmount) {
+      throw new Error(`Tiền hoàn vượt tổng tiền đơn. Đã hoàn ${money(existingRefundAmount)}, đang hoàn ${money(refundAmount)}, đơn ${money(finalAmount)}.`);
+    }
+
+    await updateOrderRefundStatus(orderid, totalRefundAmount >= finalAmount ? "refunded" : "partially_refunded");
 
     const refundMethod = first(returnOrder, ["refundmethod", "refund_method"], "cash");
     if (!["cash", "bank_transfer"].includes(refundMethod)) return;
@@ -2767,6 +2818,17 @@ export default function App() {
     const refundamount = Number(returnForm.refundamount || 0);
     if (!Number.isFinite(quantity) || quantity <= 0) return show("Số lượng đổi trả phải lớn hơn 0");
     if (!Number.isFinite(refundamount) || refundamount < 0) return show("Tiền hoàn không hợp lệ");
+
+    const order = await supabase.from("orders").select("*").eq("orderid", returnForm.orderid.trim()).maybeSingle();
+    if (order.error) throw order.error;
+    if (!order.data) return show("Không tìm thấy đơn gốc");
+    if (returnForm.actiontype === "refund" && refundamount > 0) {
+      const finalAmount = finalAmountOfOrder(order.data);
+      const existingRefundAmount = await getCompletedRefundAmount(returnForm.orderid.trim());
+      if (existingRefundAmount + refundamount > finalAmount) {
+        return show(`Tiền hoàn vượt tổng tiền đơn. Đã hoàn ${money(existingRefundAmount)}, đang hoàn ${money(refundamount)}, đơn ${money(finalAmount)}.`);
+      }
+    }
 
     const detail = await supabase
       .from("order_detail")
