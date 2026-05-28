@@ -2625,6 +2625,52 @@ export default function App() {
     commitRows(allocationViewRows(data || [], loadedOptions), "channels");
   }
 
+  async function getAlreadyReturnedQuantity(orderid, variantid, excludeReturnId = "") {
+    const returns = await supabase.from("return_order").select("returnid,status").eq("orderid", orderid);
+    if (returns.error) throw returns.error;
+    const returnIds = (returns.data || [])
+      .filter((item) => !sameId(item.returnid, excludeReturnId))
+      .filter((item) => first(item, ["status"], "") !== "cancelled")
+      .map((item) => item.returnid)
+      .filter(Boolean);
+    if (!returnIds.length) return 0;
+
+    const details = await supabase.from("return_detail").select("returnid,returnquantity").eq("variantid", variantid).in("returnid", returnIds);
+    if (details.error) throw details.error;
+    return (details.data || []).reduce((sum, item) => sum + Number(first(item, ["returnquantity", "return_quantity"], 0)), 0);
+  }
+
+  async function syncRefundLocally(returnOrder) {
+    const actionType = first(returnOrder, ["actiontype", "action_type"], "");
+    const refundAmount = Number(first(returnOrder, ["refundamount", "refund_amount"], 0));
+    if (actionType !== "refund" || refundAmount <= 0) return;
+
+    const orderid = first(returnOrder, ["orderid", "order_id"], "");
+    const paymentUpdate = await supabase.from("orders").update({ paymentstatus: "refunded" }).eq("orderid", orderid);
+    if (paymentUpdate.error) throw paymentUpdate.error;
+
+    const refundMethod = first(returnOrder, ["refundmethod", "refund_method"], "cash");
+    if (!["cash", "bank_transfer"].includes(refundMethod)) return;
+
+    const existing = await supabase.from("payment").select("paymentid").eq("transactionid", `RETURN-${returnOrder.returnid}`).maybeSingle();
+    if (existing.error) throw existing.error;
+    if (existing.data) return;
+
+    const payment = await supabase.from("payment").insert([
+      {
+        paymentid: uuid(),
+        orderid,
+        method: refundMethod,
+        amount: refundAmount,
+        status: "refunded",
+        transactionid: `RETURN-${returnOrder.returnid}`,
+        gatewayref: { return_id: returnOrder.returnid, source: "return_order" },
+        paidat: new Date().toISOString(),
+      },
+    ]);
+    if (payment.error) throw payment.error;
+  }
+
   async function completeReturnOrderLocally(returnid) {
     const returnOrder = await supabase.from("return_order").select("*").eq("returnid", returnid).maybeSingle();
     if (returnOrder.error) throw returnOrder.error;
@@ -2638,6 +2684,16 @@ export default function App() {
       const variantid = variantIdOf(detail);
       const quantity = Number(first(detail, ["returnquantity", "return_quantity"], 0));
       const condition = first(detail, ["condition"], "good");
+      const orderid = first(returnOrder.data, ["orderid", "order_id"], "");
+
+      const orderDetail = await supabase.from("order_detail").select("*").eq("orderid", orderid).eq("variantid", variantid).maybeSingle();
+      if (orderDetail.error) throw orderDetail.error;
+      if (!orderDetail.data) throw new Error("Không tìm thấy sản phẩm này trong đơn gốc");
+      const soldQuantity = Number(first(orderDetail.data, ["quantity"], 0));
+      const alreadyReturned = await getAlreadyReturnedQuantity(orderid, variantid, returnid);
+      if (alreadyReturned + quantity > soldQuantity) {
+        throw new Error(`Số lượng trả vượt số đã bán. Đã trả ${alreadyReturned}, đang trả ${quantity}, đã bán ${soldQuantity}.`);
+      }
 
       if (condition === "damaged") {
         const history = await supabase.from("stock_history").insert([
@@ -2690,6 +2746,7 @@ export default function App() {
 
     const update = await supabase.from("return_order").update({ status: "completed" }).eq("returnid", returnid);
     if (update.error) throw update.error;
+    await syncRefundLocally(returnOrder.data);
   }
 
   async function completeReturnOrderById(returnid) {
@@ -2719,7 +2776,11 @@ export default function App() {
       .maybeSingle();
     if (detail.error) throw detail.error;
     if (!detail.data) return show("Không tìm thấy sản phẩm này trong đơn gốc");
-    if (quantity > Number(detail.data.quantity || 0)) return show("Số lượng trả vượt số lượng đã bán");
+    const soldQuantity = Number(detail.data.quantity || 0);
+    const alreadyReturned = await getAlreadyReturnedQuantity(returnForm.orderid.trim(), returnForm.variantid);
+    if (alreadyReturned + quantity > soldQuantity) {
+      return show(`Số lượng trả vượt số đã bán. Đã trả ${alreadyReturned}, đang trả ${quantity}, đã bán ${soldQuantity}.`);
+    }
 
     const returnid = uuid();
     const now = new Date().toISOString();
