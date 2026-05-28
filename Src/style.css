@@ -8049,3 +8049,183 @@ body.dark .dashboard-grid .metric.danger {
   border-color: rgba(224, 132, 101, 0.42) !important;
   color: #ffc7b5 !important;
 }
+
+/* =========================================================
+   FINAL OVERRIDE 11: table features + monochrome icons
+========================================================= */
+:root {
+  --sr-icon-color: #06483c;
+}
+
+body.dark {
+  --sr-icon-color: #f6e7b0;
+}
+
+.app-shell svg,
+.modal svg,
+.toast svg {
+  color: var(--sr-icon-color) !important;
+  stroke: currentColor !important;
+}
+
+.data-table-shell {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.data-table-toolbar,
+.data-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.data-table-search {
+  min-width: min(420px, 100%);
+  flex: 1 1 340px;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border: 1px solid rgba(194, 161, 92, 0.44);
+  border-radius: 16px;
+  background: rgba(255, 253, 247, 0.86);
+}
+
+.data-table-search input {
+  min-width: 0;
+  flex: 1;
+  height: 42px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #073d31;
+  font-size: 14px;
+}
+
+.data-table-search button {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  margin: 0;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.data-table-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #745c2a;
+  font-weight: 800;
+}
+
+.data-table-meta select {
+  min-width: 120px;
+  min-height: 42px;
+  margin: 0;
+}
+
+.table-wrap th {
+  padding: 0 !important;
+}
+
+.table-wrap th > button {
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: transparent !important;
+  color: inherit !important;
+  font: inherit;
+  text-align: left;
+}
+
+.table-wrap th > button small {
+  color: inherit;
+  opacity: 0.72;
+  font-size: 13px;
+}
+
+.table-wrap th > button.active small {
+  opacity: 1;
+}
+
+.table-empty {
+  padding: 16px;
+}
+
+.data-table-footer span {
+  color: #745c2a;
+  font-weight: 800;
+}
+
+.data-table-footer > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.data-table-footer button {
+  min-height: 38px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+
+.data-table-footer button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+body.dark .data-table-search {
+  background: rgba(3, 22, 19, 0.92);
+  border-color: rgba(214, 181, 109, 0.38);
+  color: #fff1ba;
+}
+
+body.dark .data-table-search input {
+  color: #fff1ba;
+}
+
+body.dark .data-table-search input::placeholder {
+  color: rgba(216, 196, 145, 0.72);
+}
+
+body.dark .data-table-meta,
+body.dark .data-table-footer span {
+  color: #d8c491;
+}
+
+@media (max-width: 720px) {
+  .data-table-search {
+    min-width: 100%;
+    flex-basis: 100%;
+  }
+
+  .data-table-meta,
+  .data-table-footer,
+  .data-table-footer > div {
+    width: 100%;
+  }
+
+  .data-table-footer button {
+    flex: 1;
+  }
+}

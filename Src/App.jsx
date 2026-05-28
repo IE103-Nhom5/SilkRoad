@@ -4075,6 +4075,12 @@ function Grid({ children }) {
 
 // Generic data table: hides technical id columns and supports optional row click.
 function DataTable({ rows, onRowClick }) {
+  const [tableQuery, setTableQuery] = useState("");
+  const [sortKey, setSortKey] = useState("");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [pageSize, setPageSize] = useState(25);
+  const [pageIndex, setPageIndex] = useState(0);
+
   if (!rows?.length) return <p className="muted">Chưa có dữ liệu</p>;
 
   const isIdColumn = (key) => {
@@ -4088,8 +4094,36 @@ function DataTable({ rows, onRowClick }) {
     return str(value);
   };
 
-  const allKeys = Object.keys(rows[0]);
+  const allKeys = [...new Set(rows.flatMap((row) => Object.keys(row || {})))];
   const keys = allKeys.filter((key) => !isIdColumn(key));
+  const visibleSourceRows = rows.filter((row) => {
+    if (!tableQuery.trim()) return true;
+    return matchesSearchValues(keys.map((key) => formatValue(row[key])), tableQuery);
+  });
+  const sortedRows = sortKey
+    ? [...visibleSourceRows].sort((a, b) => {
+        const left = formatValue(a[sortKey]);
+        const right = formatValue(b[sortKey]);
+        const leftNumber = Number(String(left).replace(/[^\d.-]/g, ""));
+        const rightNumber = Number(String(right).replace(/[^\d.-]/g, ""));
+        const bothNumeric = left !== "" && right !== "" && Number.isFinite(leftNumber) && Number.isFinite(rightNumber);
+        const result = bothNumeric ? leftNumber - rightNumber : left.localeCompare(right, "vi", { numeric: true, sensitivity: "base" });
+        return sortDirection === "asc" ? result : -result;
+      })
+    : visibleSourceRows;
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const safePageIndex = Math.min(pageIndex, totalPages - 1);
+  const pageRows = sortedRows.slice(safePageIndex * pageSize, safePageIndex * pageSize + pageSize);
+
+  function toggleSort(key) {
+    if (sortKey === key) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDirection("asc");
+    setPageIndex(0);
+  }
 
   if (!keys.length) {
     return (
@@ -4100,31 +4134,83 @@ function DataTable({ rows, onRowClick }) {
   }
 
   return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            {keys.map((key) => (
-              <th key={key}>{key}</th>
-            ))}
-          </tr>
-        </thead>
+    <div className="data-table-shell">
+      <div className="data-table-toolbar">
+        <div className="data-table-search">
+          <Search size={16} />
+          <input
+            value={tableQuery}
+            placeholder="Lọc trong bảng..."
+            onChange={(event) => {
+              setTableQuery(event.target.value);
+              setPageIndex(0);
+            }}
+          />
+          {tableQuery && (
+            <button type="button" onClick={() => { setTableQuery(""); setPageIndex(0); }} aria-label="Xóa lọc bảng">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <div className="data-table-meta">
+          <span>{sortedRows.length.toLocaleString("vi-VN")} / {rows.length.toLocaleString("vi-VN")} dòng</span>
+          <select
+            value={pageSize}
+            onChange={(event) => {
+              setPageSize(Number(event.target.value));
+              setPageIndex(0);
+            }}
+          >
+            <option value={10}>10 dòng</option>
+            <option value={25}>25 dòng</option>
+            <option value={50}>50 dòng</option>
+            <option value={100}>100 dòng</option>
+          </select>
+        </div>
+      </div>
 
-        <tbody>
-          {rows.map((row, rowIndex) => (
-            <tr
-              key={rowIndex}
-              className={onRowClick ? "clickable-row" : ""}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              title={onRowClick ? "Bấm để xem chi tiết" : undefined}
-            >
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
               {keys.map((key) => (
-                <td key={key}>{formatValue(row[key])}</td>
+                <th key={key}>
+                  <button type="button" className={sortKey === key ? "active" : ""} onClick={() => toggleSort(key)}>
+                    <span>{key}</span>
+                    <small>{sortKey === key ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}</small>
+                  </button>
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {pageRows.map((row, rowIndex) => (
+              <tr
+                key={`${safePageIndex}-${rowIndex}`}
+                className={onRowClick ? "clickable-row" : ""}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                title={onRowClick ? "Bấm để xem chi tiết" : undefined}
+              >
+                {keys.map((key) => (
+                  <td key={key}>{formatValue(row[key])}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!pageRows.length && <p className="muted table-empty">Không có dòng phù hợp bộ lọc.</p>}
+      </div>
+
+      <div className="data-table-footer">
+        <span>Trang {safePageIndex + 1} / {totalPages}</span>
+        <div>
+          <button type="button" disabled={safePageIndex <= 0} onClick={() => setPageIndex(0)}>Đầu</button>
+          <button type="button" disabled={safePageIndex <= 0} onClick={() => setPageIndex(safePageIndex - 1)}>Trước</button>
+          <button type="button" disabled={safePageIndex >= totalPages - 1} onClick={() => setPageIndex(safePageIndex + 1)}>Sau</button>
+          <button type="button" disabled={safePageIndex >= totalPages - 1} onClick={() => setPageIndex(totalPages - 1)}>Cuối</button>
+        </div>
+      </div>
     </div>
   );
 }
