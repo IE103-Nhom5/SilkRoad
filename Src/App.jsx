@@ -1982,7 +1982,7 @@ export default function App() {
   async function loadStockFriendly() {
     if (!guard("stock")) return;
     const loadedOptions = await loadOptions();
-    const { data, error } = await supabase.from("stock").select("*").order("lastupdated", { ascending: false });
+    const { data, error } = await readRows(supabase, "stock", { order: { column: "lastupdated", ascending: false } });
     if (error) throw error;
     const filteredStock = (data || []).filter((stockItem) => {
       const variant = loadedOptions.variants.find((item) => sameId(variantIdOf(item), variantIdOf(stockItem)));
@@ -1999,7 +1999,7 @@ export default function App() {
   async function loadLowStock() {
     if (!guard("stock")) return;
     const loadedOptions = await loadOptions();
-    const { data, error } = await supabase.from("stock").select("*").order("quantity", { ascending: true });
+    const { data, error } = await readRows(supabase, "stock", { order: { column: "quantity", ascending: true } });
     if (error) throw error;
     commitRows(stockViewRows(data || [], loadedOptions, true), "stock");
     show("Đã lọc cảnh báo sắp hết hàng");
@@ -2008,7 +2008,7 @@ export default function App() {
   async function loadStockHistoryFriendly() {
     if (!guard("stock")) return;
     const loadedOptions = await loadOptions();
-    const { data, error } = await supabase.from("stock_history").select("*").limit(300);
+    const { data, error } = await readRows(supabase, "stock_history", { limit: 300 });
     if (error) throw error;
     commitRows(stockHistoryViewRows(data || [], loadedOptions), "stock");
   }
@@ -2612,7 +2612,7 @@ export default function App() {
   async function loadChannelPricesFriendly() {
     if (!guard("channels")) return;
     const loadedOptions = await loadOptions();
-    const { data, error } = await supabase.from("channel_price").select("*").limit(1000);
+    const { data, error } = await readRows(supabase, "channel_price", { limit: 1000 });
     if (error) throw error;
     commitRows(channelPriceViewRows(data || [], loadedOptions), "channels");
   }
@@ -2620,9 +2620,86 @@ export default function App() {
   async function loadAllocationsFriendly() {
     if (!guard("channels")) return;
     const loadedOptions = await loadOptions();
-    const { data, error } = await supabase.from("inventory_allocation").select("*").limit(1000);
+    const { data, error } = await readRows(supabase, "inventory_allocation", { limit: 1000 });
     if (error) throw error;
     commitRows(allocationViewRows(data || [], loadedOptions), "channels");
+  }
+
+  async function completeReturnOrderLocally(returnid) {
+    const returnOrder = await supabase.from("return_order").select("*").eq("returnid", returnid).maybeSingle();
+    if (returnOrder.error) throw returnOrder.error;
+    if (!returnOrder.data) throw new Error("Không tìm thấy phiếu đổi trả");
+
+    const details = await supabase.from("return_detail").select("*").eq("returnid", returnid);
+    if (details.error) throw details.error;
+
+    const now = new Date().toISOString();
+    for (const detail of details.data || []) {
+      const variantid = variantIdOf(detail);
+      const quantity = Number(first(detail, ["returnquantity", "return_quantity"], 0));
+      const condition = first(detail, ["condition"], "good");
+
+      if (condition === "damaged") {
+        const history = await supabase.from("stock_history").insert([
+          {
+            historyid: uuid(),
+            branchid: returnOrder.data.branchid,
+            variantid,
+            transactiontype: "damage_write_off",
+            referencetype: "RETURN_ORDER",
+            referenceid: returnid,
+            quantitychange: 0,
+            quantitybefore: 0,
+            quantityafter: 0,
+            performedby: returnOrder.data.createdby || profile?.userid || null,
+            timestamp: now,
+            note: returnOrder.data.reason || "Hàng trả bị hỏng, không hoàn kho",
+          },
+        ]);
+        if (history.error) throw history.error;
+        continue;
+      }
+
+      const stock = await supabase.from("stock").select("*").eq("branchid", returnOrder.data.branchid).eq("variantid", variantid).maybeSingle();
+      if (stock.error) throw stock.error;
+      const before = Number(stock.data?.quantity || 0);
+      const after = before + quantity;
+      const stockResult = stock.data
+        ? await supabase.from("stock").update({ quantity: after, lastupdated: now }).eq("branchid", returnOrder.data.branchid).eq("variantid", variantid)
+        : await supabase.from("stock").insert([{ branchid: returnOrder.data.branchid, variantid, quantity: after, reservedquantity: 0, minstocklevel: 0, lastupdated: now }]);
+      if (stockResult.error) throw stockResult.error;
+
+      const history = await supabase.from("stock_history").insert([
+        {
+          historyid: uuid(),
+          branchid: returnOrder.data.branchid,
+          variantid,
+          transactiontype: "return",
+          referencetype: "RETURN_ORDER",
+          referenceid: returnid,
+          quantitychange: quantity,
+          quantitybefore: before,
+          quantityafter: after,
+          performedby: returnOrder.data.createdby || profile?.userid || null,
+          timestamp: now,
+          note: returnOrder.data.reason || "Hoàn kho từ đơn đổi trả",
+        },
+      ]);
+      if (history.error) throw history.error;
+    }
+
+    const update = await supabase.from("return_order").update({ status: "completed" }).eq("returnid", returnid);
+    if (update.error) throw update.error;
+  }
+
+  async function completeReturnOrderById(returnid) {
+    const rpc = await callProcedureCandidates(supabase, [
+      { name: "fn_complete_return_order_app", params: { p_return_id: returnid } },
+      { name: "sp_complete_return_order", params: { p_return_id: returnid } },
+    ]);
+    if (!rpc.error) return;
+    if (!isProcedureUnavailable(rpc.error)) throw rpc.error;
+    await completeReturnOrderLocally(returnid);
   }
 
   // Returns flow: creates return headers/details and optionally returns stock.
@@ -2657,7 +2734,7 @@ export default function App() {
         actiontype: returnForm.actiontype,
         refundmethod: returnForm.actiontype === "refund" ? returnForm.refundmethod : null,
         refundamount,
-        status: "completed",
+        status: "pending",
         note: returnForm.note || null,
       },
     ]);
@@ -2674,34 +2751,7 @@ export default function App() {
     ]);
     if (detailError) throw detailError;
 
-    if (returnForm.condition !== "damaged") {
-      const stock = await supabase.from("stock").select("*").eq("branchid", returnForm.branchid).eq("variantid", returnForm.variantid).maybeSingle();
-      if (stock.error) throw stock.error;
-      const before = Number(stock.data?.quantity || 0);
-      const after = before + quantity;
-      const stockResult = stock.data
-        ? await supabase.from("stock").update({ quantity: after, lastupdated: now }).eq("branchid", returnForm.branchid).eq("variantid", returnForm.variantid)
-        : await supabase.from("stock").insert([{ branchid: returnForm.branchid, variantid: returnForm.variantid, quantity: after, reservedquantity: 0, minstocklevel: 0, lastupdated: now }]);
-      if (stockResult.error) throw stockResult.error;
-
-      const { error: historyError } = await supabase.from("stock_history").insert([
-        {
-          historyid: uuid(),
-          branchid: returnForm.branchid,
-          variantid: returnForm.variantid,
-          transactiontype: "return",
-          referencetype: "RETURN_ORDER",
-          referenceid: returnid,
-          quantitychange: quantity,
-          quantitybefore: before,
-          quantityafter: after,
-          performedby: profile?.userid || null,
-          timestamp: now,
-          note: returnForm.reason || "Hoàn kho từ đơn đổi trả",
-        },
-      ]);
-      if (historyError) throw historyError;
-    }
+    await completeReturnOrderById(returnid);
 
     show("Đã tạo phiếu đổi trả");
     setReturnForm({ orderid: "", branchid: "", productid: "", variantid: "", returnquantity: 1, condition: "good", actiontype: "refund", refundmethod: "cash", refundamount: 0, reason: "", note: "" });
@@ -2710,7 +2760,7 @@ export default function App() {
 
   async function loadReturnsFriendly() {
     if (!guard("returns")) return;
-    const { data, error } = await supabase.from("return_order").select("*").order("returndate", { ascending: false }).limit(300);
+    const { data, error } = await readRows(supabase, "return_order", { limit: 300, order: { column: "returndate", ascending: false } });
     if (error) throw error;
     commitRows(
       (data || []).map((item) => ({
