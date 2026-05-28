@@ -3001,6 +3001,18 @@ export default function App() {
     return first(item, ["fullname", "full_name", "FullName", "Họ tên", "Nhân viên"], first(item, ["username", "Username"], "Nhân viên"));
   }
 
+  function userStatusOf(item) {
+    return first(item, ["status", "Status", "Trạng thái"], "active");
+  }
+
+  function userRoleNameOf(item) {
+    return first(item?.role, ["rolename", "role_name"], first(item, ["rolename", "role_name", "Vai trò"], ""));
+  }
+
+  function userBranchLabelOf(item) {
+    return first(item, ["Chi nhánh"], "");
+  }
+
   function currentRoleEditorRole() {
     return options.roles.find((role) => roleLabel(role) === roleEditor.rolename) || null;
   }
@@ -3163,12 +3175,26 @@ export default function App() {
 
     let userQuery = supabase.from("users").select("*, role(*)");
     userQuery = userid ? userQuery.eq("userid", userid) : userQuery.eq("email", email);
-    const userResult = await userQuery.maybeSingle();
+    let userResult = await userQuery.maybeSingle();
+    if (userResult.error) {
+      let fallbackQuery = supabase.from("users").select("*");
+      fallbackQuery = userid ? fallbackQuery.eq("userid", userid) : fallbackQuery.eq("email", email);
+      userResult = await fallbackQuery.maybeSingle();
+    }
     if (userResult.error) throw userResult.error;
     const user = userResult.data || target;
     const realUserId = userIdOf(user);
-    const role = user.role || options.roles.find((item) => sameId(roleIdOf(item), roleIdOf(user)));
-    const branch = options.branches.find((item) => sameId(branchIdOf(item), branchIdOf(user)));
+    const roleNameText = userRoleNameOf(user) || userRoleNameOf(target);
+    const role =
+      user.role ||
+      options.roles.find((item) => sameId(roleIdOf(item), roleIdOf(user))) ||
+      options.roles.find((item) => roleLabel(item) === roleNameText) ||
+      null;
+    const targetBranchLabel = userBranchLabelOf(user) || userBranchLabelOf(target);
+    const branch =
+      options.branches.find((item) => sameId(branchIdOf(item), branchIdOf(user))) ||
+      options.branches.find((item) => branchLabel(item) === targetBranchLabel) ||
+      null;
 
     async function readUserRows(table, column, label, timeColumn = "createdat", limit = 20) {
       if (!realUserId) return [];
@@ -3202,7 +3228,7 @@ export default function App() {
     }, {});
     const permissionList = permissionsOf(role);
     const lastActivity = activityRows[0]?.["Thời gian"] || "Chưa có log";
-    const status = first(user, ["status"], "active");
+    const status = userStatusOf(user);
 
     setModal({
       title: `Hồ sơ nhân viên - ${userNameOf(user)}`,
@@ -5860,6 +5886,10 @@ function Channels(p) {
 
 // Page: RBAC users, role permissions, access lock/delete and profile logs.
 function UsersPage(p) {
+  const [staffQuery, setStaffQuery] = useState("");
+  const [staffStatus, setStaffStatus] = useState("");
+  const [staffRole, setStaffRole] = useState("");
+  const [autoLoadedUsers, setAutoLoadedUsers] = useState(false);
   const roleOptions = p.options.roles?.length ? p.options.roles : [
     { rolename: "sales_staff", permissions: ROLE_FEATURES.sales_staff },
     { rolename: "warehouse_staff", permissions: ROLE_FEATURES.warehouse_staff },
@@ -5868,6 +5898,30 @@ function UsersPage(p) {
   ];
   const selectedRole = roleOptions.find((role) => roleLabel(role) === p.roleEditor.rolename) || roleOptions[0];
   const knownPermissions = [...new Set(roleOptions.flatMap((role) => permissionsOf(role)))].sort();
+  const employeeRows = (p.rows || []).filter((row) => userEmailOf(row) || userIdOf(row) || first(row, ["Nhân viên"], ""));
+  const filteredEmployeeRows = employeeRows.filter((row) => {
+    const status = normalizeSearchText(userStatusOf(row));
+    const role = userRoleNameOf(row);
+    const matchesText = matchesSearchValues([userNameOf(row), first(row, ["Username"], ""), userEmailOf(row), role, userBranchLabelOf(row), status], staffQuery);
+    const matchesStatus = !staffStatus || status === normalizeSearchText(staffStatus);
+    const matchesRole = !staffRole || role === staffRole;
+    return matchesText && matchesStatus && matchesRole;
+  });
+  const activeCount = employeeRows.filter((row) => normalizeSearchText(userStatusOf(row)) === "active").length;
+  const lockedCount = employeeRows.filter((row) => ["locked", "inactive"].includes(normalizeSearchText(userStatusOf(row)))).length;
+  const branchCount = new Set(employeeRows.map((row) => branchIdOf(row) || userBranchLabelOf(row)).filter(Boolean)).size;
+  const roleCoverage = roleOptions.map((role) => {
+    const name = roleLabel(role);
+    const count = employeeRows.filter((row) => userRoleNameOf(row) === name).length;
+    return { role, name, count, permissions: permissionsOf(role) };
+  });
+
+  useEffect(() => {
+    if (!autoLoadedUsers && !employeeRows.length) {
+      setAutoLoadedUsers(true);
+      p.run(p.loadUsersFriendly);
+    }
+  }, [autoLoadedUsers, employeeRows.length]);
 
   function chooseRoleForEditor(roleName) {
     const role = roleOptions.find((item) => roleLabel(item) === roleName);
@@ -5887,6 +5941,64 @@ function UsersPage(p) {
 
   return (
     <>
+      <Card title="Bảng điều khiển nhân viên">
+        <div className="staff-hero">
+          <div>
+            <span>Workforce Control</span>
+            <h3>Quản lý nhân viên, vai trò, quyền và lịch sử thao tác</h3>
+            <p>Tải danh sách nhân viên, lọc nhanh theo trạng thái/vai trò, bấm vào từng dòng để mở hồ sơ, timeline và thao tác khóa/mở quyền.</p>
+          </div>
+          <ActionRow>
+            <button onClick={() => p.run(p.loadUsersFriendly)}>Tải nhân viên</button>
+            <button onClick={() => p.run(() => p.selectTable("users"))}>Bảng users gốc</button>
+            <button onClick={() => p.run(() => p.selectTable("role"))}>Bảng role gốc</button>
+          </ActionRow>
+        </div>
+
+        <div className="staff-kpi-grid">
+          <div><span>Tổng nhân viên</span><b>{employeeRows.length}</b></div>
+          <div><span>Đang hoạt động</span><b>{activeCount}</b></div>
+          <div><span>Khóa/ngưng</span><b>{lockedCount}</b></div>
+          <div><span>Vai trò</span><b>{roleOptions.length}</b></div>
+          <div><span>Chi nhánh có nhân sự</span><b>{branchCount}</b></div>
+        </div>
+
+        <div className="staff-filter-bar">
+          <div className="staff-search">
+            <Search size={16} />
+            <input value={staffQuery} placeholder="Tìm tên, email, username, chi nhánh..." onChange={(e) => setStaffQuery(e.target.value)} />
+            {staffQuery && <button type="button" onClick={() => setStaffQuery("")}><X size={14} /></button>}
+          </div>
+          <select value={staffRole} onChange={(e) => setStaffRole(e.target.value)}>
+            <option value="">Tất cả vai trò</option>
+            {roleOptions.map((role) => (
+              <option key={roleLabel(role)} value={roleLabel(role)}>{roleLabel(role)}</option>
+            ))}
+          </select>
+          <select value={staffStatus} onChange={(e) => setStaffStatus(e.target.value)}>
+            <option value="">Tất cả trạng thái</option>
+            <option value="active">Đang hoạt động</option>
+            <option value="inactive">Ngưng hoạt động</option>
+            <option value="locked">Khóa quyền</option>
+          </select>
+        </div>
+      </Card>
+
+      <Card title="Vai trò và độ phủ quyền">
+        <div className="role-card-grid">
+          {roleCoverage.map(({ role, name, count, permissions }) => (
+            <button key={name} type="button" onClick={() => chooseRoleForEditor(name)}>
+              <span>
+                <b>{name}</b>
+                <small>{first(role, ["description"], "Chưa có mô tả")}</small>
+              </span>
+              <em>{count} NV</em>
+              <strong>{permissions.length} quyền</strong>
+            </button>
+          ))}
+        </div>
+      </Card>
+
       <Card title="RBAC - tạo/cập nhật nhân viên">
         <div className="sales-form-grid">
           <Field label="Họ tên">
@@ -5931,7 +6043,6 @@ function UsersPage(p) {
           <button onClick={() => p.run(() => p.restoreUserAccess())}>Kích hoạt lại theo email</button>
           <button className="danger" onClick={() => p.run(() => p.deleteUserAccess())}>Xóa/khóa nhân viên</button>
           <button onClick={() => p.run(p.loadUsersFriendly)}>Tải hồ sơ nhân viên</button>
-          <button onClick={() => p.run(() => p.selectTable("role"))}>Xem role gốc</button>
         </ActionRow>
       </Card>
 
@@ -5977,8 +6088,18 @@ function UsersPage(p) {
       </Card>
 
       <Card title="Danh sách nhân viên">
-        <p className="muted">Bấm vào một dòng để mở hồ sơ, quyền và log hoạt động gần đây.</p>
-        <DataTable rows={p.rows} onRowClick={(row) => p.run(() => p.openUserProfile(row))} />
+        <p className="muted">
+          Bấm vào một dòng nhân viên để mở hồ sơ, quyền và log hoạt động gần đây. Nếu bảng đang hiển thị dữ liệu gốc khác, hãy bấm "Tải nhân viên".
+        </p>
+        <DataTable rows={filteredEmployeeRows} onRowClick={(row) => p.run(() => p.openUserProfile(row))} />
+        {!filteredEmployeeRows.length && (
+          <div className="staff-empty-state">
+            <Users size={28} />
+            <b>Chưa có dòng nhân viên phù hợp</b>
+            <span>Danh sách hiện tại có thể đang là bảng role/users gốc hoặc bộ lọc đang quá hẹp.</span>
+            <button onClick={() => p.run(p.loadUsersFriendly)}>Tải lại danh sách nhân viên</button>
+          </div>
+        )}
       </Card>
     </>
   );

@@ -8405,6 +8405,184 @@ body.dark .data-table-footer span {
   gap: 22px;
 }
 
+.staff-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+}
+
+.staff-hero > div:first-child {
+  display: grid;
+  gap: 7px;
+}
+
+.staff-hero span {
+  color: #8a6a28;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.staff-hero h3 {
+  margin: 0;
+  font-size: clamp(22px, 2vw, 32px);
+  line-height: 1.12;
+}
+
+.staff-hero p {
+  max-width: 820px;
+  color: #665a3e;
+  line-height: 1.55;
+}
+
+.staff-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 0;
+}
+
+.staff-kpi-grid div {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgba(194, 161, 92, 0.36);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 247, 0.92), rgba(246, 237, 216, 0.76));
+}
+
+.staff-kpi-grid span {
+  color: #745c2a;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.staff-kpi-grid b {
+  color: #003d33;
+  font-size: clamp(26px, 2.1vw, 38px);
+  line-height: 1;
+}
+
+.staff-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 260px) minmax(170px, 230px);
+  gap: 12px;
+  margin-top: 16px;
+  align-items: center;
+}
+
+.staff-search {
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border: 1px solid rgba(194, 161, 92, 0.42);
+  border-radius: 16px;
+  background: rgba(255, 253, 247, 0.86);
+}
+
+.staff-search input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #073d31;
+}
+
+.staff-search button {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  margin: 0;
+  padding: 0;
+  border-radius: 999px;
+  justify-content: center;
+}
+
+.staff-filter-bar select {
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+}
+
+.role-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.role-card-grid button {
+  min-height: 128px;
+  margin: 0;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 1fr auto;
+  align-items: start;
+  gap: 10px;
+  text-align: left;
+}
+
+.role-card-grid button span {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.role-card-grid b,
+.role-card-grid small {
+  overflow-wrap: anywhere;
+}
+
+.role-card-grid em,
+.role-card-grid strong {
+  font-style: normal;
+  font-weight: 900;
+}
+
+.role-card-grid em {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(7, 88, 73, 0.08);
+  color: #075849;
+  white-space: nowrap;
+}
+
+.role-card-grid strong {
+  grid-column: 1 / -1;
+  color: #745c2a;
+}
+
+.staff-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 28px;
+  border: 1px dashed rgba(194, 161, 92, 0.58);
+  border-radius: 18px;
+  background: rgba(255, 253, 247, 0.62);
+  text-align: center;
+}
+
+.staff-empty-state b {
+  color: #003d33;
+}
+
+.staff-empty-state span {
+  color: #75623b;
+}
+
 .help-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
@@ -8616,6 +8794,9 @@ body.dark .employee-profile-stats div,
 body.dark .employee-activity-summary div,
 body.dark .employee-permission-panel,
 body.dark .employee-timeline,
+body.dark .staff-kpi-grid div,
+body.dark .staff-search,
+body.dark .staff-empty-state,
 body.dark .help-role-card,
 body.dark .help-diagnostic-grid div,
 body.dark .help-faq-list details,
@@ -8627,6 +8808,7 @@ body.dark .app-footer {
 
 body.dark .employee-avatar,
 body.dark .employee-permission-panel span,
+body.dark .role-card-grid em,
 body.dark .app-footer-stats span {
   background: rgba(214, 181, 109, 0.1) !important;
   border-color: rgba(214, 181, 109, 0.28) !important;
@@ -8648,6 +8830,9 @@ body.dark .employee-status-inactive {
 body.dark .employee-profile-stats b,
 body.dark .employee-activity-summary b,
 body.dark .employee-permission-panel > b,
+body.dark .staff-hero h3,
+body.dark .staff-kpi-grid b,
+body.dark .staff-empty-state b,
 body.dark .help-diagnostic-grid b,
 body.dark .help-role-card b,
 body.dark .help-hero h2,
@@ -8658,6 +8843,11 @@ body.dark .app-footer span {
 
 body.dark .employee-profile-stats span,
 body.dark .employee-activity-summary span,
+body.dark .staff-hero span,
+body.dark .staff-hero p,
+body.dark .staff-kpi-grid span,
+body.dark .staff-empty-state span,
+body.dark .role-card-grid strong,
 body.dark .help-diagnostic-grid span,
 body.dark .help-hero span,
 body.dark .help-hero p,
@@ -8674,10 +8864,16 @@ body.dark .app-footer nav button {
 }
 
 @media (max-width: 1180px) {
+  .staff-hero,
+  .staff-filter-bar,
   .help-layout,
   .help-hero,
   .app-footer {
     grid-template-columns: 1fr;
+  }
+
+  .staff-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .app-footer nav,
@@ -8697,6 +8893,14 @@ body.dark .app-footer nav button {
   }
 
   .help-workflow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .role-card-grid button {
     grid-template-columns: 1fr;
   }
 
