@@ -8583,6 +8583,163 @@ body.dark .data-table-footer span {
   color: #75623b;
 }
 
+.system-page {
+  display: grid;
+  gap: 22px;
+}
+
+.system-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.system-hero > div:first-child {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+}
+
+.system-hero span,
+.system-account-card small {
+  color: #8a6a28;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.system-hero h3 {
+  margin: 0;
+  max-width: 860px;
+  color: #003d33;
+  font-size: clamp(24px, 2.25vw, 38px);
+  line-height: 1.1;
+}
+
+.system-hero p {
+  max-width: 820px;
+  color: #665a3e;
+  line-height: 1.55;
+}
+
+.system-account-card {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid rgba(194, 161, 92, 0.42);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 247, 0.9), rgba(246, 237, 216, 0.78));
+}
+
+.system-account-card b {
+  color: #003d33;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.system-account-card span {
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(7, 88, 73, 0.08);
+  color: #075849;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.system-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.system-stat-grid div {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgba(194, 161, 92, 0.36);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 247, 0.92), rgba(246, 237, 216, 0.76));
+}
+
+.system-stat-grid span {
+  color: #745c2a;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.system-stat-grid b {
+  color: #003d33;
+  font-size: clamp(24px, 2vw, 36px);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.system-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+  gap: 22px;
+}
+
+.system-setting-list,
+.system-maintenance-grid,
+.system-table-grid,
+.system-alert-list {
+  display: grid;
+  gap: 12px;
+}
+
+.system-maintenance-grid,
+.system-table-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.system-setting-list button,
+.system-maintenance-grid button,
+.system-table-grid button,
+.system-alert-list button {
+  width: 100%;
+  min-height: 86px;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.system-setting-list button.active {
+  background: rgba(7, 88, 73, 0.12);
+  border-color: rgba(7, 88, 73, 0.38);
+}
+
+.system-setting-list span,
+.system-maintenance-grid span,
+.system-table-grid span,
+.system-alert-list span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.system-setting-list b,
+.system-maintenance-grid b,
+.system-table-grid b,
+.system-alert-list b,
+.system-setting-list small,
+.system-maintenance-grid small,
+.system-table-grid small,
+.system-alert-list small {
+  overflow-wrap: anywhere;
+}
+
 .help-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
@@ -8797,6 +8954,8 @@ body.dark .employee-timeline,
 body.dark .staff-kpi-grid div,
 body.dark .staff-search,
 body.dark .staff-empty-state,
+body.dark .system-account-card,
+body.dark .system-stat-grid div,
 body.dark .help-role-card,
 body.dark .help-diagnostic-grid div,
 body.dark .help-faq-list details,
@@ -8809,6 +8968,7 @@ body.dark .app-footer {
 body.dark .employee-avatar,
 body.dark .employee-permission-panel span,
 body.dark .role-card-grid em,
+body.dark .system-account-card span,
 body.dark .app-footer-stats span {
   background: rgba(214, 181, 109, 0.1) !important;
   border-color: rgba(214, 181, 109, 0.28) !important;
@@ -8833,6 +8993,9 @@ body.dark .employee-permission-panel > b,
 body.dark .staff-hero h3,
 body.dark .staff-kpi-grid b,
 body.dark .staff-empty-state b,
+body.dark .system-hero h3,
+body.dark .system-account-card b,
+body.dark .system-stat-grid b,
 body.dark .help-diagnostic-grid b,
 body.dark .help-role-card b,
 body.dark .help-hero h2,
@@ -8848,6 +9011,10 @@ body.dark .staff-hero p,
 body.dark .staff-kpi-grid span,
 body.dark .staff-empty-state span,
 body.dark .role-card-grid strong,
+body.dark .system-hero span,
+body.dark .system-hero p,
+body.dark .system-account-card small,
+body.dark .system-stat-grid span,
 body.dark .help-diagnostic-grid span,
 body.dark .help-hero span,
 body.dark .help-hero p,
@@ -8866,6 +9033,8 @@ body.dark .app-footer nav button {
 @media (max-width: 1180px) {
   .staff-hero,
   .staff-filter-bar,
+  .system-hero,
+  .system-layout,
   .help-layout,
   .help-hero,
   .app-footer {
@@ -8873,6 +9042,10 @@ body.dark .app-footer nav button {
   }
 
   .staff-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .system-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -8897,6 +9070,12 @@ body.dark .app-footer nav button {
   }
 
   .staff-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .system-stat-grid,
+  .system-maintenance-grid,
+  .system-table-grid {
     grid-template-columns: 1fr;
   }
 

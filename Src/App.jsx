@@ -23,6 +23,7 @@ const ROLE_FEATURES = {
     "customers",
     "returns",
     "channels",
+    "system",
     "users",
     "reports",
     "query",
@@ -39,12 +40,13 @@ const ROLE_FEATURES = {
     "customers",
     "returns",
     "channels",
+    "system",
     "reports",
     "query",
     "help",
   ],
-  warehouse_staff: ["dashboard", "purchase", "stock", "transfer", "adjustment", "reports", "query", "help"],
-  sales_staff: ["dashboard", "products", "stock", "orders", "customers", "returns", "query", "help"],
+  warehouse_staff: ["dashboard", "purchase", "stock", "transfer", "adjustment", "system", "reports", "query", "help"],
+  sales_staff: ["dashboard", "products", "stock", "orders", "customers", "returns", "system", "query", "help"],
 };
 
 const MENU = [
@@ -58,6 +60,7 @@ const MENU = [
   ["customers", "Khách hàng", Users],
   ["returns", "Đổi trả", RefreshCcw],
   ["channels", "Kênh bán", Boxes],
+  ["system", "Hệ thống", Settings],
   ["users", "RBAC", Users],
   ["reports", "Báo cáo", BarChart3],
   ["query", "Tra bảng", Search],
@@ -69,7 +72,7 @@ const MENU_GROUPS = [
   { key: "goods", label: "Hàng hóa", icon: PackagePlus, items: ["products", "stock", "purchase"] },
   { key: "operations", label: "Vận hành", icon: ClipboardList, items: ["orders", "transfer", "adjustment", "returns"] },
   { key: "market", label: "Kinh doanh", icon: Users, items: ["customers", "channels"] },
-  { key: "system", label: "Hệ thống", icon: Settings, items: ["users"] },
+  { key: "system", label: "Hệ thống", icon: Settings, items: ["system", "users"] },
   { key: "tools", label: "Công cụ", icon: Search, items: ["query", "help"] },
 ];
 
@@ -160,6 +163,7 @@ const PAGE_ALIASES = {
   customers: ["khach hang", "crm", "sdt", "dien thoai"],
   returns: ["doi tra", "tra hang", "hoan tien"],
   channels: ["kenh ban", "gia kenh", "online", "san thuong mai"],
+  system: ["he thong", "cai dat", "system", "settings", "trang thai", "bao tri"],
   users: ["rbac", "phan quyen", "nhan vien", "tai khoan"],
   reports: ["bao cao", "doanh thu", "loi nhuan", "report"],
   query: ["tra bang", "truy van", "database", "tim kiem"],
@@ -177,6 +181,7 @@ const PAGE_DESCRIPTIONS = {
   customers: "Quản lý hồ sơ và lịch sử khách hàng",
   returns: "Lập phiếu đổi trả và hoàn hàng",
   channels: "Quản lý kênh bán, giá kênh, phân bổ tồn",
+  system: "Cài đặt hệ thống, trạng thái dữ liệu và lối tắt bảo trì",
   users: "Quản lý nhân viên, vai trò, quyền truy cập",
   reports: "Xem báo cáo doanh thu, đơn hàng, tồn kho",
   query: "Tra cứu dữ liệu trực tiếp từ các bảng/view",
@@ -3664,6 +3669,11 @@ export default function App() {
                       goToPage(groupItems[0][0]);
                       return;
                     }
+                    if (group.key === "system" && groupItems.some(([key]) => key === "system")) {
+                      goToPage("system");
+                      setOpenMenuGroup("system");
+                      return;
+                    }
                     setOpenMenuGroup((current) => (current === group.key ? "" : group.key));
                   }}
                 >
@@ -3988,6 +3998,26 @@ export default function App() {
                 selectTable={selectTable}
                 exportRows={exportRows}
                 rows={visibleRows}
+              />
+            )}
+            {page === "system" && (
+              <SystemPage
+                dark={dark}
+                setDark={setDark}
+                sidebar={sidebar}
+                toggleSidebar={toggleSidebar}
+                options={options}
+                notifications={notifications}
+                profile={profile}
+                role={roleName()}
+                heldCarts={heldCarts}
+                setHeldCarts={setHeldCarts}
+                setGlobalSearch={setGlobalSearch}
+                setSearchSummary={setSearchSummary}
+                run={run}
+                loadOptions={loadOptions}
+                selectTable={selectTable}
+                goToPage={goToPage}
               />
             )}
             {page === "users" && (
@@ -4352,6 +4382,7 @@ function PageSurface({ page, options, rows, cart, heldCarts, notifications, sear
     customers: { title: "Khách hàng", kicker: "CRM", text: "Lưu hồ sơ khách, điểm tích lũy, trạng thái và lịch sử chi tiêu.", tone: "blue" },
     returns: { title: "Đổi trả", kicker: "After Sales", text: "Ghi nhận trả hàng, hoàn tiền và hoàn kho khi sản phẩm còn bán được.", tone: "rose" },
     channels: { title: "Kênh bán", kicker: "Omnichannel", text: "Quản lý chi nhánh, kênh bán, giá theo kênh và phân bổ tồn.", tone: "gold" },
+    system: { title: "Hệ thống", kicker: "System Console", text: "Cài đặt giao diện, kiểm tra dữ liệu nền, truy cập bảng gốc và thao tác bảo trì nhanh.", tone: "blue" },
     users: { title: "RBAC", kicker: "Access Control", text: "Quản lý nhân viên, vai trò, quyền truy cập và log hoạt động.", tone: "blue" },
     reports: { title: "Báo cáo", kicker: "Management Insight", text: "Tổng hợp doanh thu, tồn kho, đơn hàng và biến động vận hành.", tone: "emerald" },
     query: { title: "Tra bảng", kicker: "Data Explorer", text: "Tra cứu bảng/view, xem kết quả tìm kiếm toàn hệ thống và xuất dữ liệu.", tone: "amber" },
@@ -4370,6 +4401,7 @@ function PageSurface({ page, options, rows, cart, heldCarts, notifications, sear
     customers: [["Khách hàng", options.customers.length], ["Đang hiển thị", rows.length], ["Đơn tạm", heldCarts.length], ["Cảnh báo", notifications.length]],
     returns: [["Khách hàng", options.customers.length], ["Biến thể", options.variants.length], ["Chi nhánh", options.branches.length], ["Dòng bảng", rows.length]],
     channels: [["Chi nhánh", options.branches.length], ["Kênh bán", options.channels.length], ["Giá kênh", options.channelPrices.length], ["Phân bổ", options.allocations.length]],
+    system: [["Bảng DB", QUERY_TABLES.length], ["Vai trò", options.roles.length], ["Chi nhánh", options.branches.length], ["Cảnh báo", notifications.length]],
     users: [["Vai trò", options.roles.length], ["Nhân viên", rows.length], ["Chi nhánh", options.branches.length], ["Cảnh báo", notifications.length]],
     reports: [["Sản phẩm", options.products.length], ["Tồn khả dụng", totalAvailable], ["Dòng báo cáo", rows.length], ["Cảnh báo", notifications.length]],
     query: [["Kết quả", searchSummary?.total ?? rows.length], ["Bảng hỗ trợ", QUERY_TABLES.length], ["Nhóm tìm", Object.keys(searchSummary?.groups || {}).length], ["Dòng bảng", rows.length]],
@@ -4385,6 +4417,7 @@ function PageSurface({ page, options, rows, cart, heldCarts, notifications, sear
     customers: [["Bán hàng", "orders"], ["Đổi trả", "returns"], ["Tra bảng", "query"]],
     returns: [["Bán hàng", "orders"], ["Khách hàng", "customers"], ["Kho", "stock"]],
     channels: [["Bán hàng", "orders"], ["Kho", "stock"], ["Báo cáo", "reports"]],
+    system: [["RBAC", "users"], ["Tra bảng", "query"], ["Trợ giúp", "help"]],
     users: [["Tra bảng", "query"], ["Báo cáo", "reports"], ["Tổng quan", "dashboard"]],
     reports: [["Tổng quan", "dashboard"], ["Kho", "stock"], ["Tra bảng", "query"]],
     query: [["Hàng hóa", "products"], ["Kho", "stock"], ["Báo cáo", "reports"]],
@@ -5884,6 +5917,158 @@ function Channels(p) {
   );
 }
 
+// Page: system console for UI preferences, data health and maintenance links.
+function SystemPage({
+  dark,
+  setDark,
+  sidebar,
+  toggleSidebar,
+  options = {},
+  notifications = [],
+  profile,
+  role,
+  heldCarts = [],
+  setHeldCarts,
+  setGlobalSearch,
+  setSearchSummary,
+  run,
+  loadOptions,
+  selectTable,
+  goToPage,
+}) {
+  const totalStock = (options.stock || []).reduce((sum, row) => sum + stockQuantityOf(row), 0);
+  const totalAvailable = (options.stock || []).reduce((sum, row) => sum + availableStockOf(row), 0);
+  const lowStock = (options.stock || []).filter((row) => stockQuantityOf(row) <= Number(first(row, ["minstocklevel", "min_stock_level"], 5))).length;
+  const missingImages = (options.products || []).filter((product) => !imageUrlOf(primaryProductImage(product, options.images || []))).length;
+  const inactiveProducts = (options.products || []).filter((product) => first(product, ["status"], "active") !== "active").length;
+  const systemStats = [
+    ["Sản phẩm", options.products?.length || 0],
+    ["Biến thể", options.variants?.length || 0],
+    ["Tồn thực", totalStock],
+    ["Tồn khả dụng", totalAvailable],
+    ["Sắp hết", lowStock],
+    ["Thiếu ảnh", missingImages],
+    ["Ngưng bán", inactiveProducts],
+    ["Đơn tạm", heldCarts.length],
+  ];
+  const tableShortcuts = [
+    ["Vai trò", "role"],
+    ["Nhân viên", "users"],
+    ["Chi nhánh", "branch"],
+    ["Tồn kho", "stock"],
+    ["Log kho", "stock_history"],
+    ["Đơn hàng", "orders"],
+    ["Thanh toán", "payment"],
+    ["Cảnh báo tồn thấp", "vw_low_stock_alert"],
+  ];
+  const userName = first(profile, ["fullname", "full_name", "username", "email"], "Tài khoản");
+
+  function clearLocalWorkState() {
+    setHeldCarts([]);
+    setGlobalSearch("");
+    setSearchSummary(null);
+  }
+
+  return (
+    <div className="system-page">
+      <Card title="Trung tâm hệ thống">
+        <div className="system-hero">
+          <div>
+            <span>SilkRoad Control Panel</span>
+            <h3>Không gian cài đặt, kiểm tra dữ liệu và bảo trì nhanh</h3>
+            <p>Trang hệ thống gom các tùy chọn giao diện, dữ liệu nền, bảng kỹ thuật và cảnh báo vận hành để quản trị không phải mở nhiều nơi.</p>
+          </div>
+          <div className="system-account-card">
+            <UserCircle size={34} />
+            <small>Đang đăng nhập</small>
+            <b>{userName}</b>
+            <span>{role || "user"}</span>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Tình trạng dữ liệu">
+        <div className="system-stat-grid">
+          {systemStats.map(([label, value]) => (
+            <div key={label}>
+              <span>{label}</span>
+              <b>{Number(value || 0).toLocaleString("vi-VN")}</b>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <div className="system-layout">
+        <Card title="Cài đặt giao diện">
+          <div className="system-setting-list">
+            <button type="button" className={!dark ? "active" : ""} onClick={() => setDark(false)}>
+              <Sun size={20} />
+              <span><b>Giao diện sáng</b><small>Dùng nền giấy sáng cho ca làm ban ngày</small></span>
+            </button>
+            <button type="button" className={dark ? "active" : ""} onClick={() => setDark(true)}>
+              <Moon size={20} />
+              <span><b>Giao diện tối</b><small>Tăng tương phản cho môi trường thiếu sáng</small></span>
+            </button>
+            <button type="button" className={sidebar ? "active" : ""} onClick={toggleSidebar}>
+              <Menu size={20} />
+              <span><b>{sidebar ? "Menu đang mở" : "Menu rút gọn"}</b><small>Đổi nhanh trạng thái sidebar</small></span>
+            </button>
+          </div>
+        </Card>
+
+        <Card title="Bảo trì nhanh">
+          <div className="system-maintenance-grid">
+            <button type="button" onClick={() => run(loadOptions)}>
+              <RefreshCcw size={20} />
+              <span><b>Tải lại dữ liệu nền</b><small>Sản phẩm, biến thể, chi nhánh, quyền, kênh bán</small></span>
+            </button>
+            <button type="button" onClick={() => { clearLocalWorkState(); }}>
+              <X size={20} />
+              <span><b>Xóa dữ liệu tạm</b><small>Xóa đơn tạm, tìm kiếm và bảng kết quả hiện tại</small></span>
+            </button>
+            <button type="button" onClick={() => goToPage("help")}>
+              <HelpCircle size={20} />
+              <span><b>Mở trợ giúp</b><small>Quy trình xử lý lỗi thường gặp</small></span>
+            </button>
+            <button type="button" onClick={() => goToPage("users")}>
+              <Users size={20} />
+              <span><b>Quản trị nhân viên</b><small>RBAC, khóa quyền, hồ sơ và log</small></span>
+            </button>
+          </div>
+        </Card>
+      </div>
+
+      <div className="system-layout">
+        <Card title="Bảng dữ liệu quan trọng">
+          <div className="system-table-grid">
+            {tableShortcuts.map(([label, table]) => (
+              <button key={table} type="button" onClick={() => run(async () => { await selectTable(table, 500); goToPage("query"); })}>
+                <Search size={18} />
+                <span><b>{label}</b><small>{table}</small></span>
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        <Card title="Cảnh báo hệ thống">
+          <div className="system-alert-list">
+            {notifications.length ? (
+              notifications.slice(0, 8).map((item, index) => (
+                <button key={`${item.title}-${index}`} type="button" className={item.tone || ""} onClick={() => goToPage(item.page)}>
+                  <AlertTriangle size={18} />
+                  <span><b>{item.title}</b><small>{item.detail}</small></span>
+                </button>
+              ))
+            ) : (
+              <p className="muted">Chưa có cảnh báo cần xử lý.</p>
+            )}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // Page: RBAC users, role permissions, access lock/delete and profile logs.
 function UsersPage(p) {
   const [staffQuery, setStaffQuery] = useState("");
@@ -6288,6 +6473,7 @@ function AppFooter({ page, profile, options = {}, notifications = [], goToPage, 
     ["Tổng quan", "dashboard"],
     ["Bán hàng", "orders"],
     ["Kho", "stock"],
+    ["Hệ thống", "system"],
     ["Trợ giúp", "help"],
   ];
 
