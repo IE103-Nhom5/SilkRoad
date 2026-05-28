@@ -27,6 +27,19 @@ export async function callProcedure(client, procedureName, params = {}) {
   return client.rpc(procedureName, params);
 }
 
+export async function callProcedureCandidates(client, candidates = []) {
+  let lastResult = { data: null, error: new Error("No procedure candidate provided") };
+
+  for (const candidate of candidates) {
+    const result = await callProcedure(client, candidate.name, candidate.params || {});
+    lastResult = result;
+    if (!result.error) return result;
+    if (!isProcedureUnavailable(result.error)) return result;
+  }
+
+  return lastResult;
+}
+
 export function isProcedureUnavailable(error) {
   const code = String(error?.code || "");
   const message = String(error?.message || "").toLowerCase();

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
-import { callProcedure, isProcedureUnavailable, readFirstAvailableTable, readRows } from "./lib/dbService";
+import { callProcedureCandidates, isProcedureUnavailable, readFirstAvailableTable, readRows } from "./lib/dbService";
 import { PAGE_ALIASES, PAGE_DESCRIPTIONS, QUERY_TABLES, ROLE_FEATURES, TABLE_LABELS } from "./lib/featureConfig";
 import bg from "./assets/silkroad-bg.png";
 import loginBg from "./assets/login-bg.png";
@@ -1865,7 +1865,10 @@ export default function App() {
   }
 
   async function confirmPurchaseOrderById(purchaseorderid) {
-    const rpc = await callProcedure(supabase, "sp_confirm_purchase_order", { p_purchase_order_id: purchaseorderid });
+    const rpc = await callProcedureCandidates(supabase, [
+      { name: "fn_confirm_purchase_order_app", params: { p_purchase_order_id: purchaseorderid } },
+      { name: "sp_confirm_purchase_order", params: { p_purchase_order_id: purchaseorderid } },
+    ]);
     if (!rpc.error) return;
     if (!isProcedureUnavailable(rpc.error)) throw rpc.error;
     await receivePurchaseOrderLocally(purchaseorderid);
@@ -2010,7 +2013,110 @@ export default function App() {
     commitRows(stockHistoryViewRows(data || [], loadedOptions), "stock");
   }
 
-  // Internal stock movement between branches with stock_history audit rows.
+  async function shipTransferLocally(transferid, context) {
+    const now = new Date().toISOString();
+    const from = await supabase
+      .from("stock")
+      .select("*")
+      .eq("branchid", context.frombranchid)
+      .eq("variantid", context.variantid)
+      .maybeSingle();
+    if (from.error) throw from.error;
+    if (!from.data) throw new Error("Không tìm thấy tồn kho chi nhánh gửi");
+    const before = stockQuantityOf(from.data);
+    if (before < context.quantity) throw new Error("Không đủ tồn để chuyển");
+    const after = before - context.quantity;
+
+    const stockResult = await supabase
+      .from("stock")
+      .update({ quantity: after, lastupdated: now })
+      .eq("branchid", context.frombranchid)
+      .eq("variantid", context.variantid);
+    if (stockResult.error) throw stockResult.error;
+
+    const history = await supabase.from("stock_history").insert([
+      {
+        historyid: uuid(),
+        branchid: context.frombranchid,
+        variantid: context.variantid,
+        transactiontype: "transfer_out",
+        referencetype: "TRANSFER_ORDER",
+        referenceid: transferid,
+        quantitychange: -context.quantity,
+        quantitybefore: before,
+        quantityafter: after,
+        performedby: profile?.userid || null,
+        timestamp: now,
+        note: "Xuất kho theo phiếu chuyển",
+      },
+    ]);
+    if (history.error) throw history.error;
+
+    const order = await supabase.from("transfer_order").update({ status: "in_transit", shipdate: now }).eq("transferid", transferid);
+    if (order.error) throw order.error;
+  }
+
+  async function receiveTransferLocally(transferid, context) {
+    const now = new Date().toISOString();
+    const to = await supabase
+      .from("stock")
+      .select("*")
+      .eq("branchid", context.tobranchid)
+      .eq("variantid", context.variantid)
+      .maybeSingle();
+    if (to.error) throw to.error;
+
+    const before = Number(to.data?.quantity || 0);
+    const after = before + context.quantity;
+    const stockResult = to.data
+      ? await supabase.from("stock").update({ quantity: after, lastupdated: now }).eq("branchid", context.tobranchid).eq("variantid", context.variantid)
+      : await supabase.from("stock").insert([{ branchid: context.tobranchid, variantid: context.variantid, quantity: after, reservedquantity: 0, minstocklevel: 0, lastupdated: now }]);
+    if (stockResult.error) throw stockResult.error;
+
+    const history = await supabase.from("stock_history").insert([
+      {
+        historyid: uuid(),
+        branchid: context.tobranchid,
+        variantid: context.variantid,
+        transactiontype: "transfer_in",
+        referencetype: "TRANSFER_ORDER",
+        referenceid: transferid,
+        quantitychange: context.quantity,
+        quantitybefore: before,
+        quantityafter: after,
+        performedby: profile?.userid || null,
+        timestamp: now,
+        note: "Nhập kho theo phiếu chuyển",
+      },
+    ]);
+    if (history.error) throw history.error;
+
+    const order = await supabase.from("transfer_order").update({ status: "received", receivedate: now }).eq("transferid", transferid);
+    if (order.error) throw order.error;
+  }
+
+  async function shipTransferOrderById(transferid, context) {
+    const rpc = await callProcedureCandidates(supabase, [
+      { name: "fn_ship_transfer_order_app", params: { p_transfer_id: transferid } },
+      { name: "sp_ship_transfer_order", params: { p_transfer_id: transferid } },
+    ]);
+    if (!rpc.error) return;
+    if (!isProcedureUnavailable(rpc.error)) throw rpc.error;
+    await shipTransferLocally(transferid, context);
+  }
+
+  async function receiveTransferOrderById(transferid, context) {
+    const rpc = await callProcedureCandidates(supabase, [
+      { name: "fn_receive_transfer_order_app", params: { p_transfer_id: transferid } },
+      { name: "sp_receive_transfer_order", params: { p_transfer_id: transferid } },
+    ]);
+    if (!rpc.error) return;
+    if (!isProcedureUnavailable(rpc.error)) throw rpc.error;
+    await receiveTransferLocally(transferid, context);
+  }
+
+  // Internal stock movement between branches with transfer documents and
+  // stock_history audit rows.
   async function transferStock() {
     if (!guard("transfer")) return;
     if (!transferForm.frombranchid || !transferForm.tobranchid || !transferForm.variantid) {
@@ -2031,15 +2137,8 @@ export default function App() {
       .eq("branchid", transferForm.frombranchid)
       .eq("variantid", transferForm.variantid)
       .maybeSingle();
-    const to = await supabase
-      .from("stock")
-      .select("*")
-      .eq("branchid", transferForm.tobranchid)
-      .eq("variantid", transferForm.variantid)
-      .maybeSingle();
 
     if (from.error) throw from.error;
-    if (to.error) throw to.error;
     if (!from.data) throw new Error("Không tìm thấy tồn kho chi nhánh gửi");
     if (Number(from.data.quantity) < q) throw new Error("Không đủ tồn để chuyển");
 
@@ -2051,9 +2150,9 @@ export default function App() {
         frombranchid: transferForm.frombranchid,
         tobranchid: transferForm.tobranchid,
         createdby: profile?.userid || null,
-        shipdate: now,
-        receivedate: now,
-        status: "received",
+        shipdate: null,
+        receivedate: null,
+        status: "approved",
         note: "Chuyển kho nhanh từ app",
       },
     ]);
@@ -2070,78 +2169,75 @@ export default function App() {
     ]);
     if (transferDetail.error) throw transferDetail.error;
 
-    const updates = [
-      supabase
-        .from("stock")
-        .update({ quantity: Number(from.data.quantity) - q, lastupdated: now })
-        .eq("branchid", transferForm.frombranchid)
-        .eq("variantid", transferForm.variantid),
-    ];
-
-    if (to.data) {
-      updates.push(
-        supabase
-          .from("stock")
-          .update({ quantity: Number(to.data.quantity) + q, lastupdated: now })
-          .eq("branchid", transferForm.tobranchid)
-          .eq("variantid", transferForm.variantid)
-      );
-    } else {
-      updates.push(
-        supabase.from("stock").insert([
-          {
-            branchid: transferForm.tobranchid,
-            variantid: transferForm.variantid,
-            quantity: q,
-            reservedquantity: 0,
-            minstocklevel: 0,
-            lastupdated: now,
-          },
-        ])
-      );
-    }
-
-    const res = await Promise.all(updates);
-    const err = res.find((x) => x.error)?.error;
-    if (err) throw err;
-
-    const { error: historyError } = await supabase.from("stock_history").insert([
-      {
-        historyid: uuid(),
-        branchid: transferForm.frombranchid,
-        variantid: transferForm.variantid,
-        transactiontype: "transfer_out",
-        referencetype: "TRANSFER_ORDER",
-        referenceid: transferId,
-        quantitychange: -q,
-        quantitybefore: from.data.quantity,
-        quantityafter: Number(from.data.quantity) - q,
-        performedby: profile?.userid || null,
-        timestamp: now,
-        note: "Xuất kho theo phiếu chuyển",
-      },
-      {
-        historyid: uuid(),
-        branchid: transferForm.tobranchid,
-        variantid: transferForm.variantid,
-        transactiontype: "transfer_in",
-        referencetype: "TRANSFER_ORDER",
-        referenceid: transferId,
-        quantitychange: q,
-        quantitybefore: to.data?.quantity || 0,
-        quantityafter: Number(to.data?.quantity || 0) + q,
-        performedby: profile?.userid || null,
-        timestamp: now,
-        note: "Nhập kho theo phiếu chuyển",
-      },
-    ]);
-    if (historyError) throw historyError;
+    const context = {
+      frombranchid: transferForm.frombranchid,
+      tobranchid: transferForm.tobranchid,
+      variantid: transferForm.variantid,
+      quantity: q,
+    };
+    await shipTransferOrderById(transferId, context);
+    await receiveTransferOrderById(transferId, context);
 
     show("Chuyển kho thành công");
     await loadStockFriendly();
   }
 
-  // Stock count adjustment: records both adjustment tables and stock_history.
+  async function completeStockAdjustmentLocally(adjustmentid) {
+    const adjustment = await supabase.from("stock_adjustment").select("*").eq("adjustmentid", adjustmentid).maybeSingle();
+    if (adjustment.error) throw adjustment.error;
+    if (!adjustment.data) throw new Error("Không tìm thấy phiếu kiểm kho");
+
+    const details = await supabase.from("stock_adjustment_detail").select("*").eq("adjustmentid", adjustmentid);
+    if (details.error) throw details.error;
+
+    const now = new Date().toISOString();
+    for (const detail of details.data || []) {
+      const variantid = variantIdOf(detail);
+      const actualQuantity = Number(first(detail, ["actualquantity", "actual_quantity"], 0));
+      const old = await supabase.from("stock").select("*").eq("branchid", adjustment.data.branchid).eq("variantid", variantid).maybeSingle();
+      if (old.error) throw old.error;
+
+      const before = Number(old.data?.quantity || 0);
+      const stockResult = old.data
+        ? await supabase.from("stock").update({ quantity: actualQuantity, lastupdated: now }).eq("branchid", adjustment.data.branchid).eq("variantid", variantid)
+        : await supabase.from("stock").insert([{ branchid: adjustment.data.branchid, variantid, quantity: actualQuantity, reservedquantity: 0, minstocklevel: 0, lastupdated: now }]);
+      if (stockResult.error) throw stockResult.error;
+
+      const history = await supabase.from("stock_history").insert([
+        {
+          historyid: uuid(),
+          branchid: adjustment.data.branchid,
+          variantid,
+          transactiontype: "adjustment",
+          referencetype: "STOCK_ADJUSTMENT",
+          referenceid: adjustmentid,
+          quantitychange: actualQuantity - before,
+          quantitybefore: before,
+          quantityafter: actualQuantity,
+          performedby: adjustment.data.createdby || profile?.userid || null,
+          timestamp: now,
+          note: adjustment.data.note || "Kiểm kho từ app",
+        },
+      ]);
+      if (history.error) throw history.error;
+    }
+
+    const update = await supabase.from("stock_adjustment").update({ status: "completed", completedat: now }).eq("adjustmentid", adjustmentid);
+    if (update.error) throw update.error;
+  }
+
+  async function completeStockAdjustmentById(adjustmentid) {
+    const rpc = await callProcedureCandidates(supabase, [
+      { name: "fn_complete_stock_adjustment_app", params: { p_adjustment_id: adjustmentid } },
+      { name: "sp_complete_stock_adjustment", params: { p_adjustment_id: adjustmentid } },
+    ]);
+    if (!rpc.error) return;
+    if (!isProcedureUnavailable(rpc.error)) throw rpc.error;
+    await completeStockAdjustmentLocally(adjustmentid);
+  }
+
+  // Stock count adjustment: records adjustment documents first, then lets the
+  // database routine or controlled fallback update stock and stock_history.
   async function adjustStock() {
     if (!guard("adjustment")) return;
     if (!adjustForm.branchid || !adjustForm.variantid) return show("Vui lòng chọn chi nhánh, sản phẩm và biến thể");
@@ -2153,9 +2249,8 @@ export default function App() {
 
     const old = await supabase.from("stock").select("*").eq("branchid", adjustForm.branchid).eq("variantid", adjustForm.variantid).maybeSingle();
     if (old.error) throw old.error;
-    if (!old.data) throw new Error("Không tìm thấy tồn kho để kiểm");
 
-    const before = Number(old.data.quantity);
+    const before = Number(old.data?.quantity || 0);
     const adjustmentId = uuid();
     const now = new Date().toISOString();
     const adjustment = await supabase.from("stock_adjustment").insert([
@@ -2163,10 +2258,10 @@ export default function App() {
         adjustmentid: adjustmentId,
         branchid: adjustForm.branchid,
         createdby: profile?.userid || null,
-        status: "completed",
+        status: "counting",
         note: adjustForm.note || "Kiểm kho nhanh từ app",
         createdat: now,
-        completedat: now,
+        completedat: null,
       },
     ]);
     if (adjustment.error) throw adjustment.error;
@@ -2181,30 +2276,7 @@ export default function App() {
     ]);
     if (adjustmentDetail.error) throw adjustmentDetail.error;
 
-    const { error } = await supabase
-      .from("stock")
-      .update({ quantity: after, lastupdated: now })
-      .eq("branchid", adjustForm.branchid)
-      .eq("variantid", adjustForm.variantid);
-    if (error) throw error;
-
-    const { error: historyError } = await supabase.from("stock_history").insert([
-      {
-        historyid: uuid(),
-        branchid: adjustForm.branchid,
-        variantid: adjustForm.variantid,
-        transactiontype: "adjustment",
-        referencetype: "STOCK_ADJUSTMENT",
-        referenceid: adjustmentId,
-        quantitychange: after - before,
-        quantitybefore: before,
-        quantityafter: after,
-        performedby: profile?.userid || null,
-        timestamp: now,
-        note: adjustForm.note || "Kiểm kho từ app",
-      },
-    ]);
-    if (historyError) throw historyError;
+    await completeStockAdjustmentById(adjustmentId);
 
     show("Kiểm kho xong, đã cập nhật tồn");
     await loadStockFriendly();
@@ -2708,7 +2780,10 @@ export default function App() {
   }
 
   async function confirmOrderById(orderid, stockChecks, channelid) {
-    const rpc = await callProcedure(supabase, "sp_confirm_order", { p_order_id: orderid });
+    const rpc = await callProcedureCandidates(supabase, [
+      { name: "fn_confirm_order_app", params: { p_order_id: orderid } },
+      { name: "sp_confirm_order", params: { p_order_id: orderid } },
+    ]);
     if (!rpc.error) return;
     if (!shouldFallbackOrderConfirm(rpc.error)) throw rpc.error;
     await confirmOrderLocally(orderid, stockChecks, channelid);
@@ -2803,7 +2878,18 @@ export default function App() {
       if (detailError) throw detailError;
     }
 
-    await confirmOrderById(orderid, stockChecks, channelid);
+    try {
+      await confirmOrderById(orderid, stockChecks, channelid);
+    } catch (error) {
+      await supabase
+        .from("orders")
+        .update({
+          orderstatus: "cancelled",
+          note: `Hủy tự động vì không xác nhận được tồn kho: ${error.message}`,
+        })
+        .eq("orderid", orderid);
+      throw error;
+    }
 
     if (totals.final > 0) {
       const { error: paymentError } = await supabase.from("payment").insert([

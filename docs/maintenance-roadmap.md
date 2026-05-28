@@ -7,21 +7,24 @@
 - Giữ dữ liệu từng trang bằng `pageRows` để chuyển menu không làm lẫn bảng RBAC, kho, dashboard và tra cứu.
 - Đổi tạo hóa đơn POS sang luồng: tạo `orders`, tạo `order_detail`, gọi `sp_confirm_order`, fallback local có kiểm soát khi procedure không expose hoặc thiếu allocation kênh.
 - Siết xác nhận phiếu nhập: chỉ fallback local khi procedure không gọi được, không bỏ qua lỗi nghiệp vụ thật.
+- Thêm wrapper function `fn_*_app` trong `Silkroad_database/sql/07_create_procedures.sql` để Supabase RPC gọi nghiệp vụ ổn định hơn.
+- Chuyển chuyển kho và kiểm kho sang mô hình tạo chứng từ trước, gọi routine DB, fallback local nếu database chưa cập nhật wrapper.
 - Chuẩn hóa topbar/sidebar bằng block CSS cuối để sidebar quyết định width main, topbar sticky và action bám phải.
 - Trang tra bảng tự tải dữ liệu khi chọn bảng mới.
+- Tách vendor chunk trong `vite.config.js` để build không còn cảnh báo JS chunk vượt 500 kB.
 
 ## Nguyên tắc bảo trì
 
 - Cấu hình quyền hoặc thêm trang mới: cập nhật `ROLE_FEATURES`, `PAGE_ALIASES`, `PAGE_DESCRIPTIONS` trong `Src/lib/featureConfig.js`, sau đó gắn menu trong `Src/App.jsx`.
 - Gọi Supabase đọc bảng đơn giản: dùng `readRows` trong `Src/lib/dbService.js`.
-- Gọi procedure: dùng `callProcedure`, chỉ fallback khi `isProcedureUnavailable(error)` hoặc lỗi đã được xác định là có thể xử lý an toàn.
+- Gọi nghiệp vụ DB: dùng `callProcedureCandidates` với function wrapper `fn_*_app` trước, legacy `sp_*` sau. Chỉ fallback khi `isProcedureUnavailable(error)` hoặc lỗi đã được xác định là có thể xử lý an toàn.
 - Không dùng `setRows` trực tiếp cho dữ liệu trang. Dùng `commitRows(rows, pageKey)` để cache theo trang.
 - CSS layout nên thêm vào block cuối cùng nếu cần override legacy, vì file hiện có nhiều lớp override cũ.
 
 ## Nâng cấp tiếp theo
 
 - Tách `App.jsx` thành các feature pages riêng: `pages/orders`, `pages/stock`, `pages/rbac`, `pages/query`.
-- Chuyển các thao tác tồn kho còn lại sang procedure/fallback: chuyển kho, kiểm kho, đổi trả.
-- Thêm Supabase function wrapper cho procedure hiện đang là `PROCEDURE`, vì PostgREST/Supabase RPC ổn định nhất với `FUNCTION`.
-- Tách bundle bằng lazy import cho các trang nặng để hết cảnh báo chunk trên 500 kB.
+- Chuyển đổi trả sang procedure/fallback hoặc bổ sung function database riêng cho hoàn kho/hoàn tiền.
+- Sau khi deploy SQL mới, refresh schema cache Supabase để RPC thấy các `fn_*_app`.
+- Tách page/component khỏi `App.jsx` để giảm bundle app chính thêm nữa và dễ review từng module.
 - Thêm test tự động cho POS: chọn sản phẩm gốc, chọn biến thể, thêm giỏ, tạo hóa đơn, kiểm tra tồn kho giảm đúng.
