@@ -3605,7 +3605,7 @@ export default function App() {
             <div className="topbar-search" role="search">
               <input
                 value={globalSearch}
-                placeholder="Tìm sản phẩm, biến thể, barcode, đơn hàng, khách hàng..."
+                placeholder="Tìm sản phẩm, đơn hàng, khách hàng..."
                 onFocus={() => setSearchOpen(true)}
                 onChange={(event) => {
                   setGlobalSearch(event.target.value);
@@ -3749,6 +3749,19 @@ export default function App() {
           <Skeleton />
         ) : (
           <div className="content">
+            {page !== "dashboard" && (
+              <PageSurface
+                page={page}
+                options={options}
+                rows={visibleRows}
+                cart={cart}
+                heldCarts={heldCarts}
+                notifications={notifications}
+                searchSummary={searchSummary}
+                goToPage={goToPage}
+                exportRows={exportRows}
+              />
+            )}
             {page === "dashboard" && <Dashboard run={run} dashboardData={dashboardData} rows={visibleRows} goToPage={goToPage} notifications={notifications} can={can} />}
             {page === "products" && (
               <Products
@@ -4137,6 +4150,84 @@ function Modal({ title, children, onClose }) {
         {children}
       </div>
     </div>
+  );
+}
+
+// Shared page header for non-dashboard screens. It gives sparse pages a
+// consistent professional shell without changing each page's business logic.
+function PageSurface({ page, options, rows, cart, heldCarts, notifications, searchSummary, goToPage, exportRows }) {
+  const metaMap = {
+    products: { title: "Hàng hóa", kicker: "Product Studio", text: "Quản lý sản phẩm gốc, biến thể, ảnh, danh mục và nguồn nhập.", tone: "emerald" },
+    purchase: { title: "Nhập hàng", kicker: "Procurement", text: "Tạo phiếu nhập, nhận hàng, cập nhật tồn và theo dõi nhà cung cấp.", tone: "gold" },
+    stock: { title: "Kho hàng", kicker: "Inventory Control", text: "Theo dõi tồn khả dụng, cảnh báo thấp và lịch sử nhập xuất theo chi nhánh.", tone: "emerald" },
+    transfer: { title: "Chuyển kho", kicker: "Branch Transfer", text: "Điều chuyển tồn giữa chi nhánh và tự động ghi lịch sử kho.", tone: "blue" },
+    adjustment: { title: "Kiểm kho", kicker: "Stock Count", text: "Đối soát tồn hệ thống với tồn thực tế, lưu phiếu điều chỉnh.", tone: "amber" },
+    orders: { title: "Bán hàng", kicker: "POS Workspace", text: "Chọn sản phẩm, biến thể, xử lý giỏ hàng, giữ đơn và tạo hóa đơn.", tone: "emerald" },
+    customers: { title: "Khách hàng", kicker: "CRM", text: "Lưu hồ sơ khách, điểm tích lũy, trạng thái và lịch sử chi tiêu.", tone: "blue" },
+    returns: { title: "Đổi trả", kicker: "After Sales", text: "Ghi nhận trả hàng, hoàn tiền và hoàn kho khi sản phẩm còn bán được.", tone: "rose" },
+    channels: { title: "Kênh bán", kicker: "Omnichannel", text: "Quản lý chi nhánh, kênh bán, giá theo kênh và phân bổ tồn.", tone: "gold" },
+    users: { title: "RBAC", kicker: "Access Control", text: "Quản lý nhân viên, vai trò, quyền truy cập và log hoạt động.", tone: "blue" },
+    reports: { title: "Báo cáo", kicker: "Management Insight", text: "Tổng hợp doanh thu, tồn kho, đơn hàng và biến động vận hành.", tone: "emerald" },
+    query: { title: "Tra bảng", kicker: "Data Explorer", text: "Tra cứu bảng/view, xem kết quả tìm kiếm toàn hệ thống và xuất dữ liệu.", tone: "amber" },
+  };
+  const meta = metaMap[page] || { title: page, kicker: "SilkRoad", text: PAGE_DESCRIPTIONS[page] || "Quản lý dữ liệu hệ thống.", tone: "emerald" };
+  const totalAvailable = (options.stock || []).reduce((sum, item) => sum + availableStockOf(item), 0);
+  const lowStock = (options.stock || []).filter((item) => Number(first(item, ["quantity"], 0)) <= Number(first(item, ["minstocklevel", "min_stock_level"], 5))).length;
+  const statMap = {
+    products: [["Sản phẩm", options.products.length], ["Biến thể", options.variants.length], ["Danh mục", options.categories.length], ["Ảnh", options.images.length]],
+    purchase: [["Nhà cung cấp", options.suppliers.length], ["Chi nhánh", options.branches.length], ["Biến thể", options.variants.length], ["Dòng bảng", rows.length]],
+    stock: [["Tồn khả dụng", totalAvailable], ["Sắp hết", lowStock], ["Chi nhánh", options.branches.length], ["Dòng bảng", rows.length]],
+    transfer: [["Chi nhánh", options.branches.length], ["Biến thể", options.variants.length], ["Tồn khả dụng", totalAvailable], ["Dòng bảng", rows.length]],
+    adjustment: [["Chi nhánh", options.branches.length], ["Biến thể", options.variants.length], ["Sắp hết", lowStock], ["Dòng bảng", rows.length]],
+    orders: [["Dòng giỏ", cart.length], ["Đơn tạm", heldCarts.length], ["Kênh bán", options.channels.length], ["Khách hàng", options.customers.length]],
+    customers: [["Khách hàng", options.customers.length], ["Đang hiển thị", rows.length], ["Đơn tạm", heldCarts.length], ["Cảnh báo", notifications.length]],
+    returns: [["Khách hàng", options.customers.length], ["Biến thể", options.variants.length], ["Chi nhánh", options.branches.length], ["Dòng bảng", rows.length]],
+    channels: [["Chi nhánh", options.branches.length], ["Kênh bán", options.channels.length], ["Giá kênh", options.channelPrices.length], ["Phân bổ", options.allocations.length]],
+    users: [["Vai trò", options.roles.length], ["Nhân viên", rows.length], ["Chi nhánh", options.branches.length], ["Cảnh báo", notifications.length]],
+    reports: [["Sản phẩm", options.products.length], ["Tồn khả dụng", totalAvailable], ["Dòng báo cáo", rows.length], ["Cảnh báo", notifications.length]],
+    query: [["Kết quả", searchSummary?.total ?? rows.length], ["Bảng hỗ trợ", QUERY_TABLES.length], ["Nhóm tìm", Object.keys(searchSummary?.groups || {}).length], ["Dòng bảng", rows.length]],
+  };
+  const navMap = {
+    products: [["Kho", "stock"], ["Bán hàng", "orders"], ["Báo cáo", "reports"]],
+    purchase: [["Kho", "stock"], ["Nhà cung cấp", "products"], ["Báo cáo", "reports"]],
+    stock: [["Nhập hàng", "purchase"], ["Chuyển kho", "transfer"], ["Kiểm kho", "adjustment"]],
+    transfer: [["Kho", "stock"], ["Kiểm kho", "adjustment"], ["Báo cáo", "reports"]],
+    adjustment: [["Kho", "stock"], ["Chuyển kho", "transfer"], ["Báo cáo", "reports"]],
+    orders: [["Khách hàng", "customers"], ["Đổi trả", "returns"], ["Báo cáo", "reports"]],
+    customers: [["Bán hàng", "orders"], ["Đổi trả", "returns"], ["Tra bảng", "query"]],
+    returns: [["Bán hàng", "orders"], ["Khách hàng", "customers"], ["Kho", "stock"]],
+    channels: [["Bán hàng", "orders"], ["Kho", "stock"], ["Báo cáo", "reports"]],
+    users: [["Tra bảng", "query"], ["Báo cáo", "reports"], ["Tổng quan", "dashboard"]],
+    reports: [["Tổng quan", "dashboard"], ["Kho", "stock"], ["Tra bảng", "query"]],
+    query: [["Hàng hóa", "products"], ["Kho", "stock"], ["Báo cáo", "reports"]],
+  };
+  const stats = statMap[page] || [["Dòng dữ liệu", rows.length], ["Cảnh báo", notifications.length]];
+  const navItems = navMap[page] || [["Tổng quan", "dashboard"], ["Tra bảng", "query"]];
+
+  return (
+    <section className={`page-surface page-surface-${meta.tone}`}>
+      <div className="page-surface-main">
+        <span>{meta.kicker}</span>
+        <h1>{meta.title}</h1>
+        <p>{meta.text}</p>
+      </div>
+      <div className="page-surface-stats">
+        {stats.map(([label, value]) => (
+          <div key={label}>
+            <b>{Number(value || 0).toLocaleString("vi-VN")}</b>
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="page-surface-actions">
+        {navItems.map(([label, target]) => (
+          <button key={target} type="button" onClick={() => goToPage(target)}>
+            {label}
+          </button>
+        ))}
+        <button type="button" onClick={() => exportRows(page)}>Xuất CSV</button>
+      </div>
+    </section>
   );
 }
 

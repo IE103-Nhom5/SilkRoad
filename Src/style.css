@@ -7574,3 +7574,199 @@ body,
     max-width: none !important;
   }
 }
+
+/* =========================================================
+   FINAL OVERRIDE 9: shorter search + richer page surfaces
+========================================================= */
+@media (min-width: 961px) {
+  .topbar {
+    grid-template-columns: minmax(150px, 220px) minmax(280px, min(520px, 32vw)) minmax(0, 1fr) !important;
+    padding-right: clamp(390px, 28vw, 520px) !important;
+  }
+
+  .topbar-search-shell {
+    max-width: 520px !important;
+  }
+}
+
+@media (min-width: 961px) and (max-width: 1280px) {
+  .topbar {
+    grid-template-columns: minmax(130px, 170px) minmax(260px, 420px) minmax(0, 1fr) !important;
+    padding-right: clamp(320px, 32vw, 420px) !important;
+  }
+
+  .topbar-search-shell {
+    max-width: 420px !important;
+  }
+}
+
+.page-surface {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(260px, 1.05fr) minmax(300px, 1fr) auto;
+  gap: 18px;
+  align-items: stretch;
+  margin: 0 0 22px;
+  padding: 20px;
+  border: 1px solid rgba(194, 161, 92, 0.46);
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 253, 247, 0.98), rgba(246, 236, 212, 0.9)),
+    radial-gradient(circle at top right, rgba(13, 122, 102, 0.13), transparent 38%);
+  box-shadow: 0 22px 58px rgba(58, 43, 16, 0.12);
+  overflow: hidden;
+}
+
+.page-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: linear-gradient(180deg, #0d7a66, #d6b56d);
+}
+
+.page-surface-main {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 6px;
+}
+
+.page-surface-main span {
+  color: #8a6a28;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.page-surface-main h1 {
+  margin: 0;
+  color: #003d33;
+  font-size: clamp(26px, 2.2vw, 38px);
+  line-height: 1.05;
+}
+
+.page-surface-main p {
+  margin: 0;
+  color: #716448;
+  line-height: 1.45;
+  max-width: 680px;
+}
+
+.page-surface-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(90px, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.page-surface-stats div {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(194, 161, 92, 0.34);
+  background: rgba(255, 250, 240, 0.72);
+}
+
+.page-surface-stats b {
+  color: #003d33;
+  font-size: clamp(22px, 1.7vw, 32px);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.page-surface-stats span {
+  color: #745c2a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.page-surface-actions {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+  min-width: 138px;
+}
+
+.page-surface-actions button {
+  min-height: 40px;
+  margin: 0;
+  padding: 9px 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(194, 161, 92, 0.5);
+  background: rgba(255, 253, 247, 0.88);
+  color: #003d33;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.page-surface-actions button:hover {
+  background: rgba(13, 122, 102, 0.1);
+}
+
+.page-surface-gold::before,
+.page-surface-amber::before {
+  background: linear-gradient(180deg, #d6b56d, #8a6a28);
+}
+
+.page-surface-blue::before {
+  background: linear-gradient(180deg, #1d7288, #0d7a66);
+}
+
+.page-surface-rose::before {
+  background: linear-gradient(180deg, #a03023, #d6b56d);
+}
+
+body.dark .page-surface {
+  background:
+    linear-gradient(135deg, rgba(7, 35, 29, 0.98), rgba(10, 51, 43, 0.94)),
+    radial-gradient(circle at top right, rgba(214, 181, 109, 0.15), transparent 38%);
+  border-color: rgba(214, 181, 109, 0.34);
+}
+
+body.dark .page-surface-main h1,
+body.dark .page-surface-stats b {
+  color: #fff1ba;
+}
+
+body.dark .page-surface-main p,
+body.dark .page-surface-stats span {
+  color: #d8c491;
+}
+
+body.dark .page-surface-main span {
+  color: #f0d58f;
+}
+
+body.dark .page-surface-stats div,
+body.dark .page-surface-actions button {
+  background: rgba(5, 32, 27, 0.76);
+  border-color: rgba(214, 181, 109, 0.28);
+  color: #fff1ba;
+}
+
+@media (max-width: 1180px) {
+  .page-surface {
+    grid-template-columns: 1fr;
+  }
+
+  .page-surface-actions {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .page-surface {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .page-surface-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
