@@ -4180,6 +4180,120 @@ export default function App() {
           </div>
         )}
       </main>
+      <FloatingGeminiHelp page={page} goToPage={goToPage} />
+    </div>
+  );
+}
+
+// Frontend-only assistant shell. It deliberately returns local mock answers so
+// Gemini API keys never live in React/Vite, localStorage or browser requests.
+function FloatingGeminiHelp({ page, goToPage }) {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      text:
+        "Mình là khung trợ giúp front-end. Chưa gọi Gemini API và không nhận API key ở trình duyệt. Bạn có thể hỏi cách thao tác app hoặc cách nối Gemini qua backend.",
+    },
+  ]);
+
+  const quickQuestions = [
+    "Cách nối Gemini API an toàn",
+    "Tại sao không để API key ở frontend?",
+    "Gợi ý sửa lỗi layout",
+  ];
+
+  function answerFor(question) {
+    const normalized = normalizeSearchText(question);
+    if (normalized.includes("api") || normalized.includes("gemini") || normalized.includes("key")) {
+      return [
+        "Luồng nối Gemini đúng là: frontend gọi endpoint backend của bạn, backend giữ GEMINI_API_KEY trong biến môi trường, backend gọi Gemini rồi trả câu trả lời về frontend.",
+        "Không đưa API key vào React/Vite env public, localStorage, source code hoặc request trực tiếp từ trình duyệt.",
+        "Khi muốn bật thật: tạo endpoint POST /api/gemini-chat, nhận { message, context }, kiểm quyền user, gọi Gemini từ server, rồi frontend thay phần mock bằng fetch('/api/gemini-chat').",
+      ].join("\n");
+    }
+    if (normalized.includes("layout") || normalized.includes("giao dien") || normalized.includes("icon")) {
+      return [
+        "Mình đã thêm lớp CSS cuối để topbar, sidebar, icon và nút trợ giúp dùng cùng một hệ màu.",
+        "Nếu còn lệch ở thiết bị cụ thể, chụp đúng viewport đó. Ưu tiên sửa trong block CSS cuối để tránh các override cũ kéo ngược lại.",
+      ].join("\n");
+    }
+    if (normalized.includes("ban hang") || normalized.includes("hoa don") || normalized.includes("ton")) {
+      return "Với bán hàng: chọn chi nhánh, chọn sản phẩm gốc, chọn biến thể theo tên, thêm giỏ rồi tạo hóa đơn. Nếu báo không đủ tồn, kiểm tra tồn khả dụng, tồn giữ chỗ và phân bổ theo kênh.";
+    }
+    return `Gợi ý nhanh cho trang ${page}: dùng ô tìm kiếm trên thanh đầu để mở chức năng hoặc tra dữ liệu. Với câu hỏi kỹ thuật Gemini, hãy nối qua backend riêng, không gọi API trực tiếp từ giao diện này.`;
+  }
+
+  function ask(question = input) {
+    const value = trim(question);
+    if (!value) return;
+    setMessages((current) => [
+      ...current,
+      { role: "user", text: value },
+      { role: "assistant", text: answerFor(value) },
+    ]);
+    setInput("");
+    setOpen(true);
+  }
+
+  return (
+    <div className={`gemini-help ${open ? "open" : ""}`}>
+      {open && (
+        <section className="gemini-help-panel" aria-label="Trợ lý Gemini frontend">
+          <header>
+            <div>
+              <b>Hỏi trợ lý</b>
+              <span>Frontend mock, chưa nối API</span>
+            </div>
+            <button type="button" onClick={() => setOpen(false)} aria-label="Đóng trợ lý">
+              <X size={18} />
+            </button>
+          </header>
+          <div className="gemini-help-warning">
+            <Info size={16} />
+            <span>Không nhập hoặc lưu API key Gemini trong trình duyệt.</span>
+          </div>
+          <div className="gemini-help-messages">
+            {messages.map((message, index) => (
+              <div key={`${message.role}-${index}`} className={`gemini-help-message ${message.role}`}>
+                {message.text.split("\n").map((line, lineIndex) => (
+                  <p key={lineIndex}>{line}</p>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div className="gemini-help-quick">
+            {quickQuestions.map((question) => (
+              <button key={question} type="button" onClick={() => ask(question)}>
+                {question}
+              </button>
+            ))}
+          </div>
+          <form
+            className="gemini-help-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              ask();
+            }}
+          >
+            <input
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="Hỏi về thao tác hoặc cách nối Gemini..."
+            />
+            <button type="submit" aria-label="Gửi câu hỏi">
+              <Search size={17} />
+            </button>
+          </form>
+          <button type="button" className="gemini-help-link" onClick={() => goToPage("help")}>
+            Mở trang trợ giúp đầy đủ
+          </button>
+        </section>
+      )}
+      <button type="button" className="gemini-help-fab" onClick={() => setOpen((current) => !current)} aria-label="Mở trợ giúp">
+        ?
+      </button>
     </div>
   );
 }
