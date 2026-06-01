@@ -2,28 +2,18 @@
 
 > Bản thân tôi cũng không hiểu vì sao nó chạy --qct
 
-Khi bạn mò được tài liệu này thì đọc tài liệu này sẽ giải đáp được nghi vấn trong lòng: **Cấu trúc file tà đạo j đây ???** . Tôi cũng không hiểu được hết toàn bộ cấu trúc tà môn này, do một phần từ xuất thân lai tạp giữa con người và trí tuệ nhân tạo. Tuy nhiên, tài liệu này sẽ giải thích các file trong đây dùng để làm j, vì sao lại tồn tại ở đây ( **THEO CÁC HIỂU CỦA TÔI** )
+Khi bạn mò được tài liệu này thì sẽ có một nghi vấn trong tâm: **Cấu trúc file tà đạo j đây ???** . Tôi cũng không hiểu được hết toàn bộ cấu trúc tà môn này, do một phần từ xuất thân lai tạp giữa con người và trí tuệ nhân tạo. Tuy nhiên, tài liệu này sẽ giải thích các file trong đây dùng để làm j, vì sao lại tồn tại ở đây ( **THEO CÁC HIỂU CỦA TÔI** )
 
-## 1. Luong Chay Chinh
+## 1. Work flow chính
 
-Duong chay that cua app:
+| Thứ tự chạy | File | Vai trò |
+|---|---|---|
+| 1 | `index.html` | tạo node gốc `<div id="root"></div>` |
+| 2 | `Src/main.jsx` | gắn React vào `root` |
+| 3 | `Src/App.jsx` | file vận hành app chính |
+| 4 | `Src/style.css` | file giao diện |
+| 5 | `Src/lib/*` | chứa cấu hình db |
 
-```txt
-index.html
-  -> Src/main.jsx
-    -> Src/App.jsx
-      -> Src/style.css
-      -> Src/lib/*
-      -> Src/assets/*
-```
-
-Y nghia:
-
-- `index.html` tao node goc `<div id="root"></div>`.
-- `Src/main.jsx` gan React vao `root`.
-- `Src/App.jsx` la file dieu khien app chinh.
-- `Src/style.css` la file giao dien chinh.
-- `Src/lib/*` chua cau hinh Supabase, quyen, helper database.
 
 Neu muon hieu app dang chay nhu the nao, doc theo thu tu:
 
