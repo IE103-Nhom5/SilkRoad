@@ -1,6 +1,7 @@
 # Huong Dan Cau Truc Du An SilkRoad UIT
+>> Bản thân tôi cũng không hiểu vì sao nó chạy --qct
 
-Tai lieu nay giai thich cac file trong frontend SilkRoad UIT dang dung de lam gi, file nao dang chay that, file nao la ban cu/prototype, va vi sao cau truc hien tai lai nhu vay.
+Khi bạn mò được tài liệu này thì đọc tài liệu này sẽ giải đáp được nghi vấn trong lòng: **Cấu trúc file tà đạo j đây ??? **. Tôi cũng không hiểu được hết toàn bộ cấu trúc tà môn này, do một phần từ xuất thân lai tạp giữa con người và trí tuệ nhân tạo. Tuy nhiên, tài liệu này sẽ giải thích các file trong đây dùng để làm j, vì sao lại tồn tại ở đây ( **THEO CÁC HIỂU CỦA TÔI** )
 
 ## 1. Luong Chay Chinh
 
