@@ -9861,3 +9861,176 @@ body.dark .sidebar button svg {
   right: clamp(18px, 2vw, 34px) !important;
   z-index: 700 !important;
 }
+
+/* =========================================================
+   FINAL OVERRIDE 16: hard-pin topbar actions and untrap POS scroll
+   This is intentionally last because legacy rules keep reintroducing offsets.
+========================================================= */
+@media (min-width: 961px) {
+  .topbar {
+    position: sticky !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: clamp(14px, 1.4vw, 24px) !important;
+    padding-right: clamp(430px, 28vw, 520px) !important;
+  }
+
+  .topbar-title-block {
+    flex: 0 0 clamp(160px, 14vw, 230px) !important;
+  }
+
+  .topbar-search-shell {
+    flex: 0 1 370px !important;
+    min-width: 240px !important;
+    max-width: 370px !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+  }
+
+  .topbar-search {
+    max-width: 370px !important;
+  }
+
+  .topbar-actions {
+    position: absolute !important;
+    top: 50% !important;
+    right: clamp(16px, 1.7vw, 28px) !important;
+    left: auto !important;
+    bottom: auto !important;
+    transform: translateY(-50%) !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+    width: max-content !important;
+    min-width: max-content !important;
+    max-width: calc(100vw - 48px) !important;
+    z-index: 20 !important;
+  }
+
+  .notification-menu,
+  .account-menu {
+    position: relative !important;
+    inset: auto !important;
+    z-index: auto !important;
+  }
+}
+
+@media (min-width: 961px) and (max-width: 1220px) {
+  .topbar {
+    padding-right: clamp(330px, 35vw, 430px) !important;
+  }
+
+  .topbar-search-shell,
+  .topbar-search {
+    max-width: 300px !important;
+  }
+
+  .topbar .account-trigger {
+    min-width: 160px !important;
+    max-width: 190px !important;
+  }
+}
+
+.pos-workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 500px) !important;
+  gap: clamp(16px, 1.8vw, 24px) !important;
+  align-items: start !important;
+}
+
+.pos-main,
+.pos-checkout,
+.pos-product-panel,
+.product-grid,
+.variant-list,
+.product-preview,
+.pos-sale-fields,
+.payment-tabs {
+  min-width: 0 !important;
+}
+
+.pos-checkout {
+  position: static !important;
+  top: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  align-self: start !important;
+  border-radius: 18px !important;
+}
+
+.product-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding-right: 0 !important;
+}
+
+.product-tile {
+  min-height: 318px !important;
+}
+
+.variant-list {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.product-preview {
+  grid-template-columns: 132px minmax(0, 1fr) !important;
+  align-items: stretch !important;
+}
+
+.product-preview-image {
+  min-height: 132px !important;
+}
+
+@media (max-width: 1500px) {
+  .pos-workspace {
+    grid-template-columns: 1fr !important;
+  }
+
+  .pos-checkout {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 420px) !important;
+    align-items: start !important;
+  }
+
+  .product-preview,
+  .variant-panel {
+    grid-column: auto !important;
+  }
+
+  .pos-sale-fields,
+  .payment-tabs,
+  .pos-checkout > .field,
+  .pos-checkout > .action-row,
+  .held-cart-list,
+  .pos-checkout > .table-wrap,
+  .pos-checkout > .cart-total {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .pos-checkout {
+    display: flex !important;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .product-tile {
+    min-height: 280px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .product-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .product-tile {
+    min-height: 0 !important;
+  }
+}
