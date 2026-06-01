@@ -9668,3 +9668,196 @@ body.dark .gemini-help-form input {
     min-height: 54px !important;
   }
 }
+
+/* =========================================================
+   FINAL OVERRIDE 15: flex topbar, right-pinned actions and clear icons
+   Keep this block last. Earlier topbar blocks use grid/fixed positioning.
+========================================================= */
+@media (min-width: 961px) {
+  .topbar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: clamp(12px, 1.3vw, 20px) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 84px !important;
+    padding: 14px clamp(14px, 1.2vw, 22px) 14px clamp(22px, 2vw, 36px) !important;
+    overflow: visible !important;
+  }
+
+  .topbar > .mobile-menu-toggle {
+    display: none !important;
+  }
+
+  .topbar-title-block {
+    flex: 0 0 clamp(170px, 14vw, 230px) !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 230px !important;
+  }
+
+  .topbar-search-shell {
+    flex: 0 1 360px !important;
+    width: auto !important;
+    min-width: 240px !important;
+    max-width: 360px !important;
+    margin: 0 !important;
+    position: relative !important;
+    z-index: 2 !important;
+  }
+
+  .topbar-search {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 360px !important;
+  }
+
+  .topbar-actions {
+    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+    width: max-content !important;
+    min-width: max-content !important;
+    max-width: none !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    z-index: 5 !important;
+    white-space: nowrap !important;
+  }
+
+  .notification-menu,
+  .account-menu {
+    position: relative !important;
+    inset: auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 auto !important;
+  }
+
+  .topbar .notification-trigger,
+  .topbar .theme-toggle {
+    flex: 0 0 52px !important;
+    width: 52px !important;
+    min-width: 52px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    padding: 0 !important;
+  }
+
+  .topbar .account-trigger {
+    flex: 0 1 260px !important;
+    width: auto !important;
+    min-width: 180px !important;
+    max-width: min(260px, 22vw) !important;
+    height: 52px !important;
+  }
+
+  .notification-dropdown,
+  .account-dropdown {
+    right: 0 !important;
+    left: auto !important;
+    top: calc(100% + 12px) !important;
+  }
+}
+
+@media (min-width: 961px) and (max-width: 1180px) {
+  .topbar {
+    gap: 10px !important;
+    padding-inline: 16px 12px !important;
+  }
+
+  .topbar-title-block {
+    flex-basis: 150px !important;
+    max-width: 170px !important;
+  }
+
+  .topbar-search-shell {
+    flex-basis: 300px !important;
+    min-width: 220px !important;
+    max-width: 300px !important;
+  }
+
+  .topbar-search {
+    max-width: 300px !important;
+  }
+
+  .topbar .account-trigger {
+    min-width: 160px !important;
+    max-width: 200px !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .topbar {
+    display: grid !important;
+    grid-template-columns: 48px minmax(0, 1fr) max-content !important;
+    gap: 10px !important;
+    align-items: center !important;
+  }
+
+  .topbar-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+  }
+
+  .topbar-search-shell {
+    grid-column: 1 / -1 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+
+.sidebar svg,
+.sidebar button svg,
+.topbar-search-submit svg,
+.gemini-help-fab,
+.gemini-help-form button svg {
+  color: #fff6d5 !important;
+}
+
+.topbar .notification-trigger svg,
+.topbar .theme-toggle svg,
+.topbar .account-trigger svg,
+.account-dropdown button svg,
+.notification-dropdown svg,
+.gemini-help-panel header button svg,
+.gemini-help-warning svg {
+  color: #043d31 !important;
+}
+
+body.dark .topbar .notification-trigger svg,
+body.dark .topbar .theme-toggle svg,
+body.dark .topbar .account-trigger svg,
+body.dark .account-dropdown button svg,
+body.dark .notification-dropdown svg,
+body.dark .gemini-help-panel header button svg,
+body.dark .gemini-help-warning svg {
+  color: #fff1ba !important;
+}
+
+body.dark .topbar-search-submit svg,
+body.dark .gemini-help-form button svg,
+body.dark .sidebar svg,
+body.dark .sidebar button svg {
+  color: #fff6d5 !important;
+}
+
+.toast {
+  top: calc(84px + 18px) !important;
+  right: clamp(18px, 2vw, 34px) !important;
+  z-index: 700 !important;
+}
