@@ -9276,12 +9276,16 @@ body.dark .app-footer nav button {
    FINAL OVERRIDE 14: unified icons, resilient layout and Gemini help UI
 ========================================================= */
 :root {
-  --sr-icon-color: #06463a;
+  --sr-icon-color: #0b6f5c;
+  --sr-icon-strong: #043d31;
+  --sr-icon-on-dark: #fff1ba;
   --sr-icon-muted: #7a6739;
 }
 
 body.dark {
   --sr-icon-color: #f6e7b0;
+  --sr-icon-strong: #fff1ba;
+  --sr-icon-on-dark: #fff1ba;
   --sr-icon-muted: #d8c491;
 }
 
@@ -9333,6 +9337,32 @@ body.dark option {
   fill: none !important;
 }
 
+.sidebar svg,
+.sidebar button svg {
+  color: var(--sr-icon-on-dark) !important;
+}
+
+.topbar button svg,
+.account-dropdown button svg,
+.notification-dropdown svg,
+.gemini-help-panel header button svg,
+.gemini-help-warning svg {
+  color: var(--sr-icon-strong) !important;
+}
+
+.topbar-search-submit svg,
+.gemini-help-form button svg {
+  color: #fff6d5 !important;
+}
+
+body.dark .topbar button svg,
+body.dark .account-dropdown button svg,
+body.dark .notification-dropdown svg,
+body.dark .gemini-help-panel header button svg,
+body.dark .gemini-help-warning svg {
+  color: var(--sr-icon-on-dark) !important;
+}
+
 .notification-badge,
 .sidebar-parent-count {
   color: #fff6d5 !important;
@@ -9354,17 +9384,39 @@ body.dark option {
 
 @media (min-width: 961px) {
   .topbar {
-    grid-template-columns: minmax(170px, 230px) minmax(240px, 380px) minmax(max-content, 1fr) !important;
+    grid-template-columns: minmax(160px, 220px) minmax(230px, 360px) minmax(0, 1fr) !important;
+    padding-right: clamp(10px, 1vw, 18px) !important;
   }
 
   .topbar-search-shell,
   .topbar-search {
-    max-width: 380px !important;
+    max-width: 360px !important;
   }
 
   .topbar-actions {
+    grid-column: 3 !important;
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    transform: none !important;
     justify-self: end !important;
     margin-left: auto !important;
+    margin-right: 0 !important;
+    width: max-content !important;
+    max-width: 100% !important;
+  }
+
+  .notification-menu,
+  .account-menu {
+    position: relative !important;
+    right: auto !important;
+    top: auto !important;
+  }
+
+  .notification-dropdown,
+  .account-dropdown {
+    right: 0 !important;
+    left: auto !important;
   }
 
   .sidebar {
@@ -9485,6 +9537,7 @@ body.dark option {
   gap: 10px;
   overflow-y: auto;
   padding-right: 4px;
+  scroll-behavior: smooth;
 }
 
 .gemini-help-message {

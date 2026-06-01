@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { callProcedureCandidates, isProcedureUnavailable, readFirstAvailableTable, readRows } from "./lib/dbService";
 import { PAGE_ALIASES, PAGE_DESCRIPTIONS, QUERY_TABLES, ROLE_FEATURES, TABLE_LABELS } from "./lib/featureConfig";
@@ -4190,6 +4190,7 @@ export default function App() {
 function FloatingGeminiHelp({ page, goToPage }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
+  const messageListRef = useRef(null);
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -4203,6 +4204,14 @@ function FloatingGeminiHelp({ page, goToPage }) {
     "Tại sao không để API key ở frontend?",
     "Gợi ý sửa lỗi layout",
   ];
+
+  useEffect(() => {
+    if (!open || !messageListRef.current) return;
+    requestAnimationFrame(() => {
+      const list = messageListRef.current;
+      if (list) list.scrollTop = list.scrollHeight;
+    });
+  }, [messages, open]);
 
   function answerFor(question) {
     const normalized = normalizeSearchText(question);
@@ -4254,7 +4263,7 @@ function FloatingGeminiHelp({ page, goToPage }) {
             <Info size={16} />
             <span>Không nhập hoặc lưu API key Gemini trong trình duyệt.</span>
           </div>
-          <div className="gemini-help-messages">
+          <div className="gemini-help-messages" ref={messageListRef}>
             {messages.map((message, index) => (
               <div key={`${message.role}-${index}`} className={`gemini-help-message ${message.role}`}>
                 {message.text.split("\n").map((line, lineIndex) => (
