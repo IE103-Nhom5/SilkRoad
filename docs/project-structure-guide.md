@@ -2,7 +2,7 @@
 
 > Bản thân tôi cũng không hiểu vì sao nó chạy --qct
 
-Khi bạn mò được tài liệu này thì đọc tài liệu này sẽ giải đáp được nghi vấn trong lòng: **Cấu trúc file tà đạo j đây ??? **. Tôi cũng không hiểu được hết toàn bộ cấu trúc tà môn này, do một phần từ xuất thân lai tạp giữa con người và trí tuệ nhân tạo. Tuy nhiên, tài liệu này sẽ giải thích các file trong đây dùng để làm j, vì sao lại tồn tại ở đây ( **THEO CÁC HIỂU CỦA TÔI** )
+Khi bạn mò được tài liệu này thì đọc tài liệu này sẽ giải đáp được nghi vấn trong lòng: **Cấu trúc file tà đạo j đây ???** . Tôi cũng không hiểu được hết toàn bộ cấu trúc tà môn này, do một phần từ xuất thân lai tạp giữa con người và trí tuệ nhân tạo. Tuy nhiên, tài liệu này sẽ giải thích các file trong đây dùng để làm j, vì sao lại tồn tại ở đây ( **THEO CÁC HIỂU CỦA TÔI** )
 
 ## 1. Luong Chay Chinh
 
