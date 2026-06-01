@@ -2,7 +2,7 @@
 
 > Bản thân tôi cũng không hiểu vì sao nó chạy --qct
 
-Khi bạn mò được tài liệu này thì sẽ có một nghi vấn trong tâm: **Cấu trúc file tà đạo j đây ???** . Tôi cũng không hiểu được hết toàn bộ cấu trúc tà môn này, do một phần từ xuất thân lai tạp giữa con người và trí tuệ nhân tạo. Tuy nhiên, tài liệu này sẽ giải thích các file trong đây dùng để làm j, vì sao lại tồn tại ở đây ( **THEO CÁC HIỂU CỦA TÔI** )
+Khi bạn mò được tài liệu này thì sẽ có một nghi vấn trong tâm: **Cấu trúc file tà đạo j đây ???** . Tôi cũng không hiểu được hết toàn bộ cấu trúc tà môn này, do một phần từ xuất thân lai tạp giữa con người và trí tuệ nhân tạo. Tuy nhiên, tài liệu này sẽ giải thích các file trong đây dùng để làm j, vì sao lại tồn tại ở đây ( **THEO CÁCH HIỂU CỦA TÔI** )
 
 ## 1. Work flow chính
 
@@ -15,7 +15,7 @@ Khi bạn mò được tài liệu này thì sẽ có một nghi vấn trong tâ
 | 5 | `Src/lib/*` | chứa cấu hình db |
 
 
-Neu muon hieu app dang chay nhu the nao, doc theo thu tu:
+Nếu muốn tọc vạch hệ thống sâu hơn, rcm đọc file như sau:
 
 1. `index.html`
 2. `Src/main.jsx`
@@ -24,7 +24,7 @@ Neu muon hieu app dang chay nhu the nao, doc theo thu tu:
 5. `Src/lib/dbService.js`
 6. `Src/style.css`
 
-## 2. File Goc O Thu Muc Root
+## 2. File gốc ở thư mục chính
 
 | File / thu muc | Dang dung? | Cong dung |
 |---|---:|---|
