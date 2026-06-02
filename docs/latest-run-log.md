@@ -2,6 +2,33 @@
 
 File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. Từ bây giờ, sau mỗi lượt sửa hoặc chạy kiểm tra quan trọng, cần cập nhật lại file này bằng tiếng Việt để dễ theo dõi.
 
+## 2026-06-02 - Viết lại project structure guide cùng phong cách đoạn đầu
+
+### Yêu cầu từ người dùng
+
+- Chỉnh `docs/project-structure-guide.md` cho phù hợp với phong cách ở đoạn đầu.
+
+### Đã làm
+
+- Viết lại toàn bộ `docs/project-structure-guide.md` bằng tiếng Việt có dấu, giữ giọng văn tự thú/kỹ thuật/hơi cà khịa như phần mở đầu.
+- Làm rõ hơn các nhóm file:
+  - File đang chạy thật.
+  - File sạch và đáng giữ.
+  - File prototype/bóng ma không nên sửa nếu muốn đổi app hiện tại.
+- Bổ sung hướng dẫn sửa đúng chỗ theo từng nhu cầu: POS, Dashboard, RBAC, topbar/sidebar, DB/RPC, quyền truy cập.
+- Cập nhật mô tả docs hiện tại, gồm `latest-run-log.md`, `maintenance-roadmap.md`, `max-potential-roadmap.md`.
+- Giữ định hướng refactor từng phần nhỏ thay vì xóa hàng loạt.
+
+### Kiểm tra
+
+- Không chạy build vì đây là thay đổi tài liệu Markdown, không đụng code runtime.
+- Đã đọc lại phần đầu file sau khi sửa để kiểm tra giọng văn và cấu trúc.
+
+### File đã thay đổi trong lượt này
+
+- `docs/project-structure-guide.md`
+- `docs/latest-run-log.md`
+
 ## 2026-06-02 - Sửa lỗi sidebar hover chồng lên topbar/content
 
 ### Yêu cầu từ người dùng
