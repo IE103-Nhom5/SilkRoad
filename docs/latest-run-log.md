@@ -2,6 +2,76 @@
 
 File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. Từ bây giờ, sau mỗi lượt sửa hoặc chạy kiểm tra quan trọng, cần cập nhật lại file này bằng tiếng Việt để dễ theo dõi.
 
+## 2026-06-02 - Thêm mục lục có link cho project structure guide
+
+### Yêu cầu từ người dùng
+
+- Thêm mục lục có link ngay đầu `docs/project-structure-guide.md`.
+- Link dùng kiểu Markdown `[Tên mục](#anchor)`.
+
+### Đã làm
+
+- Thêm mục `Mục Lục` ngay sau phần mở đầu.
+- Tạo 17 link tới các mục chính:
+  - `Workflow Chính`
+  - `Repo Map`
+  - `Root Files`
+  - `Source Folder`
+  - `Library Layer`
+  - `Assets`
+  - `Pages Prototype`
+  - `Legacy Layout`
+  - `Legacy Nav Config`
+  - `Documentation`
+  - `Feature Inventory`
+  - `Gemini API Rule`
+  - `File Ownership`
+  - `Non-Runtime Files`
+  - `Technical Debt`
+  - `Refactor Roadmap`
+  - `TL;DR`
+- Gắn anchor HTML ngắn trước từng heading chính để link không bị lỗi do dấu tiếng Việt hoặc ký tự đặc biệt.
+
+### Kiểm tra
+
+- Không chạy build vì đây là thay đổi Markdown, không đụng code runtime.
+- Đã rà lại heading và anchor bằng `rg`.
+
+### File đã thay đổi trong lượt này
+
+- `docs/project-structure-guide.md`
+- `docs/latest-run-log.md`
+
+## 2026-06-02 - Giữ thuật ngữ chuyên ngành trong guide kiếm hiệp
+
+### Yêu cầu từ người dùng
+
+- Giữ giọng văn kiếm hiệp/tà môn nhưng không được mất thuật ngữ chuyên ngành.
+- Các mục vẫn phải rõ kiểu `workflow chính`, `runtime`, `prototype`, `layout`, `refactor`.
+
+### Đã làm
+
+- Chỉnh lại heading trong `docs/project-structure-guide.md` theo dạng kỹ thuật trước, kiếm hiệp sau:
+  - `Workflow Chính / Kinh Mạch Chạy Chính`
+  - `Repo Map: Runtime, Docs, Prototype`
+  - `Root Files / File Gốc Ở Thư Mục Chính`
+  - `Source Folder Src / Động Phủ Src`
+  - `Library Layer Src/lib / Tàng Kinh Các`
+  - `Feature Inventory / Những Chức Năng Đang Có`
+  - `Refactor Roadmap / Lộ Trình Quy Chính Về Chính Đạo`
+- Khôi phục đúng câu mở đầu `Cấu trúc file tà đạo j đây ???`.
+- Thêm ghi chú ngay đầu file rằng phần kiếm hiệp chỉ là phong cách, còn thuật ngữ kỹ thuật vẫn là đường dẫn chính để bảo trì.
+
+### Kiểm tra
+
+- Không chạy build vì đây là thay đổi Markdown, không đụng code runtime.
+- Đã rà lại mục lục bằng `rg -n "^#|^##|^###"` để kiểm tra heading.
+
+### File đã thay đổi trong lượt này
+
+- `docs/project-structure-guide.md`
+- `docs/latest-run-log.md`
+
 ## 2026-06-02 - Khôi phục giọng văn kiếm hiệp/tà môn cho project structure guide
 
 ### Yêu cầu từ người dùng
