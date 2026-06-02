@@ -2,6 +2,62 @@
 
 File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. Từ bây giờ, sau mỗi lượt sửa hoặc chạy kiểm tra quan trọng, cần cập nhật lại file này bằng tiếng Việt để dễ theo dõi.
 
+## 2026-06-02 - Phát triển tối đa tiềm năng hệ thống
+
+### Yêu cầu từ người dùng
+
+- Phát triển tối đa tiềm năng của app.
+- Tiếp tục giữ quy ước: mỗi lần chạy/sửa xong phải cập nhật log mới nhất trong `docs/`.
+- Không làm bừa API thật; các phần Gemini/AI vẫn giữ frontend-only nếu chưa có backend an toàn.
+
+### Đã làm
+
+- Tạo tài liệu `docs/max-potential-roadmap.md` để ghi rõ hướng phát triển SilkRoad thành hệ thống bán hàng, kho, RBAC, dashboard và trợ giúp chuyên nghiệp.
+- Bổ sung trong `Src/App.jsx` phần logic “độ sẵn sàng mở rộng” cho trang Hệ thống:
+  - Tính từ dữ liệu thật đang tải trong `options`: hàng hóa, biến thể, chi nhánh/kho, kênh bán, khách hàng, RBAC và ảnh sản phẩm.
+  - Hiển thị phần `Tiềm năng hệ thống` với điểm phần trăm, các nền tảng đã sẵn sàng/chưa sẵn sàng.
+  - Thêm các hướng nâng cấp có thể bấm sang module tương ứng: POS, kho, RBAC, tra cứu, dashboard, trợ giúp AI.
+- Nâng cấp Dashboard thành bảng điều hành hơn:
+  - Thêm `Trung tâm điều hành` với điểm sức khỏe vận hành.
+  - Thêm các tín hiệu nhanh: dữ liệu KPI, cảnh báo, bán chạy, đơn gần đây.
+  - Thêm playbook tác vụ nên làm tiếp, có nút làm mới KPI hoặc đi thẳng sang module cần xử lý.
+- Bổ sung CSS trong `Src/style.css` cho:
+  - `.system-potential-panel`
+  - `.system-readiness-card`
+  - `.system-readiness-list`
+  - `.system-roadmap-grid`
+  - `.dashboard-command-center`
+  - `.dashboard-health-card`
+  - `.dashboard-signal-grid`
+  - `.dashboard-playbook`
+  - Dark mode cho các class mới để chữ/icon không bị chìm nền.
+  - Responsive tablet/mobile cho lưới roadmap và command center.
+
+### Kiểm tra đã chạy
+
+```bash
+npm run build
+```
+
+Kết quả:
+
+- Build thành công sau cả hai lượt sửa app/CSS.
+- Vite không báo lỗi cú pháp React/CSS.
+- Dev server hiện đang trả `STATUS=200` tại `http://127.0.0.1:5173/`.
+
+### File đã thay đổi trong lượt này
+
+- `Src/App.jsx`
+- `Src/style.css`
+- `docs/max-potential-roadmap.md`
+- `docs/latest-run-log.md`
+
+### Ghi chú bảo trì
+
+- `SystemPage` hiện đã có comment ngắn cho block tính điểm sẵn sàng, giúp biết rõ phần này lấy dữ liệu từ đâu.
+- Roadmap mới là bản định hướng để phát triển theo lộ trình, tránh sửa lan man từng lỗi nhỏ mà không có kiến trúc.
+- Giai đoạn tiếp theo nên ưu tiên tách `Src/App.jsx` theo page/component và gom CSS theo module, vì đây vẫn là điểm nghẽn lớn nhất của app.
+
 ## 2026-06-02 - Sửa layout shell/sidebar/topbar và rà soát cấu trúc file
 
 ### Yêu cầu từ người dùng

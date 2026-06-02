@@ -6652,6 +6652,132 @@ body.dark .account-permission-preview span {
   border-color: rgba(13, 122, 102, 0.32);
 }
 
+.dashboard-command-center {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.32fr) minmax(0, 1fr) minmax(300px, 0.42fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.dashboard-health-card,
+.dashboard-signal-grid div,
+.dashboard-playbook {
+  min-width: 0;
+  border: 1px solid rgba(194, 161, 92, 0.36);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 253, 247, 0.94), rgba(246, 237, 216, 0.72));
+}
+
+.dashboard-health-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 18px;
+}
+
+.dashboard-health-card span,
+.dashboard-signal-grid span {
+  color: #745c2a;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.dashboard-health-card strong {
+  color: #003d33;
+  font-size: clamp(42px, 4vw, 62px);
+  line-height: .95;
+}
+
+.dashboard-health-card small,
+.dashboard-signal-grid small,
+.dashboard-playbook small {
+  color: #766849;
+  line-height: 1.4;
+}
+
+.dashboard-health-card i {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(194, 161, 92, 0.18);
+  overflow: hidden;
+}
+
+.dashboard-health-card i em {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0d7a66, #0b8d76);
+}
+
+.dashboard-signal-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-signal-grid div {
+  display: grid;
+  gap: 7px;
+  padding: 16px;
+}
+
+.dashboard-signal-grid b {
+  color: #003d33;
+  font-size: clamp(20px, 1.8vw, 30px);
+  overflow-wrap: anywhere;
+}
+
+.dashboard-playbook {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 14px;
+}
+
+.dashboard-playbook > b {
+  color: #003d33;
+}
+
+.dashboard-playbook button {
+  min-height: 62px;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.dashboard-playbook button svg {
+  color: #075849;
+}
+
+.dashboard-playbook button.danger {
+  border-color: rgba(160, 48, 35, 0.38);
+}
+
+.dashboard-playbook button.danger svg {
+  color: #a03023;
+}
+
+.dashboard-playbook button span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.dashboard-playbook strong,
+.dashboard-playbook small {
+  overflow-wrap: anywhere;
+}
+
+.dashboard-playbook strong {
+  color: #003d33;
+}
+
 .dashboard-two-col,
 .dashboard-insight-grid {
   display: grid;
@@ -6920,6 +7046,9 @@ body.dark .account-permission-preview span {
 
 body.dark .dashboard-toolbar span,
 body.dark .dashboard-grid .metric small,
+body.dark .dashboard-health-card small,
+body.dark .dashboard-signal-grid small,
+body.dark .dashboard-playbook small,
 body.dark .dashboard-action-grid small,
 body.dark .dashboard-alert-list small,
 body.dark .dashboard-group-panel span,
@@ -6942,11 +7071,32 @@ body.dark .dashboard-group-panel {
   border-color: rgba(214, 181, 109, 0.32);
 }
 
+body.dark .dashboard-health-card,
+body.dark .dashboard-signal-grid div,
+body.dark .dashboard-playbook {
+  background: rgba(8, 39, 32, 0.92);
+  border-color: rgba(214, 181, 109, 0.32);
+}
+
+body.dark .dashboard-health-card span,
+body.dark .dashboard-signal-grid span {
+  color: #d8c491;
+}
+
 body.dark .dashboard-group-panel > b,
+body.dark .dashboard-health-card strong,
+body.dark .dashboard-signal-grid b,
+body.dark .dashboard-playbook > b,
+body.dark .dashboard-playbook strong,
+body.dark .dashboard-playbook button svg,
 body.dark .dashboard-product-row strong,
 body.dark .dashboard-order-row strong,
 body.dark .dashboard-trend b {
   color: #fff1ba;
+}
+
+body.dark .dashboard-playbook button.danger svg {
+  color: #ffc8b8;
 }
 
 body.dark .dashboard-product-row,
@@ -6983,8 +7133,13 @@ body.dark .dashboard-order-row {
   }
 
   .dashboard-two-col,
+  .dashboard-command-center,
   .dashboard-insight-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-signal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .dashboard-product-row,
@@ -7006,6 +7161,18 @@ body.dark .dashboard-order-row {
   .dashboard-trend {
     grid-template-columns: repeat(4, minmax(56px, 1fr));
     overflow-x: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-signal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-health-card,
+  .dashboard-signal-grid div,
+  .dashboard-playbook {
+    border-radius: 14px;
   }
 }
 
@@ -8682,6 +8849,125 @@ body.dark .data-table-footer span {
   overflow-wrap: anywhere;
 }
 
+.system-potential-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.34fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.system-readiness-card {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 18px;
+  border: 1px solid rgba(7, 88, 73, 0.2);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 247, 0.96), rgba(236, 246, 225, 0.86));
+}
+
+.system-readiness-card > span {
+  color: #745c2a;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.system-readiness-card b {
+  color: #003d33;
+  font-size: clamp(44px, 5vw, 72px);
+  line-height: .95;
+}
+
+.system-readiness-card small {
+  color: #665a3e;
+  line-height: 1.45;
+}
+
+.system-readiness-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.system-readiness-list span {
+  padding: 7px 10px;
+  border: 1px solid rgba(194, 161, 92, 0.42);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, 0.76);
+  color: #745c2a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.system-readiness-list span.ready {
+  border-color: rgba(7, 88, 73, 0.24);
+  background: rgba(7, 88, 73, 0.1);
+  color: #075849;
+}
+
+.system-roadmap-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.system-roadmap-grid button {
+  min-width: 0;
+  min-height: 150px;
+  margin: 0;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  align-items: start;
+  gap: 10px 12px;
+  text-align: left;
+  border-color: rgba(194, 161, 92, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 253, 247, 0.94), rgba(246, 237, 216, 0.7));
+}
+
+.system-roadmap-grid button svg {
+  color: #075849;
+}
+
+.system-roadmap-grid button > span {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.system-roadmap-grid button b {
+  color: #003d33;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.system-roadmap-grid button small {
+  color: #665a3e;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.system-roadmap-grid button em {
+  grid-column: 1 / -1;
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(7, 88, 73, 0.08);
+  color: #075849;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
 .system-layout {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
@@ -8956,6 +9242,8 @@ body.dark .staff-search,
 body.dark .staff-empty-state,
 body.dark .system-account-card,
 body.dark .system-stat-grid div,
+body.dark .system-readiness-card,
+body.dark .system-roadmap-grid button,
 body.dark .help-role-card,
 body.dark .help-diagnostic-grid div,
 body.dark .help-faq-list details,
@@ -8969,6 +9257,8 @@ body.dark .employee-avatar,
 body.dark .employee-permission-panel span,
 body.dark .role-card-grid em,
 body.dark .system-account-card span,
+body.dark .system-roadmap-grid button em,
+body.dark .system-readiness-list span.ready,
 body.dark .app-footer-stats span {
   background: rgba(214, 181, 109, 0.1) !important;
   border-color: rgba(214, 181, 109, 0.28) !important;
@@ -8996,6 +9286,9 @@ body.dark .staff-empty-state b,
 body.dark .system-hero h3,
 body.dark .system-account-card b,
 body.dark .system-stat-grid b,
+body.dark .system-readiness-card b,
+body.dark .system-roadmap-grid button b,
+body.dark .system-roadmap-grid button svg,
 body.dark .help-diagnostic-grid b,
 body.dark .help-role-card b,
 body.dark .help-hero h2,
@@ -9015,6 +9308,10 @@ body.dark .system-hero span,
 body.dark .system-hero p,
 body.dark .system-account-card small,
 body.dark .system-stat-grid span,
+body.dark .system-readiness-card > span,
+body.dark .system-readiness-card small,
+body.dark .system-readiness-list span,
+body.dark .system-roadmap-grid button small,
 body.dark .help-diagnostic-grid span,
 body.dark .help-hero span,
 body.dark .help-hero p,
@@ -9034,6 +9331,7 @@ body.dark .app-footer nav button {
   .staff-hero,
   .staff-filter-bar,
   .system-hero,
+  .system-potential-panel,
   .system-layout,
   .help-layout,
   .help-hero,
@@ -9046,6 +9344,10 @@ body.dark .app-footer nav button {
   }
 
   .system-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .system-roadmap-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -9074,6 +9376,7 @@ body.dark .app-footer nav button {
   }
 
   .system-stat-grid,
+  .system-roadmap-grid,
   .system-maintenance-grid,
   .system-table-grid {
     grid-template-columns: 1fr;

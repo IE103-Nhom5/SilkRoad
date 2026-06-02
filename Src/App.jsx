@@ -4759,6 +4759,21 @@ function Dashboard({ run, dashboardData, rows, goToPage, notifications = [], can
     ["customers", "Khách hàng", Users, "CRM và lịch sử mua hàng"],
     ["reports", "Báo cáo", BarChart3, "Doanh thu, đơn hàng, tồn kho"],
   ].filter(([key]) => can(key));
+  const warningCount = notifications.length + riskRows.length;
+  const loadedMetricCount = displayRows.filter((row) => numberOf(row) > 0).length;
+  const healthScore = Math.max(20, Math.min(100, (dashboardRows.length ? 88 : 52) + Math.min(16, loadedMetricCount * 2) - Math.min(64, warningCount * 12)));
+  const commandSignals = [
+    { label: "Dữ liệu KPI", value: dashboardRows.length ? `${dashboardRows.length} chỉ số` : "Chưa tải", detail: dashboardRows.length ? "Dashboard đang dùng dữ liệu thật" : "Bấm tải thống kê để đồng bộ" },
+    { label: "Cảnh báo", value: warningCount, detail: warningCount ? "Có việc cần xử lý trước" : "Chưa có cảnh báo ưu tiên" },
+    { label: "Bán chạy", value: bestSellerRows.length, detail: "Dòng sản phẩm có tín hiệu doanh thu" },
+    { label: "Đơn gần đây", value: recentOrderRows.length, detail: "Hoạt động bán hàng mới nhất" },
+  ];
+  const priorityPlaybook = [
+    notifications[0] && { title: notifications[0].title, detail: notifications[0].detail, page: notifications[0].page, icon: AlertTriangle, tone: notifications[0].tone || "warning" },
+    riskRows[0] && { title: riskRows[0].metric, detail: riskRows[0].detail || riskRows[0].value, page: "stock", icon: AlertTriangle, tone: "danger" },
+    { title: "Làm mới KPI", detail: "Tải lại thống kê từ bán hàng, kho, khách hàng và thanh toán", refresh: true, icon: RefreshCcw, tone: "neutral" },
+    { title: "Mở lộ trình hệ thống", detail: "Xem mức sẵn sàng và các hướng nâng cấp tiếp theo", page: "system", icon: Settings, tone: "neutral" },
+  ].filter(Boolean).slice(0, 4);
 
   return (
     <div className="dashboard-shell">
@@ -4775,6 +4790,38 @@ function Dashboard({ run, dashboardData, rows, goToPage, notifications = [], can
               {r.detail && <small>{r.detail}</small>}
             </div>
           ))}
+        </div>
+      </Card>
+
+      <Card title="Trung tâm điều hành">
+        <div className="dashboard-command-center">
+          <div className="dashboard-health-card">
+            <span>Sức khỏe vận hành</span>
+            <strong>{healthScore}%</strong>
+            <small>{warningCount ? `${warningCount} cảnh báo đang kéo điểm xuống` : "Các tín hiệu chính đang ổn định"}</small>
+            <i><em style={{ width: `${healthScore}%` }} /></i>
+          </div>
+          <div className="dashboard-signal-grid">
+            {commandSignals.map((item) => (
+              <div key={item.label}>
+                <span>{item.label}</span>
+                <b>{typeof item.value === "number" ? item.value.toLocaleString("vi-VN") : item.value}</b>
+                <small>{item.detail}</small>
+              </div>
+            ))}
+          </div>
+          <div className="dashboard-playbook">
+            <b>Tác vụ nên làm tiếp</b>
+            {priorityPlaybook.map(({ title, detail, page, refresh, icon: Icon, tone }) => (
+              <button key={title} type="button" className={tone || ""} onClick={() => (refresh ? run(dashboardData) : goToPage(page))}>
+                <Icon size={18} />
+                <span>
+                  <strong>{title}</strong>
+                  <small>{detail}</small>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </Card>
 
@@ -6219,6 +6266,63 @@ function SystemPage({
   ];
   const userName = first(profile, ["fullname", "full_name", "username", "email"], "Tài khoản");
 
+  // Growth/readiness signals: keep this computed from loaded DB data so the
+  // System page reflects real product potential instead of static decoration.
+  const readinessItems = [
+    { label: "Hàng hóa", ready: (options.products?.length || 0) > 0 && (options.variants?.length || 0) > 0 },
+    { label: "Chi nhánh/kho", ready: (options.branches?.length || 0) > 0 && (options.stock?.length || 0) > 0 },
+    { label: "Kênh bán", ready: (options.channels?.length || 0) > 0 },
+    { label: "Khách hàng", ready: (options.customers?.length || 0) > 0 },
+    { label: "RBAC", ready: (options.roles?.length || 0) > 0 },
+    { label: "Ảnh sản phẩm", ready: (options.products?.length || 0) > 0 && missingImages === 0 },
+  ];
+  const readyCount = readinessItems.filter((item) => item.ready).length;
+  const readinessScore = Math.round((readyCount / readinessItems.length) * 100);
+  const growthTracks = [
+    {
+      title: "POS chuyên nghiệp",
+      detail: "Chọn sản phẩm gốc, lọc biến thể, giữ đơn, kiểm tồn và tạo hóa đơn.",
+      status: `${heldCarts.length} đơn tạm`,
+      page: "orders",
+      icon: ShoppingCart,
+    },
+    {
+      title: "Kho đa chi nhánh",
+      detail: "Theo dõi tồn khả dụng, cảnh báo tồn thấp và lịch sử nhập/xuất.",
+      status: `${totalAvailable.toLocaleString("vi-VN")} khả dụng`,
+      page: "stock",
+      icon: Boxes,
+    },
+    {
+      title: "RBAC & nhân sự",
+      detail: "Hồ sơ nhân viên, quyền truy cập, trạng thái tài khoản và log thao tác.",
+      status: `${options.roles?.length || 0} vai trò`,
+      page: "users",
+      icon: Users,
+    },
+    {
+      title: "Tra cứu toàn cục",
+      detail: "Gợi ý trang, bảng DB, sản phẩm, biến thể, khách hàng và đơn hàng.",
+      status: `${QUERY_TABLES.length} bảng`,
+      page: "query",
+      icon: Search,
+    },
+    {
+      title: "Dashboard điều hành",
+      detail: "KPI doanh thu, đơn hàng, tồn kho, khách hàng và cảnh báo ưu tiên.",
+      status: "Theo dữ liệu thật",
+      page: "dashboard",
+      icon: BarChart3,
+    },
+    {
+      title: "Trợ giúp AI",
+      detail: "Giữ frontend-only; khi nối thật phải đi qua backend để bảo vệ API key.",
+      status: "Chưa nối API",
+      page: "help",
+      icon: HelpCircle,
+    },
+  ];
+
   function clearLocalWorkState() {
     setHeldCarts([]);
     setGlobalSearch("");
@@ -6251,6 +6355,35 @@ function SystemPage({
               <b>{Number(value || 0).toLocaleString("vi-VN")}</b>
             </div>
           ))}
+        </div>
+      </Card>
+
+      <Card title="Tiềm năng hệ thống">
+        <div className="system-potential-panel">
+          <div className="system-readiness-card">
+            <span>Mức sẵn sàng mở rộng</span>
+            <b>{readinessScore}%</b>
+            <small>{readyCount}/{readinessItems.length} nền tảng đã có dữ liệu đủ dùng</small>
+            <div className="system-readiness-list">
+              {readinessItems.map((item) => (
+                <span key={item.label} className={item.ready ? "ready" : "pending"}>
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="system-roadmap-grid">
+            {growthTracks.map(({ title, detail, status, page, icon: Icon }) => (
+              <button key={title} type="button" onClick={() => goToPage(page)}>
+                <Icon size={22} />
+                <span>
+                  <b>{title}</b>
+                  <small>{detail}</small>
+                </span>
+                <em>{status}</em>
+              </button>
+            ))}
+          </div>
         </div>
       </Card>
 
