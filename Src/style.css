@@ -10433,3 +10433,26 @@ body.dark .sidebar button svg {
     border-radius: 0 22px 22px 0 !important;
   }
 }
+
+/* =========================================================
+   FINAL OVERRIDE 18: sync rail-hover sidebar with the main shell
+   When the collapsed desktop sidebar expands on hover, the main area must use
+   the open-sidebar offset too. Otherwise topbar/content sit underneath it.
+========================================================= */
+@media (min-width: 961px) {
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked):has(.sidebar:hover) .main {
+    margin-left: var(--sr-main-open-offset) !important;
+    width: calc(100vw - var(--sr-main-open-offset)) !important;
+    max-width: calc(100vw - var(--sr-main-open-offset)) !important;
+  }
+
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked):has(.sidebar:hover) .topbar,
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked):has(.sidebar:hover) .content {
+    max-width: 100% !important;
+  }
+
+  .app-shell.sidebar-open .main,
+  .app-shell.sidebar-closed .main {
+    transition: margin-left .18s ease, width .18s ease, max-width .18s ease !important;
+  }
+}

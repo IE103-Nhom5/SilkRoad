@@ -2,6 +2,44 @@
 
 File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. Từ bây giờ, sau mỗi lượt sửa hoặc chạy kiểm tra quan trọng, cần cập nhật lại file này bằng tiếng Việt để dễ theo dõi.
 
+## 2026-06-02 - Sửa lỗi sidebar hover chồng lên topbar/content
+
+### Yêu cầu từ người dùng
+
+- Sửa lỗi layout trong ảnh: sidebar đang mở/hover bị chồng lên topbar và nội dung Dashboard.
+
+### Nguyên nhân
+
+- Khi sidebar ở trạng thái rút gọn (`sidebar-closed`) nhưng người dùng hover vào menu, CSS cũ cho sidebar nở ra theo chiều rộng menu mở.
+- Tuy nhiên `.main` vẫn giữ khoảng cách của rail nhỏ, nên topbar/content nằm dưới phần sidebar vừa nở.
+
+### Đã sửa
+
+- Thêm block cuối `FINAL OVERRIDE 18: sync rail-hover sidebar with the main shell` trong `Src/style.css`.
+- Khi `.app-shell.sidebar-closed` có `.sidebar:hover`, `.main` sẽ dùng cùng offset với sidebar mở:
+  - `margin-left: var(--sr-main-open-offset)`
+  - `width: calc(100vw - var(--sr-main-open-offset))`
+  - `max-width: calc(100vw - var(--sr-main-open-offset))`
+- Giữ `sidebar-rail-locked` để lúc vừa bấm đóng menu không bị hover mở lại ngay.
+- Thêm transition ngắn cho `.main` để lúc sidebar nở/thu không bị giật.
+
+### Kiểm tra đã chạy
+
+```bash
+npm run build
+```
+
+Kết quả:
+
+- Build thành công.
+- Vite không báo lỗi CSS/React.
+- Dev server trả `STATUS=200` tại `http://127.0.0.1:5173/`.
+
+### File đã thay đổi trong lượt này
+
+- `Src/style.css`
+- `docs/latest-run-log.md`
+
 ## 2026-06-02 - Phát triển tối đa tiềm năng hệ thống
 
 ### Yêu cầu từ người dùng
