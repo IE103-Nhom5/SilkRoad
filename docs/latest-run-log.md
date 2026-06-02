@@ -2,6 +2,39 @@
 
 File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. Từ bây giờ, sau mỗi lượt sửa hoặc chạy kiểm tra quan trọng, cần cập nhật lại file này bằng tiếng Việt để dễ theo dõi.
 
+## 2026-06-02 - Khôi phục giọng văn kiếm hiệp/tà môn cho project structure guide
+
+### Yêu cầu từ người dùng
+
+- Khôi phục đoạn mở đầu ban đầu của `docs/project-structure-guide.md`.
+- Viết tiếp toàn bộ guide theo đúng giọng văn kiếm hiệp/tà môn ở đoạn đầu.
+
+### Đã làm
+
+- Khôi phục nguyên đoạn mở đầu:
+  - `Cấu trúc file tà đạo j đây ???`
+  - `cấu trúc tà môn`
+  - `THEO CÁCH HIỂU CỦA TÔI`
+- Viết lại các phần sau theo cùng phong cách:
+  - Kinh mạch chạy chính.
+  - Chính mạch đang sống.
+  - Tàng thư nên giữ.
+  - Tàn bản/prototype cũ.
+  - Tàng kinh các `Src/lib/`.
+  - Cấm địa `Src/pages/`.
+  - Lộ trình quy chính về chính đạo.
+- Vẫn giữ thông tin kỹ thuật thực dụng: file nào đang chạy thật, file nào không nên sửa, sửa tính năng nào thì vào đâu.
+
+### Kiểm tra
+
+- Không chạy build vì đây là thay đổi Markdown, không đụng code runtime.
+- Đã đọc lại phần đầu file để kiểm tra đúng giọng mở đầu.
+
+### File đã thay đổi trong lượt này
+
+- `docs/project-structure-guide.md`
+- `docs/latest-run-log.md`
+
 ## 2026-06-02 - Viết lại project structure guide cùng phong cách đoạn đầu
 
 ### Yêu cầu từ người dùng
