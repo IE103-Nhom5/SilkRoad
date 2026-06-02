@@ -10034,3 +10034,99 @@ body.dark .sidebar button svg {
     min-height: 0 !important;
   }
 }
+
+/* =========================================================
+   FINAL OVERRIDE 17: canonical shell geometry
+   Desktop sidebar and main now share one source of truth for width.
+   This prevents the topbar/content from sliding underneath the open menu.
+========================================================= */
+:root {
+  --sr-shell-gap: 10px;
+  --sr-sidebar-open-final: 340px;
+  --sr-sidebar-rail-final: 86px;
+  --sr-main-open-offset: calc(var(--sr-sidebar-open-final) + (var(--sr-shell-gap) * 2));
+  --sr-main-rail-offset: calc(var(--sr-sidebar-rail-final) + (var(--sr-shell-gap) * 2));
+}
+
+@media (min-width: 961px) {
+  .app-shell.sidebar-open .sidebar,
+  .app-shell.sidebar-closed:not(.sidebar-rail-locked) .sidebar:hover {
+    left: var(--sr-shell-gap) !important;
+    top: var(--sr-shell-gap) !important;
+    bottom: var(--sr-shell-gap) !important;
+    width: var(--sr-sidebar-open-final) !important;
+    min-width: var(--sr-sidebar-open-final) !important;
+    max-width: var(--sr-sidebar-open-final) !important;
+    height: calc(100vh - (var(--sr-shell-gap) * 2)) !important;
+    border-radius: 24px !important;
+  }
+
+  .app-shell.sidebar-closed .sidebar {
+    left: var(--sr-shell-gap) !important;
+    top: var(--sr-shell-gap) !important;
+    bottom: var(--sr-shell-gap) !important;
+    width: var(--sr-sidebar-rail-final) !important;
+    min-width: var(--sr-sidebar-rail-final) !important;
+    max-width: var(--sr-sidebar-rail-final) !important;
+    height: calc(100vh - (var(--sr-shell-gap) * 2)) !important;
+    border-radius: 24px !important;
+  }
+
+  .app-shell.sidebar-open .main {
+    margin-left: var(--sr-main-open-offset) !important;
+    width: calc(100vw - var(--sr-main-open-offset)) !important;
+    max-width: calc(100vw - var(--sr-main-open-offset)) !important;
+  }
+
+  .app-shell.sidebar-closed .main {
+    margin-left: var(--sr-main-rail-offset) !important;
+    width: calc(100vw - var(--sr-main-rail-offset)) !important;
+    max-width: calc(100vw - var(--sr-main-rail-offset)) !important;
+  }
+
+  .main {
+    min-width: 0 !important;
+    overflow-x: clip !important;
+  }
+
+  .topbar {
+    left: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .content {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-inline: clamp(20px, 2.4vw, 42px) !important;
+  }
+
+  .card,
+  .page-surface,
+  .dashboard-shell,
+  .system-page,
+  .help-page {
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .app-scrim {
+    display: none !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .app-shell.sidebar-open .main,
+  .app-shell.sidebar-closed .main,
+  .main {
+    margin-left: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+
+  .sidebar {
+    border-radius: 0 22px 22px 0 !important;
+  }
+}
