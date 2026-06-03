@@ -2,6 +2,126 @@
 
 File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. Từ bây giờ, sau mỗi lượt sửa hoặc chạy kiểm tra quan trọng, cần cập nhật lại file này bằng tiếng Việt để dễ theo dõi.
 
+## 2026-06-03 - Rà cursor và tối ưu SQL cũ
+
+### Yêu cầu từ người dùng
+
+- Xem các SQL cũ có cần tối ưu thêm không.
+- Đánh giá có nên thêm `cursor` hay kỹ thuật tương tự không.
+
+### Đã rà soát
+
+- Rà `Silkroad_database/sql/05_create_functions.sql`:
+  - Các function hiện tại chủ yếu đọc nhanh theo khóa hoặc trigger helper.
+  - `fn_get_stock_movement` đã có `ORDER BY Timestamp DESC`, phù hợp với index lịch sử kho.
+- Rà `Silkroad_database/sql/07_create_procedures.sql`:
+  - Các procedure xác nhận đơn, nhập kho, chuyển kho, kiểm kho, đổi trả đều là luồng transaction.
+  - Các vòng `FOR rec IN SELECT ... LOOP` đang xử lý từng dòng chi tiết để khóa tồn kho bằng `FOR UPDATE`, kiểm tra nghiệp vụ và ghi log.
+- Rà `Silkroad_database/sql/08_create_views.sql`:
+  - View cũ vẫn dùng được, nhưng app nên ưu tiên thêm các view tối ưu trong `12_optimize_database.sql` cho POS/search.
+
+### Kết luận kỹ thuật
+
+- Không nên thêm `DECLARE CURSOR` vào các procedure giao dịch hiện tại.
+- Với web app, hướng đúng là keyset/cursor pagination ở tầng API/frontend, không phải database cursor tường minh.
+- Các bảng nên phân trang kiểu keyset:
+  - `ORDERS`
+  - `STOCK_HISTORY`
+  - `CHANNEL_SYNC_LOG`
+
+### Đã làm
+
+- Bổ sung index phục vụ keyset pagination trong `Silkroad_database/sql/12_optimize_database.sql`:
+  - `idx_order_date_id_desc`
+  - `idx_stock_history_timestamp_id_desc`
+  - `idx_channel_sync_received_log_desc`
+- Bổ sung RPC đọc trang:
+  - `fn_orders_page_app(...)`
+  - `fn_stock_history_page_app(...)`
+  - `fn_channel_sync_log_page_app(...)`
+- Cấp quyền RPC mới cho role Supabase nếu tồn tại:
+  - `anon`
+  - `authenticated`
+- Tạo tài liệu audit:
+  - `Silkroad_database/docs/database_optimization_audit.md`
+- Cập nhật `Silkroad_database/README.md` để trỏ tới tài liệu audit.
+
+### Kiểm tra
+
+- Đã rà reference bằng `rg`.
+- Chưa chạy SQL trực tiếp vì máy hiện tại không có `psql` trong PATH.
+- Không chạy `npm run build` vì lượt này chỉ sửa SQL và Markdown, không đụng runtime React.
+
+### File đã thay đổi trong lượt này
+
+- `../Silkroad_database/sql/12_optimize_database.sql`
+- `../Silkroad_database/docs/database_optimization_audit.md`
+- `../Silkroad_database/README.md`
+- `docs/latest-run-log.md`
+
+## 2026-06-03 - Tối ưu database SilkRoad
+
+### Yêu cầu từ người dùng
+
+- Tối ưu `dtb`/database cho hệ thống.
+
+### Đã rà soát
+
+- Rà app thật trong `Src/App.jsx` để biết các luồng đọc dữ liệu chính:
+  - Login/profile theo `users.email`.
+  - POS/product search theo product, variant, SKU, barcode, stock.
+  - Dashboard đọc nhiều bảng lớn: `orders`, `order_detail`, `stock_history`, `return_order`, `payment`.
+  - Kho đọc `stock`, `stock_history`, cảnh báo tồn thấp.
+  - RBAC đọc `users`, `role`.
+- Rà schema/index hiện có trong repo database `Silkroad_database/sql`.
+
+### Đã làm
+
+- Tạo file tối ưu mới:
+  - `Silkroad_database/sql/12_optimize_database.sql`
+- File này chỉ thêm extension, index, view và function; không reset schema, không xóa dữ liệu.
+- Thêm index cho các hot path:
+  - Login/RBAC: email lower-case, role/status, branch/status.
+  - Product/POS search: `ProductName`, `Brand`, `SKU`, `Barcode` bằng `pg_trgm`.
+  - Stock: branch/available, low-stock partial index, lịch sử kho theo thời gian.
+  - Purchase/transfer/adjustment: branch/status/created date, variant lookup.
+  - Sales/reporting: order status/date, payment status/date, order detail theo variant, return status/date.
+- Thêm view tối ưu:
+  - `vw_pos_variant_stock_catalog`: gom branch + product + variant + stock + ảnh cho POS/kho.
+  - `vw_product_search_catalog`: gom product + số biến thể + tồn khả dụng + ảnh đại diện cho search/catalog.
+- Thêm function:
+  - `fn_dashboard_summary_app()`: gom KPI dashboard bằng một RPC thay vì frontend phải kéo nhiều bảng lớn.
+- Cập nhật:
+  - `Silkroad_database/sql/run_all.sql` để gọi `11_create_permissions.sql` và `12_optimize_database.sql`.
+  - `Silkroad_database/README.md` để ghi cách chạy riêng file tối ưu.
+
+### Cách áp dụng
+
+Nếu database đã tồn tại và chỉ muốn tối ưu:
+
+```bash
+psql -d silkroad -f sql/12_optimize_database.sql
+```
+
+Nếu dựng lại database từ đầu:
+
+```bash
+psql -d silkroad -f sql/run_all.sql
+```
+
+### Kiểm tra
+
+- Đã rà reference bằng `rg`.
+- Không chạy được SQL trực tiếp vì máy hiện tại không có `psql` trong PATH.
+- Không chạy `npm run build` vì thay đổi chính nằm ở repo database và docs, không đụng runtime React.
+
+### File đã thay đổi trong lượt này
+
+- `../Silkroad_database/sql/12_optimize_database.sql`
+- `../Silkroad_database/sql/run_all.sql`
+- `../Silkroad_database/README.md`
+- `docs/latest-run-log.md`
+
 ## 2026-06-02 - Thêm mục lục có link cho project structure guide
 
 ### Yêu cầu từ người dùng
