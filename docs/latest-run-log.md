@@ -2,6 +2,33 @@
 
 File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. Từ bây giờ, sau mỗi lượt sửa hoặc chạy kiểm tra quan trọng, cần cập nhật lại file này bằng tiếng Việt để dễ theo dõi.
 
+## 2026-06-13 - Khôi phục màn hình đăng nhập và workflow thao tác trong runtime mới
+
+### Đã thực hiện
+
+- Khôi phục giao diện đăng nhập SilkRoad cũ bằng các asset `login-bg`, `login-frame`, `login-benefits` và logo cũ.
+- Hoàn thiện các thao tác đăng nhập, đăng ký, quên mật khẩu, ghi nhớ email, hiện/ẩn mật khẩu và đăng nhập demo.
+- Không còn tự động bỏ qua màn hình đăng nhập khi Supabase chưa cấu hình.
+- Sửa sidebar rút gọn bị cắt icon, sinh thanh cuộn ngang và trạng thái collapsed làm hỏng mobile drawer.
+- Bổ sung workflow dùng được cho các module TypeScript:
+  - Tạo bản nháp và lưu trên thiết bị.
+  - Xem danh sách bản nháp.
+  - Xóa bản nháp.
+  - Import Excel/CSV tạo lô xem trước ở demo, không còn nút bị vô hiệu hóa hoàn toàn.
+  - Giữ bảng có tìm kiếm, sắp xếp, chọn cột, phân trang, mở chi tiết và xuất CSV.
+
+### Giải thích về code cũ
+
+- Các chức năng cũ vẫn còn trong `Src/App.jsx`, không bị xóa.
+- Runtime hiện tại chạy từ `Src/main.tsx` và `Src/app/App.tsx`, nên các màn monolith cũ chưa tự xuất hiện trong app mới.
+- Việc phục hồi được thực hiện theo từng workflow vào module TypeScript để tránh đưa trở lại lỗi layout và direct write nguy hiểm của runtime cũ.
+
+### Kiểm tra
+
+- Browser QA xác nhận đăng nhập demo đi vào dashboard.
+- Browser QA xác nhận tạo bản nháp hàng hóa và hiển thị lại trong bảng.
+- Kiểm tra typecheck, test và build được chạy lại sau thay đổi.
+
 ## 2026-06-13 - Production foundation TypeScript, secure data layer và layout mới
 
 ### Mục tiêu

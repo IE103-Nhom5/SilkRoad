@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Bell, ChevronDown, CircleHelp, Command, LogOut, Menu, Moon, Search, Sun, UserCircle, X } from "lucide-react";
 import logo from "../assets/silkroad-logo.png";
@@ -27,6 +27,7 @@ export function AppShell({
   const [accountOpen, setAccountOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const sidebarNavRef = useRef<HTMLElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const current = routeByPath[location.pathname] || routeByPath["/dashboard"];
@@ -35,7 +36,12 @@ export function AppShell({
     document.documentElement.dataset.theme = dark ? "dark" : "light";
     localStorage.setItem("sr-theme", dark ? "dark" : "light");
   }, [dark]);
-  useEffect(() => localStorage.setItem("sr-sidebar", collapsed ? "collapsed" : "open"), [collapsed]);
+  useEffect(() => {
+    localStorage.setItem("sr-sidebar", collapsed ? "collapsed" : "open");
+    requestAnimationFrame(() => {
+      if (sidebarNavRef.current) sidebarNavRef.current.scrollLeft = 0;
+    });
+  }, [collapsed]);
   useEffect(() => setMobileOpen(false), [location.pathname]);
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -60,7 +66,7 @@ export function AppShell({
           <b>{profile.name}</b>
           <span>{profile.role}</span>
         </div>
-        <nav>
+        <nav ref={sidebarNavRef}>
           {groupedRoutes.map(([group, items]) => (
             <section key={group}>
               <span className="nav-group-label">{group}</span>

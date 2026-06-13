@@ -1,26 +1,96 @@
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, Mail, PlayCircle } from "lucide-react";
 import logo from "../assets/silkroad-logo.png";
 import bg from "../assets/login-bg.png";
-import { Button } from "../components/ui";
+import frame from "../assets/login-frame.png";
+import benefits from "../assets/login-benefits.png";
 
 const schema = z.object({ email: z.string().email("Email không hợp lệ"), password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự") });
-type LoginInput = z.infer<typeof schema>;
+export type LoginInput = z.infer<typeof schema>;
 
-export function LoginPage({ onSubmit, error }: { onSubmit: (input: LoginInput) => Promise<void>; error?: string }) {
-  const form = useForm<LoginInput>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } });
+export function LoginPage({
+  onSubmit,
+  onSignUp,
+  onResetPassword,
+  onDemo,
+  error,
+  notice,
+  demoAvailable,
+}: {
+  onSubmit: (input: LoginInput) => Promise<void>;
+  onSignUp: (input: LoginInput) => Promise<void>;
+  onResetPassword: (email: string) => Promise<void>;
+  onDemo: () => void;
+  error?: string;
+  notice?: string;
+  demoAvailable: boolean;
+}) {
+  const rememberedEmail = localStorage.getItem("silkroad-remember-email") || "";
+  const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(Boolean(rememberedEmail));
+  const form = useForm<LoginInput>({ resolver: zodResolver(schema), defaultValues: { email: rememberedEmail, password: "" } });
+
+  useEffect(() => {
+    if (!remember) localStorage.removeItem("silkroad-remember-email");
+  }, [remember]);
+
+  async function submit(input: LoginInput) {
+    if (remember) localStorage.setItem("silkroad-remember-email", input.email);
+    await onSubmit(input);
+  }
+
   return (
-    <main className="login-page" style={{ backgroundImage: `linear-gradient(90deg,rgba(0,29,20,.9),rgba(0,29,20,.25)),url(${bg})` }}>
-      <section className="login-brand"><img src={logo} alt="SilkRoad" /><span>Hệ thống quản trị bán lẻ đa chi nhánh</span><h1>Vận hành xuyên suốt, dữ liệu nhất quán.</h1><p>Quản lý hàng hóa, kho, bán hàng và nhân sự trên một nền tảng duy nhất.</p></section>
-      <form className="login-card" onSubmit={form.handleSubmit(onSubmit)}>
-        <span className="eyebrow">SilkRoad Management</span><h2>Đăng nhập hệ thống</h2><p>Sử dụng tài khoản đã được quản trị viên cấp quyền.</p>
-        <label>Email<div><Mail /><input {...form.register("email")} placeholder="name@silkroad.vn" /></div><small>{form.formState.errors.email?.message}</small></label>
-        <label>Mật khẩu<div><LockKeyhole /><input type="password" {...form.register("password")} placeholder="••••••••" /></div><small>{form.formState.errors.password?.message}</small></label>
-        {error && <p className="form-error">{error}</p>}
-        <Button variant="primary" icon={<ArrowRight size={18} />} disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}</Button>
-      </form>
+    <main className="heritage-login" style={{ backgroundImage: `url(${bg})` }}>
+      <div className="heritage-login-overlay" />
+      <img className="heritage-login-logo" src={logo} alt="SilkRoad" />
+
+      <section className="heritage-login-frame">
+        <img src={frame} alt="" aria-hidden="true" />
+        <form className="heritage-login-form" onSubmit={form.handleSubmit(submit)}>
+          <h1>LOGIN</h1>
+          <div className="heritage-divider"><span /><b>◇</b><span /></div>
+
+          <label>
+            Email
+            <div className="heritage-input">
+              <Mail />
+              <input {...form.register("email")} autoComplete="email" placeholder="name@silkroad.vn" />
+            </div>
+            <small>{form.formState.errors.email?.message}</small>
+          </label>
+
+          <label>
+            Mật khẩu
+            <div className="heritage-input">
+              <LockKeyhole />
+              <input type={showPassword ? "text" : "password"} {...form.register("password")} autoComplete="current-password" placeholder="Nhập mật khẩu" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}>
+                {showPassword ? <EyeOff /> : <Eye />}
+              </button>
+            </div>
+            <small>{form.formState.errors.password?.message}</small>
+          </label>
+
+          <div className="heritage-login-options">
+            <label className="heritage-remember"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /> Ghi nhớ đăng nhập</label>
+            <button type="button" onClick={() => onResetPassword(form.getValues("email"))}>Quên mật khẩu?</button>
+          </div>
+
+          {error && <p className="heritage-login-message error">{error}</p>}
+          {notice && <p className="heritage-login-message">{notice}</p>}
+
+          <button className="heritage-login-submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "ĐANG XỬ LÝ..." : "ĐĂNG NHẬP"}
+          </button>
+          <button className="heritage-login-register" type="button" onClick={form.handleSubmit(onSignUp)}>Đăng ký tài khoản</button>
+          {demoAvailable && <button className="heritage-login-demo" type="button" onClick={onDemo}><PlayCircle /> Vào hệ thống bằng dữ liệu demo</button>}
+        </form>
+      </section>
+
+      <img className="heritage-login-benefits" src={benefits} alt="Các lợi ích của SilkRoad" />
     </main>
   );
 }

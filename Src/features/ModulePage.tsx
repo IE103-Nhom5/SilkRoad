@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileSpreadsheet, Plus, RefreshCcw } from "lucide-react";
+import { Archive, BookOpen, FileSpreadsheet, Plus, RefreshCcw, Trash2 } from "lucide-react";
 import { DataTable } from "../components/DataTable";
 import { Badge, Button, ErrorState, LoadingState, Modal, PageHeader, Panel } from "../components/ui";
 import type { AppRoute } from "../lib/navigation";
@@ -26,13 +26,65 @@ const guideByResource: Record<string, string[]> = {
 export function ModulePage({ route }: { route: AppRoute }) {
   const query = useQuery({ queryKey: ["resource", route.resource], queryFn: () => readResource(route.resource) });
   const [guideOpen, setGuideOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [draftsOpen, setDraftsOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importMessage, setImportMessage] = useState("");
+  const [draft, setDraft] = useState({ title: "", branch: "", note: "" });
+  const [draftRows, setDraftRows] = useState<Record<string, unknown>[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(`sr-drafts-${route.resource}`) || "[]");
+    } catch {
+      return [];
+    }
+  });
   const fileRef = useRef<HTMLInputElement>(null);
   if (query.isLoading) return <LoadingState />;
   if (query.isError) return <ErrorState message={query.error.message} onRetry={() => query.refetch()} />;
-  const rows = query.data || [];
+  const rows = [...draftRows, ...(query.data || [])];
   const supportsImport = route.resource === "products";
+
+  function saveDraft() {
+    const title = draft.title.trim();
+    if (!title) return;
+    const next = [{
+      code: `DRAFT-${Date.now().toString().slice(-6)}`,
+      name: title,
+      branch: draft.branch.trim() || "Chưa chọn",
+      note: draft.note.trim() || "—",
+      status: "draft",
+      createdat: new Date().toISOString(),
+    }, ...draftRows];
+    setDraftRows(next);
+    localStorage.setItem(`sr-drafts-${route.resource}`, JSON.stringify(next));
+    setDraft({ title: "", branch: "", note: "" });
+    setCreateOpen(false);
+  }
+
+  function removeDraft(code: unknown) {
+    const next = draftRows.filter((row) => row.code !== code);
+    setDraftRows(next);
+    localStorage.setItem(`sr-drafts-${route.resource}`, JSON.stringify(next));
+  }
+
+  function checkAndImport() {
+    if (!selectedFile) return;
+    const importedDraft = {
+      code: `IMPORT-${Date.now().toString().slice(-6)}`,
+      name: `Lô import: ${selectedFile.name}`,
+      branch: "Danh mục hàng hóa",
+      note: `${Math.ceil(selectedFile.size / 1024)} KB · Chờ kiểm tra và duyệt`,
+      status: isSupabaseConfigured ? "pending_import" : "demo_preview",
+      createdat: new Date().toISOString(),
+    };
+    const next = [importedDraft, ...draftRows];
+    setDraftRows(next);
+    localStorage.setItem(`sr-drafts-${route.resource}`, JSON.stringify(next));
+    setImportMessage(isSupabaseConfigured
+      ? "Đã tạo lô import chờ Edge Function kiểm tra."
+      : "Đã tạo bản xem trước import trên thiết bị. Chưa ghi vào database.");
+  }
 
   return (
     <>
@@ -43,8 +95,10 @@ export function ModulePage({ route }: { route: AppRoute }) {
         actions={
           <>
             {supportsImport && <Button icon={<FileSpreadsheet size={18} />} onClick={() => setImportOpen(true)}>Import Excel</Button>}
+            {draftRows.length > 0 && <Button icon={<Archive size={18} />} onClick={() => setDraftsOpen(true)}>Bản nháp ({draftRows.length})</Button>}
             <Button icon={<RefreshCcw size={18} />} onClick={() => query.refetch()}>Làm mới</Button>
-            <Button variant="primary" icon={<Plus size={18} />} onClick={() => setGuideOpen(true)}>Quy trình mới</Button>
+            <Button icon={<BookOpen size={18} />} onClick={() => setGuideOpen(true)}>Quy trình</Button>
+            <Button variant="primary" icon={<Plus size={18} />} onClick={() => setCreateOpen(true)}>Tạo bản nháp</Button>
           </>
         }
       />
@@ -56,6 +110,17 @@ export function ModulePage({ route }: { route: AppRoute }) {
       <Panel title={`Danh sách ${route.label.toLowerCase()}`} description="Tìm kiếm, sắp xếp, chọn cột, phân trang và mở chi tiết từng dòng.">
         <DataTable rows={rows} name={route.resource} />
       </Panel>
+      {createOpen && (
+        <Modal title={`Tạo bản nháp ${route.label.toLowerCase()}`} onClose={() => setCreateOpen(false)}>
+          <div className="draft-form">
+            <label>Tên / nội dung chính<input autoFocus value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder={`Nhập tên ${route.label.toLowerCase()}...`} /></label>
+            <label>Chi nhánh / phạm vi<input value={draft.branch} onChange={(event) => setDraft({ ...draft, branch: event.target.value })} placeholder="Ví dụ: Chi nhánh Quận 1" /></label>
+            <label>Ghi chú<textarea value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} placeholder="Thông tin cần xử lý tiếp..." /></label>
+            <p className="security-note">Bản nháp được lưu trên thiết bị này. Khi hoàn thiện nghiệp vụ production, nút duyệt sẽ gửi dữ liệu qua RPC/Edge Function và ghi audit log.</p>
+            <div className="modal-actions"><Button onClick={() => setCreateOpen(false)}>Hủy</Button><Button variant="primary" disabled={!draft.title.trim()} onClick={saveDraft}>Lưu bản nháp</Button></div>
+          </div>
+        </Modal>
+      )}
       {guideOpen && (
         <Modal title={`Quy trình ${route.label.toLowerCase()}`} onClose={() => setGuideOpen(false)}>
           <ol className="workflow-list">
@@ -64,16 +129,30 @@ export function ModulePage({ route }: { route: AppRoute }) {
           <p className="security-note">Các nghiệp vụ ghi dữ liệu production phải chạy qua RPC hoặc Edge Function. Giao diện mới không fallback ghi tồn trực tiếp.</p>
         </Modal>
       )}
+      {draftsOpen && (
+        <Modal title={`Bản nháp ${route.label.toLowerCase()}`} onClose={() => setDraftsOpen(false)}>
+          <div className="draft-list">
+            {draftRows.map((row) => (
+              <article key={String(row.code)}>
+                <div><b>{String(row.name)}</b><span>{String(row.code)} · {String(row.branch)}</span><small>{String(row.note)}</small></div>
+                <Button icon={<Trash2 size={17} />} onClick={() => removeDraft(row.code)}>Xóa</Button>
+              </article>
+            ))}
+          </div>
+          <p className="security-note">Bản nháp demo được lưu riêng trên trình duyệt, có thể xóa mà không ảnh hưởng dữ liệu database.</p>
+        </Modal>
+      )}
       {importOpen && (
-        <Modal title="Import danh mục từ Excel" onClose={() => setImportOpen(false)}>
-          <div className="import-box" onClick={() => fileRef.current?.click()}>
+        <Modal title="Import danh mục từ Excel" onClose={() => { setImportOpen(false); setImportMessage(""); }}>
+          <div className="import-box" onClick={() => { setImportMessage(""); fileRef.current?.click(); }}>
             <FileSpreadsheet />
             <b>{selectedFile?.name || "Chọn file Excel hoặc CSV"}</b>
             <span>Hệ thống sẽ preview, kiểm tra lỗi từng dòng rồi gửi qua Edge Function import-catalog.</span>
             <input ref={fileRef} hidden type="file" accept=".xlsx,.xls,.csv" onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} />
           </div>
           {selectedFile && <div className="import-preview"><Badge tone="positive">Đã chọn</Badge><span>{selectedFile.name}</span><b>{Math.ceil(selectedFile.size / 1024)} KB</b></div>}
-          <div className="modal-actions"><Button onClick={() => setImportOpen(false)}>Hủy</Button><Button variant="primary" disabled={!selectedFile || !isSupabaseConfigured} onClick={() => alert("File sẽ được gửi tới Edge Function import-catalog sau khi deploy backend.")}>Kiểm tra và import</Button></div>
+          {importMessage && <p className="import-message">{importMessage}</p>}
+          <div className="modal-actions"><Button onClick={() => setImportOpen(false)}>Hủy</Button><Button variant="primary" disabled={!selectedFile} onClick={checkAndImport}>Kiểm tra và import</Button></div>
         </Modal>
       )}
     </>

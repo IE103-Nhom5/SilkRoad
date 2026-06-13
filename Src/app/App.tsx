@@ -4,7 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { AppShell, type AppProfile } from "../components/AppShell";
 import { DashboardPage } from "../features/DashboardPage";
 import { HelpPage } from "../features/HelpPage";
-import { LoginPage } from "../features/LoginPage";
+import { LoginPage, type LoginInput } from "../features/LoginPage";
 import { ModulePage } from "../features/ModulePage";
 import { PosPage } from "../features/PosPage";
 import { SystemPage } from "../features/SystemPage";
@@ -18,6 +18,8 @@ export function App() {
   const [profile, setProfile] = useState<AppProfile>(demoProfile);
   const [authReady, setAuthReady] = useState(!isSupabaseConfigured);
   const [loginError, setLoginError] = useState("");
+  const [loginNotice, setLoginNotice] = useState("");
+  const [demoSession, setDemoSession] = useState(sessionStorage.getItem("sr-demo-session") === "active");
 
   useEffect(() => {
     if (!supabase) return;
@@ -36,12 +38,39 @@ export function App() {
   }, [session]);
 
   if (!authReady) return <div className="boot-screen">Đang khởi tạo SilkRoad...</div>;
-  if (isSupabaseConfigured && !session) {
-    return <LoginPage error={loginError} onSubmit={async (input) => { setLoginError(""); const result = await supabase!.auth.signInWithPassword(input); if (result.error) setLoginError(result.error.message); }} />;
+  async function signIn(input: LoginInput) {
+    setLoginError("");
+    setLoginNotice("");
+    if (!supabase) return setLoginError("Supabase chưa được cấu hình. Hãy dùng chế độ demo để xem hệ thống.");
+    const result = await supabase.auth.signInWithPassword(input);
+    if (result.error) setLoginError(result.error.message);
+  }
+
+  async function signUp(input: LoginInput) {
+    setLoginError("");
+    setLoginNotice("");
+    if (!supabase) return setLoginError("Cần cấu hình Supabase để đăng ký tài khoản thật.");
+    const result = await supabase.auth.signUp(input);
+    if (result.error) setLoginError(result.error.message);
+    else setLoginNotice("Đã gửi yêu cầu đăng ký. Kiểm tra email nếu hệ thống yêu cầu xác nhận.");
+  }
+
+  async function resetPassword(email: string) {
+    setLoginError("");
+    setLoginNotice("");
+    if (!email.trim()) return setLoginError("Nhập email trước khi yêu cầu đặt lại mật khẩu.");
+    if (!supabase) return setLoginError("Cần cấu hình Supabase để gửi email đặt lại mật khẩu.");
+    const result = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin });
+    if (result.error) setLoginError(result.error.message);
+    else setLoginNotice("Đã gửi liên kết đặt lại mật khẩu tới email của bạn.");
+  }
+
+  if (!session && !demoSession) {
+    return <LoginPage error={loginError} notice={loginNotice} onSubmit={signIn} onSignUp={signUp} onResetPassword={resetPassword} demoAvailable={!isSupabaseConfigured} onDemo={() => { sessionStorage.setItem("sr-demo-session", "active"); setDemoSession(true); }} />;
   }
 
   return (
-    <AppShell profile={profile} demo={!isSupabaseConfigured} onSignOut={async () => { await supabase?.auth.signOut(); }}>
+    <AppShell profile={profile} demo={!isSupabaseConfigured} onSignOut={async () => { sessionStorage.removeItem("sr-demo-session"); setDemoSession(false); await supabase?.auth.signOut(); }}>
       <Routes>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/sales/pos" element={<PosPage />} />
