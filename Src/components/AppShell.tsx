@@ -5,6 +5,7 @@ import logo from "../assets/silkroad-logo.png";
 import bg from "../assets/silkroad-bg.png";
 import { groupedRoutes, routeByPath } from "../lib/navigation";
 import { CommandPalette } from "./CommandPalette";
+import { AssistantChat } from "./AssistantChat";
 import { Button, Modal } from "./ui";
 
 export type AppProfile = { name: string; email: string; role: string };
@@ -27,6 +28,7 @@ export function AppShell({
   const [accountOpen, setAccountOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const sidebarNavRef = useRef<HTMLElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -117,7 +119,14 @@ export function AppShell({
         {demo && <div className="demo-banner">Chế độ demo chỉ-đọc · Thêm biến môi trường Supabase để dùng dữ liệu thật.</div>}
         <main className="content">{children}</main>
       </div>
-      <button className="help-fab" onClick={() => navigate("/help")} aria-label="Trợ giúp"><CircleHelp /></button>
+      <button className="help-fab" onClick={() => setHelpOpen(!helpOpen)} aria-label="Mở trợ lý SilkRoad"><CircleHelp /></button>
+      {helpOpen && (
+        <section className="help-popup" aria-label="Trợ lý SilkRoad">
+          <header><div><b>Trợ lý SilkRoad</b><span>Gemini · hiểu trang đang mở</span></div><button className="icon-button" onClick={() => setHelpOpen(false)} aria-label="Đóng trợ lý"><X /></button></header>
+          <AssistantChat compact />
+          <button className="help-popup-link" onClick={() => { setHelpOpen(false); navigate("/help"); }}>Mở trung tâm trợ giúp</button>
+        </section>
+      )}
       <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} />
       {logoutOpen && <Modal title="Xác nhận đăng xuất" onClose={() => setLogoutOpen(false)}><div className="confirm-content"><p>Bạn có chắc muốn kết thúc phiên làm việc hiện tại?</p><div><Button onClick={() => setLogoutOpen(false)}>Hủy</Button><Button variant="danger" onClick={onSignOut}>Đăng xuất</Button></div></div></Modal>}
     </div>
