@@ -2,6 +2,19 @@
 
 File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. Từ bây giờ, sau mỗi lượt sửa hoặc chạy kiểm tra quan trọng, cần cập nhật lại file này bằng tiếng Việt để dễ theo dõi.
 
+## 2026-06-13 - Kết nối Supabase và deploy Edge Functions
+
+- Xác nhận frontend đã đọc đúng `VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY`.
+- Xác nhận Supabase Auth hoạt động; API dữ liệu yêu cầu tài khoản Auth liên kết với `public.USERS.AuthUserID` theo RLS production.
+- Deploy thành công và kiểm tra trạng thái `ACTIVE` cho:
+  - `admin-invite-user`
+  - `admin-update-user-status`
+  - `import-catalog`
+  - `gemini-chat`
+- `_shared/cors.ts` được đóng gói làm thư viện dùng chung, không deploy thành function riêng.
+- Các function quản trị/import giữ JWT verification và trả `401 Unauthenticated` khi gọi không có phiên đăng nhập.
+- `gemini-chat` hiện vẫn là contract an toàn trả `503 disabled`; chưa lưu Gemini API key và chưa bật gọi Gemini thật.
+
 ## 2026-06-13 - Khôi phục màn hình đăng nhập và workflow thao tác trong runtime mới
 
 ### Đã thực hiện
