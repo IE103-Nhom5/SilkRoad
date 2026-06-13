@@ -1484,11 +1484,79 @@ export default function App() {
     if (error) show(error.message);
   }
 
-  async function signUp() {
-    const { error } = await supabase.auth.signUp(login);
-    if (error) show(error.message);
-    else show("Đã tạo Auth. Tiếp theo tạo profile users để phân quyền.");
+  async function signUp(extraProfile = {}) {
+  const email = trim(login.email);
+  const password = trim(login.password);
+
+  if (!email || !password) {
+    return show("Vui lòng nhập email và mật khẩu để đăng ký");
   }
+
+  if (password.length < 6) {
+    return show("Mật khẩu phải có ít nhất 6 ký tự");
+  }
+
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (authError) {
+    show(authError.message);
+    return;
+  }
+
+  const { data: roleData, error: roleError } = await supabase
+    .from("role")
+    .select("roleid, rolename")
+    .in("rolename", ["sales_staff", "admin"])
+    .limit(1);
+
+  if (roleError) {
+    show("Đã tạo Auth nhưng lỗi lấy role: " + roleError.message);
+    return;
+  }
+
+  const defaultRole = roleData?.[0];
+
+  if (!defaultRole?.roleid) {
+    show("Đã tạo Auth nhưng chưa có role mặc định trong bảng role");
+    return;
+  }
+
+  const rawName = trim(extraProfile.fullname) || email.split("@")[0];
+  const username =
+    trim(extraProfile.username) ||
+    slugify(rawName).slice(0, 45) ||
+    `user-${Date.now()}`;
+
+  const fakeHash =
+    "$2b$10$abcdefghijklmnopqrstuvabcdefghijklmnopqrstuvabcdefghijkl";
+
+  const profilePayload = {
+    userid: authData.user?.id || uuid(),
+    fullname: rawName,
+    username,
+    email,
+    phonenumber: trim(extraProfile.phonenumber) || null,
+    roleid: defaultRole.roleid,
+    branchid: null,
+    status: "active",
+    passwordhash: fakeHash,
+    updatedat: new Date().toISOString(),
+  };
+
+  const { error: profileError } = await supabase
+    .from("users")
+    .upsert([profilePayload], { onConflict: "email" });
+
+  if (profileError) {
+    show("Đã tạo Auth nhưng lỗi tạo profile users: " + profileError.message);
+    return;
+  }
+
+  show("Đăng ký thành công. Bạn có thể đăng nhập.");
+}
 
   async function resetPassword() {
     if (!login.email.trim()) return show("Vui lòng nhập email trước khi đặt lại mật khẩu");
