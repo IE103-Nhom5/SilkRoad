@@ -2,6 +2,13 @@
 
 File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. Từ bây giờ, sau mỗi lượt sửa hoặc chạy kiểm tra quan trọng, cần cập nhật lại file này bằng tiếng Việt để dễ theo dõi.
 
+## 2026-06-13 - Kích hoạt trợ lý Gemini qua Edge Function
+
+- Thay `gemini-chat` placeholder bằng Edge Function gọi Gemini API thật.
+- Giữ `GEMINI_API_KEY` trong Supabase Secrets, không đưa key vào frontend.
+- Edge Function yêu cầu JWT đăng nhập, giới hạn độ dài câu hỏi và chỉ hướng dẫn thao tác; không tự thay đổi dữ liệu.
+- HelpPage bỏ phản hồi mock, gọi `supabase.functions.invoke("gemini-chat")`, hiển thị trạng thái gửi và lỗi rõ ràng.
+
 ## 2026-06-13 - Kết nối Supabase và deploy Edge Functions
 
 - Xác nhận frontend đã đọc đúng `VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY`.
