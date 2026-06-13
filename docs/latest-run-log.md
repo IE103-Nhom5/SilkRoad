@@ -11,6 +11,10 @@ File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. 
 - Deploy `gemini-chat` phiên bản 2 lên Supabase; function đang ở trạng thái `ACTIVE`.
 - Bổ sung kiểm tra phiên đăng nhập và đọc lỗi chi tiết từ Edge Function để phân biệt lỗi xác thực, cấu hình secret và lỗi Gemini API.
 - Xác minh gateway từ chối request không đăng nhập với HTTP 401 đúng theo thiết kế bảo mật.
+- Thêm sổ tay ngữ cảnh SilkRoad cho Gemini gồm route, tên menu, workflow thật, giới hạn và phong cách trả lời.
+- Truyền route hiện tại từ frontend để trợ lý hiểu người dùng đang đứng ở trang nào; giảm câu trả lời chung chung và giảm độ dài phản hồi.
+- Deploy `gemini-chat` phiên bản 3 và xác nhận trạng thái `ACTIVE`.
+- Giữ xuống dòng trong bong bóng chat để hướng dẫn theo bước dễ đọc; cập nhật tài liệu cấu trúc để phản ánh Gemini đã được kích hoạt.
 
 ## 2026-06-13 - Kết nối Supabase và deploy Edge Functions
 

@@ -26,7 +26,7 @@ export function HelpPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) throw new Error("Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để dùng Gemini.");
       const { data, error } = await supabase.functions.invoke("gemini-chat", {
-        body: { message: question, history },
+        body: { message: question, history, currentPath: window.location.pathname },
       });
       if (error) {
         let detail = error.message;

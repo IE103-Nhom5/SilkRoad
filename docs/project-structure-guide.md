@@ -96,7 +96,7 @@ SilkRoad-UIT/
 - `ModulePage.tsx`: khung danh sách chuẩn cho catalog, vận hành, CRM, RBAC, báo cáo.
 - `PosPage.tsx`: chọn chi nhánh, kênh, sản phẩm gốc, biến thể, kiểm tồn và giỏ hàng.
 - `SystemPage.tsx`: trạng thái nền tảng và checklist production.
-- `HelpPage.tsx`: tài liệu thao tác và Gemini frontend-only.
+- `HelpPage.tsx`: tài liệu thao tác và giao diện chat gọi Gemini qua Edge Function.
 - `LoginPage.tsx`: React Hook Form + Zod, không có public signup.
 
 ### `Src/lib/`
@@ -161,7 +161,7 @@ Repo database nằm cạnh UI tại `../Silkroad_database`.
 - `supabase/functions/admin-invite-user`: invite nhân viên.
 - `supabase/functions/admin-update-user-status`: khóa/mở tài khoản.
 - `supabase/functions/import-catalog`: contract import catalog.
-- `supabase/functions/gemini-chat`: disabled mặc định.
+- `supabase/functions/gemini-chat`: gọi Gemini an toàn, xác thực JWT và giữ API key ở Supabase Secrets.
 
 `anon` không có quyền nghiệp vụ. `authenticated` chỉ đọc dữ liệu qua RLS và gọi RPC được cấp quyền. Các Edge Function dùng service role ở backend, không bao giờ đưa service-role key ra frontend.
 
@@ -227,7 +227,7 @@ Quy tắc trọng yếu:
 
 ## 11. Gemini API Rule
 
-UI trợ lý nằm ở `Src/features/HelpPage.tsx`. Frontend hiện chỉ mock phản hồi. Gemini thật phải đi qua `gemini-chat` Edge Function, có auth, permission, rate limit, timeout và audit. Khi chưa có secret/phê duyệt, function phải tiếp tục trả `503 disabled`.
+UI trợ lý nằm ở `Src/features/HelpPage.tsx`. Frontend gọi `gemini-chat` Edge Function; API key chỉ tồn tại trong Supabase Secrets. Ngữ cảnh nghiệp vụ được quản lý tại `supabase/functions/_shared/silkroad-context.ts`, gồm route, workflow và giới hạn trả lời. Các bước nâng cấp tiếp theo là rate limit, audit log, RAG tài liệu và function calling chỉ-đọc.
 
 <a id="tldr"></a>
 
