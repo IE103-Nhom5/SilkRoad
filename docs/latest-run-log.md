@@ -8,6 +8,9 @@ File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. 
 - Giữ `GEMINI_API_KEY` trong Supabase Secrets, không đưa key vào frontend.
 - Edge Function yêu cầu JWT đăng nhập, giới hạn độ dài câu hỏi và chỉ hướng dẫn thao tác; không tự thay đổi dữ liệu.
 - HelpPage bỏ phản hồi mock, gọi `supabase.functions.invoke("gemini-chat")`, hiển thị trạng thái gửi và lỗi rõ ràng.
+- Deploy `gemini-chat` phiên bản 2 lên Supabase; function đang ở trạng thái `ACTIVE`.
+- Bổ sung kiểm tra phiên đăng nhập và đọc lỗi chi tiết từ Edge Function để phân biệt lỗi xác thực, cấu hình secret và lỗi Gemini API.
+- Xác minh gateway từ chối request không đăng nhập với HTTP 401 đúng theo thiết kế bảo mật.
 
 ## 2026-06-13 - Kết nối Supabase và deploy Edge Functions
 

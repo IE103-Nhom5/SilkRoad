@@ -23,14 +23,24 @@ export function HelpPage() {
     setSending(true);
     try {
       if (!supabase || !isSupabaseConfigured) throw new Error("Supabase chưa được cấu hình.");
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) throw new Error("Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để dùng Gemini.");
       const { data, error } = await supabase.functions.invoke("gemini-chat", {
         body: { message: question, history },
       });
-      if (error) throw error;
+      if (error) {
+        let detail = error.message;
+        const context = "context" in error ? error.context : null;
+        if (context instanceof Response) {
+          const body = await context.clone().json().catch(() => null);
+          detail = String(body?.error || detail);
+        }
+        throw new Error(detail);
+      }
       setMessages((current) => [...current, { role: "assistant", text: String(data?.answer || "Gemini không trả về nội dung.") }]);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      setMessages((current) => [...current, { role: "assistant", text: `Không thể gọi Gemini: ${detail}. Hãy kiểm tra phiên đăng nhập và Edge Function.` }]);
+      setMessages((current) => [...current, { role: "assistant", text: `Không thể gọi Gemini: ${detail}` }]);
     } finally {
       setSending(false);
     }
