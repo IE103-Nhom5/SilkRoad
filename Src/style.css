@@ -10456,3 +10456,194 @@ body.dark .sidebar button svg {
     transition: margin-left .18s ease, width .18s ease, max-width .18s ease !important;
   }
 }
+
+/* ===== SILKROAD UI POLISH FINAL ===== */
+
+.card {
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 55px rgba(53, 37, 11, .16);
+  border-color: rgba(184, 139, 59, .75);
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top right, rgba(214,181,109,.16), transparent 34%),
+    linear-gradient(135deg, rgba(255,255,255,.16), transparent 35%);
+}
+
+.card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.metric {
+  position: relative;
+  overflow: hidden;
+  min-height: 118px;
+  transition: .18s ease;
+}
+
+.metric:hover {
+  transform: translateY(-3px);
+  border-color: var(--gold);
+  box-shadow: 0 14px 34px rgba(53, 37, 11, .14);
+}
+
+.metric::after {
+  content: "✦";
+  position: absolute;
+  right: 18px;
+  top: 10px;
+  font-size: 42px;
+  color: rgba(184, 139, 59, .18);
+}
+
+.metric strong {
+  font-size: 30px;
+  letter-spacing: -0.5px;
+}
+
+.table-wrap {
+  box-shadow: 0 14px 34px rgba(53, 37, 11, .08);
+}
+
+tbody tr {
+  transition: background .14s ease, transform .14s ease;
+}
+
+tbody tr:hover {
+  background: #f8edd6;
+}
+
+th {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .45px;
+}
+
+td {
+  vertical-align: middle;
+}
+
+button {
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+.topbar {
+  backdrop-filter: blur(14px);
+  background: rgba(248, 241, 227, .92);
+}
+
+.topbar input,
+.topbar .search-input {
+  border-radius: 999px;
+}
+
+.sidebar {
+  background-blend-mode: multiply;
+}
+
+.sidebar button {
+  position: relative;
+}
+
+.sidebar button.active::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--gold);
+  box-shadow: 0 0 12px rgba(214,181,109,.7);
+}
+
+.toast {
+  border: 1px solid rgba(214,181,109,.55);
+  box-shadow: 0 20px 50px rgba(0,0,0,.26);
+}
+
+/* Status badges: dùng được nếu trong JSX có span className="status-badge active" */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid transparent;
+}
+
+.status-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.status-badge.active,
+.status-badge.confirmed,
+.status-badge.paid,
+.status-badge.received {
+  color: #0b5b4d;
+  background: rgba(11, 91, 77, .1);
+  border-color: rgba(11, 91, 77, .25);
+}
+
+.status-badge.pending,
+.status-badge.draft,
+.status-badge.in_transit {
+  color: #8a5b00;
+  background: rgba(214, 181, 109, .18);
+  border-color: rgba(184, 139, 59, .3);
+}
+
+.status-badge.cancelled,
+.status-badge.inactive,
+.status-badge.failed {
+  color: #8b2424;
+  background: rgba(139, 36, 36, .1);
+  border-color: rgba(139, 36, 36, .22);
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  min-height: 220px;
+  padding: 28px;
+  border: 1px dashed #d6b56d;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at center, rgba(214,181,109,.16), transparent 42%),
+    #fffaf0;
+  color: #073d31;
+}
+
+.empty-state b {
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.empty-state span {
+  color: #80683a;
+}
