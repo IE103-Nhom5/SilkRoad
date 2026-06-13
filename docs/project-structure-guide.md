@@ -2,703 +2,239 @@
 
 > Bản thân tôi cũng không hiểu vì sao nó chạy --qct
 
-Khi bạn mò được tài liệu này thì sẽ có một nghi vấn trong tâm: **Cấu trúc file tà đạo j đây ???** . Tôi cũng không hiểu được hết toàn bộ cấu trúc tà môn này, do một phần từ xuất thân lai tạp giữa con người và trí tuệ nhân tạo. Tuy nhiên, tài liệu này sẽ giải thích các file trong đây dùng để làm j, vì sao lại tồn tại ở đây ( **THEO CÁCH HIỂU CỦA TÔI** )
+Khi bạn mò được tài liệu này thì sẽ có một nghi vấn trong tâm: **Cấu trúc file tà đạo j đây ???**. Tôi cũng không hiểu được hết toàn bộ cấu trúc tà môn này, do một phần từ xuất thân lai tạp giữa con người và trí tuệ nhân tạo. Tuy nhiên, tài liệu này sẽ giải thích các file trong đây dùng để làm j, vì sao lại tồn tại ở đây (**THEO CÁCH HIỂU CỦA TÔI**).
 
-Từ cổ chí kim, repo này vốn được lập ra để phát triển theo chính đạo, chia hạng mục `pages`, `components`, `lib` rõ ràng. Nhưng đường tu luyện không bằng phẳng, thiên kiếp deadline kéo tới, thế là nhiều công pháp được nhét thẳng vào `Src/App.jsx`. Kết quả là app vẫn vận hành được, thậm chí có khá nhiều công năng, nhưng kinh mạch code đã rối loạn.
+Từ cổ chí kim, repo này từng bị thiên kiếp deadline đánh cho kinh mạch rối loạn, nhiều công pháp bị nhét thẳng vào `Src/App.jsx` và `Src/style.css`. Từ đợt production foundation tháng 06/2026, chính mạch mới đã được khai thông bằng TypeScript, route thật, feature module, design token và secure RPC. Hai đại tàn bản cũ vẫn còn để tra khảo lịch sử, nhưng **không còn là runtime đang chạy**.
 
-Tài liệu này vẫn giữ thuật ngữ chuyên ngành như `workflow`, `runtime`, `entrypoint`, `prototype`, `layout`, `RBAC`, `refactor`. Phần kiếm hiệp chỉ để đọc đỡ buồn ngủ, không phải để làm mờ đường đi nước bước của code.
+Tài liệu vẫn giữ thuật ngữ chuyên ngành như `workflow`, `runtime`, `entrypoint`, `feature`, `layout`, `RLS`, `RBAC`, `RPC`, `Edge Function`, `refactor`. Phần kiếm hiệp chỉ để đọc đỡ buồn ngủ, không phải để làm mờ đường đi nước bước của code.
 
 ## Mục Lục
 
 1. [Workflow Chính / Kinh Mạch Chính](#workflow-chinh)
-2. [Repo Map: Runtime, Docs, Prototype](#repo-map)
-3. [Root Files / File Gốc Ở Thư Mục Chính](#root-files)
-4. [Source Folder `Src/` / Động Phủ `Src/`](#source-folder)
-5. [Library Layer `Src/lib/` / Tàng Kinh Các](#library-layer)
-6. [Assets `Src/assets/` / Kho Ảnh](#assets)
-7. [Pages Prototype `Src/pages/` / Cấm Địa](#pages-prototype)
-8. [Legacy Layout `Src/components/Layout.jsx`](#legacy-layout)
-9. [Legacy Nav Config `Src/data/nav.js`](#legacy-nav-config)
-10. [Documentation `docs/` / Bí Kíp Trong `docs/`](#documentation)
-11. [Feature Inventory / Những Chức Năng Đang Có](#feature-inventory)
-12. [Gemini API Rule / Cấm Kỵ API Key Frontend](#gemini-api-rule)
-13. [File Ownership / Muốn Sửa Gì Thì Đi Đâu](#file-ownership)
-14. [Non-Runtime Files / Những Nơi Đừng Vội Sửa](#non-runtime-files)
-15. [Technical Debt / Vì Sao Cấu Trúc Bị Lệch](#technical-debt)
-16. [Refactor Roadmap / Lộ Trình Quy Chính Về Chính Đạo](#refactor-roadmap)
-17. [TL;DR / Kết Luận Cho Đệ Tử Mới Nhập Môn](#tldr)
+2. [Repo Map / Bản Đồ Sơn Môn](#repo-map)
+3. [Source Folder `Src/` / Động Phủ Runtime](#source-folder)
+4. [Data Layer / Đường Vận Chuyển Nội Lực](#data-layer)
+5. [Route Và Feature Inventory](#feature-inventory)
+6. [Design System Và Layout](#design-system)
+7. [Database, RLS, RBAC Và Edge Functions](#security)
+8. [Legacy / Tàn Bản Cũ](#legacy)
+9. [File Ownership / Muốn Sửa Gì Thì Đi Đâu](#file-ownership)
+10. [Workflow Bảo Trì Và Production Gate](#maintenance)
+11. [Gemini API Rule](#gemini)
+12. [TL;DR / Kết Luận Cho Đệ Tử Mới Nhập Môn](#tldr)
 
 <a id="workflow-chinh"></a>
 
-## 1. Workflow Chính / Kinh Mạch Chính 
+## 1. Workflow Chính / Kinh Mạch Chính
 
-Nếu chỉ muốn biết app thật chạy từ đâu, đây là **workflow chính**:
-
-```txt
+```text
 index.html
-  -> Src/main.jsx
-    -> Src/App.jsx
-      -> Src/style.css
+  -> Src/main.tsx
+    -> Src/app/App.tsx
+      -> Src/components/AppShell.tsx
+      -> Src/features/*
+      -> Src/core/dataService.ts
+      -> Src/styles/tokens.css + Src/styles/app.css
 ```
 
-Đây là runtime (đại mạch vận hành) chính. Mọi thay đổi liên quan đến luồng vận hành cần được thực hiện tại đây. nếu sửa nhầm nơi khác, server sẽ không nhận được cập nhật (vận công sai huyệt khiến linh lực không thể lưu thông).
-
-| Thứ tự chạy | File | Vai trò trong workflow |
+| Thứ tự | File | Vai trò trong workflow |
 |---:|---|---|
-| 1 | `index.html` | HTML entry, tạo `<div id="root"></div>`. |
-| 2 | `Src/main.jsx` | React entrypoint, render app vào `#root`. |
-| 3 | `Src/App.jsx` | Runtime app chính, chứa phần lớn state/page/business logic. |
-| 4 | `Src/style.css` | Stylesheet chính: layout, dark mode, responsive. |
-| 5 | `Src/lib/*` | Service/config layer: Supabase, quyền, DB service. |
+| 1 | `index.html` | HTML entry, tạo `#root`, gọi `/Src/main.tsx`. |
+| 2 | `Src/main.tsx` | Gắn React Query, React Router và render app. |
+| 3 | `Src/app/App.tsx` | Khởi tạo auth/profile và khai báo route. |
+| 4 | `Src/components/AppShell.tsx` | Sidebar, topbar, account, notification, dark mode. |
+| 5 | `Src/features/*` | Page và workflow nghiệp vụ đang chạy thật. |
+| 6 | `Src/core/dataService.ts` | Adapter demo/Supabase/RPC. |
+| 7 | `Src/styles/*` | Design token, layout responsive và dark mode. |
 
-Nếu mới khởi đầu, rcm đọc theo thứ tự:
-
-1. `index.html`
-2. `Src/main.jsx`
-3. `Src/App.jsx`
-4. `Src/lib/featureConfig.js`
-5. `Src/lib/dbService.js`
-6. `Src/style.css`
-
-Tuyệt kỹ sinh tồn: đừng đọc `App.jsx` từ dòng 1 tới dòng cuối như đọc kinh thư. Hãy dùng `rg` hoặc tìm function cần sửa.
+Muốn nhập môn nhanh, đọc đúng thứ tự trên. Đừng đọc `Src/App.jsx` cũ từ đầu tới cuối như cổ thư, vì đó giờ là tàn bản.
 
 <a id="repo-map"></a>
 
-## 2. Repo Map: Runtime, Docs, Prototype
+## 2. Repo Map / Bản Đồ Sơn Môn
 
-Repo hiện có ba nhóm chính.
-### Runtime thật / Chính mạch đang sống
-
-Đây là nơi app thật đang dựa vào:
-
-- `index.html`
-- `Src/main.jsx`
-- `Src/App.jsx`
-- `Src/style.css`
-- `Src/lib/supabase.js`
-- `Src/lib/dbService.js`
-- `Src/lib/featureConfig.js`
-- `Src/assets/*`
-
-Sửa tính năng đang chạy thì chủ yếu đi vào đây.
-
-### Documentation / Tàng kinh các 
-
-Đây là nơi ghi lại trí nhớ môn phái:
-
-- `docs/latest-run-log.md`
-- `docs/project-structure-guide.md`
-- `docs/maintenance-roadmap.md`
-- `docs/max-potential-roadmap.md`
-- `README.md`
-
-Đặc biệt, sau mỗi lần sửa/chạy kiểm tra quan trọng, phải cập nhật `docs/latest-run-log.md`. Đây là nhật ký tu luyện, không ghi thì đời sau lại hỏi "ai đã làm chuyện này".
-
-### Prototype & legacy / Tàn bản cũ
-
-Các file này từng có ý nghĩa, nhưng hiện không phải luồng chính:
-
-- `Src/main.js`
-- `Src/index.css`
-- `Src/components/Layout.jsx`
-- `Src/data/nav.js`
-- `Src/pages/*.jsx`
-- `Src/banner.png`
-- `Src/login-bg.png`
-
-Không phải cứ thấy file là lao vào sửa. Một số file chỉ là di tích cổ. Sửa chúng có thể không làm app thay đổi.
-
-<a id="root-files"></a>
-
-## 3. Root Files / File Gốc Ở Thư Mục Chính
-
-| File/thư mục | Trạng thái | Luận giải |
-|---|---|---|
-| `index.html` | Đang dùng | Cổng vào của Vite. Gọi `/Src/main.jsx`. |
-| `package.json` | Đang dùng | Chứa script `dev`, `build`, `preview` và dependency. |
-| `package-lock.json` | Đang dùng | Khóa phiên bản package. Không sửa tay nếu chưa hiểu hậu quả. |
-| `vite.config.js` | Đang dùng | Cấu hình Vite, chia chunk khi build. |
-| `README.md` | Đang dùng | Hướng dẫn chạy local, biến môi trường Supabase. |
-| `docs/` | Đang dùng | Bí kíp, nhật ký, roadmap, giải thích cấu trúc. |
-| `node_modules/` | Sinh ra bởi npm | Động phủ thư viện. Không sửa tay. |
-| `dist/` | Sinh ra khi build | Thành phẩm sau `npm run build`. Không sửa tay. |
-
-Nếu muốn chạy app:
-
-```bash
-npm install
-npm run dev
+```text
+SilkRoad-UIT/
+├── index.html
+├── package.json
+├── vite.config.js
+├── tsconfig.json
+├── Src/
+│   ├── app/
+│   ├── components/
+│   ├── core/
+│   ├── data/
+│   ├── features/
+│   ├── lib/
+│   ├── styles/
+│   └── assets/
+├── docs/
+├── dist/             # sinh ra khi build
+└── node_modules/     # sinh ra khi npm install
 ```
 
-Nếu muốn kiểm tra app có build được không:
-
-```bash
-npm run build
-```
+`package.json` giữ dependency và script. `vite.config.js` chia production chunk. `tsconfig.json` là giới luật TypeScript. `docs/latest-run-log.md` là nhật ký tu luyện bắt buộc cập nhật sau mỗi lượt sửa/chạy quan trọng.
 
 <a id="source-folder"></a>
 
-## 4. Source Folder `Src/` / Động Phủ `Src/`
+## 3. Source Folder `Src/` / Động Phủ Runtime
 
-### `Src/main.jsx`
+### `Src/app/App.tsx`
 
-Đây là frontend entrypoint thật, hay nói màu mè là đệ tử gác cổng.
+Đại điện điều phối mới. Chỉ giữ session, profile, login gate và route composition. Nó không còn ôm vạn vật.
 
-Nó làm:
+### `Src/components/`
 
-- Import React.
-- Import `App.jsx`.
-- Import `style.css`.
-- Render `<App />` vào `#root`.
+- `AppShell.tsx`: shell ổn định; sidebar open/collapsed không làm main đổi chỗ ngoài ý muốn; mobile dùng drawer.
+- `CommandPalette.tsx`: global search nhóm chức năng, sản phẩm, đơn hàng, khách hàng và nhân viên.
+- `DataTable.tsx`: TanStack Table có search, sort, chọn cột, phân trang, CSV và row detail.
+- `ui.tsx`: panel, button, modal, badge, loading, empty, error và retry state.
 
-File này nhỏ nhưng quan trọng. Nếu `App.jsx` là đại điện, `main.jsx` là người mở cửa đại điện.
+### `Src/features/`
 
-### `Src/App.jsx`
+- `DashboardPage.tsx`: KPI, biểu đồ, cảnh báo, hoạt động gần đây.
+- `ModulePage.tsx`: khung danh sách chuẩn cho catalog, vận hành, CRM, RBAC, báo cáo.
+- `PosPage.tsx`: chọn chi nhánh, kênh, sản phẩm gốc, biến thể, kiểm tồn và giỏ hàng.
+- `SystemPage.tsx`: trạng thái nền tảng và checklist production.
+- `HelpPage.tsx`: tài liệu thao tác và Gemini frontend-only.
+- `LoginPage.tsx`: React Hook Form + Zod, không có public signup.
 
-Đây là runtime app chính, nơi hội tụ phần lớn công pháp của môn phái. Động vào phải tỉnh táo.
+### `Src/lib/`
 
-Hiện trong `App.jsx` có:
+- `client.ts`: tạo Supabase client từ biến môi trường.
+- `navigation.tsx`: route registry và icon Lucide.
+- `format.ts`: format tiền/ngày và normalize tìm kiếm.
+- `cart.ts`: tính tổng giỏ và kiểm giới hạn tồn.
+- `*.test.ts`: unit test cho các helper/route.
 
-- Menu sidebar.
-- Nhóm menu cha/con.
-- Login/logout.
-- Session Supabase.
-- Profile user.
-- Role và phân quyền.
-- Global search.
-- Notification.
-- Topbar.
-- Avatar menu.
-- Dark mode.
-- Dashboard.
-- POS bán hàng.
-- Hàng hóa.
-- Nhập hàng.
-- Kho.
-- Chuyển kho.
-- Kiểm kho.
-- Khách hàng.
-- Đổi trả.
-- Kênh bán.
-- RBAC/nhân viên/quyền/log.
-- Báo cáo.
-- Tra bảng DB.
-- Trang hệ thống.
-- Trang trợ giúp.
-- Widget dấu hỏi `?`.
+<a id="data-layer"></a>
 
-Vì sao file này to?
+## 4. Data Layer / Đường Vận Chuyển Nội Lực
 
-- Ban đầu dự án định tách page.
-- Sau đó cần demo nhanh, tính năng được đưa thẳng vào `App.jsx`.
-- Mỗi lần thêm POS, RBAC, search, avatar, dark mode, layout fix thì file lại hấp thụ thêm một chiêu.
-- App mạnh hơn, nhưng file cũng khó đọc hơn.
+`Src/core/dataService.ts` là cửa duy nhất cho page đọc dữ liệu hoặc gọi nghiệp vụ nhạy cảm.
 
-Khi muốn tìm đường trong `App.jsx`, tìm theo function:
+- Không có Supabase env: dùng `Src/data/demo.ts`, chỉ-đọc.
+- Có Supabase env: đọc view/bảng đã được RLS cho phép.
+- Ghi nghiệp vụ: gọi RPC transaction như `fn_create_order_app`.
+- Frontend không được tự cập nhật tồn, hoàn tiền, tạo nhân viên hoặc xóa role.
 
-```txt
-function App()
-function Dashboard()
-function Products()
-function Orders()
-function Stock()
-function UsersPage()
-function SystemPage()
-function HelpPage()
-function FloatingGeminiHelp()
-```
-
-Nếu sửa tính năng thật đang hiện trên màn hình, 80% khả năng bạn sẽ vào `App.jsx`.
-
-### `Src/style.css`
-
-Đây là stylesheet chính, tức pháp trận giao diện. Một file nhưng bao rất nhiều trận:
-
-- Login.
-- Sidebar.
-- Topbar.
-- Card.
-- Form.
-- Table.
-- Modal.
-- Dashboard.
-- POS.
-- Product picker.
-- Stock.
-- RBAC.
-- System.
-- Help.
-- Footer.
-- Dark mode.
-- Responsive.
-- Chat `?`.
-
-Các block `FINAL OVERRIDE` là gì?
-
-Đó là những tầng trận pháp được đặt cuối file để áp chế rule cũ. Vì CSS chạy theo thứ tự sau thắng trước, nên khi layout từng bị chồng chéo, cách nhanh nhất là đặt một block cuối có ghi chú rõ.
-
-Hiện có các block quan trọng như:
-
-- Topbar sticky.
-- Sidebar mở/rút gọn.
-- Icon đồng bộ.
-- POS scroll/layout.
-- Shell geometry.
-- Sidebar hover không chồng lên topbar/content.
-
-Lưu ý:
-
-- Muốn sửa lỗi layout đang thấy, nhìn cuối `style.css` trước.
-- Muốn chỉnh lâu dài, nên tách CSS thành module.
-- Đừng rải thêm rule lung tung nếu có thể viết một block có tên rõ.
-
-### `Src/main.js`
-
-Legacy/prototype cũ.
-
-Không phải entry thật. `index.html` không gọi file này. Sửa nó thường không ảnh hưởng app đang chạy.
-
-### `Src/index.css`
-
-Legacy CSS cũ.
-
-App thật đang dùng `Src/style.css`, không phải `Src/index.css`.
-
-<a id="library-layer"></a>
-
-## 5. Library Layer `Src/lib/` / Tàng Kinh Các
-
-Đây là service/config layer khá sạch, nên giữ và phát triển tiếp.
-
-### `Src/lib/supabase.js`
-
-Tạo Supabase client.
-
-Dùng biến:
-
-```txt
-VITE_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY
-```
-
-Luật cấm:
-
-- Không nhét service role key vào đây.
-- Không nhét Gemini API key vào đây.
-- Không nhét secret backend vào frontend.
-
-Vì `VITE_*` sẽ bị bundle ra browser. Người ngoài có thể soi được.
-
-### `Src/lib/featureConfig.js`
-
-Đây là sổ phân quyền và tra cứu.
-
-Nó chứa:
-
-```js
-ROLE_FEATURES
-QUERY_TABLES
-TABLE_LABELS
-PAGE_ALIASES
-PAGE_DESCRIPTIONS
-```
-
-Khi nào sửa:
-
-- Thêm trang mới.
-- Đổi quyền role.
-- Thêm bảng/view cho Tra bảng.
-- Thêm alias để global search hiểu từ khóa.
-- Đổi tên tiếng Việt cho table DB.
-
-Nếu menu có trang mới mà role không mở được, nhìn file này.
-
-### `Src/lib/dbService.js`
-
-Đây là người đi đàm phán với database.
-
-Nó làm:
-
-- Đọc row từ Supabase.
-- Gọi RPC/procedure.
-- Thử nhiều tên procedure khi schema chưa đồng bộ.
-- Fallback nếu view/table chưa có.
-- Nhận diện lỗi schema cache.
-
-Các hàm đáng nhớ:
-
-```js
-readRows()
-readFirstAvailableTable()
-callProcedureCandidates()
-isProcedureUnavailable()
-```
-
-Vì database có nhiều table/view/procedure, file này giúp app không gục ngay khi DB còn đang luyện công chưa xong.
-
-<a id="assets"></a>
-
-## 6. Assets `Src/assets/` / Kho Ảnh
-
-Đây là nơi asset/image UI đang được dùng thật.
-
-| File | Công dụng |
-|---|---|
-| `silkroad-logo.png` | Logo app/sidebar/login/topbar. |
-| `silkroad-bg.png` | Nền sidebar. |
-| `login-bg.png` | Nền login. |
-| `login-frame.png` | Khung login. |
-| `login-benefits.png` | Ảnh phụ login. |
-| `banner.png` | Asset phụ, có thể là bản thiết kế cũ. |
-
-Ngoài ra còn:
-
-- `Src/banner.png`
-- `Src/login-bg.png`
-
-Hai file này nằm ngoài `assets/`, khả năng là bản duplicate cũ. App hiện ưu tiên import từ `Src/assets/`.
-
-<a id="pages-prototype"></a>
-
-## 7. Pages Prototype `Src/pages/` / Cấm Địa
-
-Nghe tên tưởng là nơi chứa page chính, nhưng hiện tại chưa phải.
-
-Các file trong `Src/pages/` đa số là bản cũ/prototype:
-
-| File | Ý định ban đầu | Trạng thái |
-|---|---|---|
-| `Dashboard.jsx` | Tổng quan | Tàn bản/prototype. |
-| `Products.jsx` | Hàng hóa | Tàn bản/prototype. |
-| `Purchase.jsx` | Nhập hàng | Tàn bản/prototype. |
-| `Stock.jsx` | Kho | Tàn bản/prototype. |
-| `Orders.jsx` | POS/đơn hàng | Tàn bản/prototype. |
-| `Reports.jsx` | Báo cáo | Tàn bản/prototype. |
-| `Users.jsx` | RBAC/người dùng | Tàn bản/prototype. |
-| `Help.jsx` | Trợ giúp | Tàn bản/prototype. |
-| `Login.jsx` | Đăng nhập | Tàn bản/prototype. |
-
-Vì sao có mà không dùng?
-
-- Ban đầu định tách page.
-- Sau đó `App.jsx` phình nhanh hơn tốc độ refactor.
-- Những file này chưa được nối lại vào luồng thật.
-
-Cảnh báo:
-
-- Sửa `Src/pages/Orders.jsx` không sửa POS hiện tại.
-- POS thật nằm trong `function Orders(p)` bên trong `Src/App.jsx`.
-
-<a id="legacy-layout"></a>
-
-## 8. Legacy Layout `Src/components/Layout.jsx`
-
-Đây là layout cũ, không phải layout đang chạy.
-
-Nó từng có:
-
-- Sidebar đơn giản.
-- Topbar đơn giản.
-- Logout.
-
-Layout thật hiện nằm trong `App.jsx`, gồm:
-
-- Sidebar nhóm cha/con.
-- Collapse/hover.
-- Topbar sticky.
-- Global search.
-- Notification.
-- Avatar menu.
-- Dark mode.
-- Widget `?`.
-
-Khi sửa sidebar/topbar hiện tại, đừng vào `Layout.jsx` trước. Vào `App.jsx` và `style.css`.
-
-<a id="legacy-nav-config"></a>
-
-## 9. Legacy Nav Config `Src/data/nav.js`
-
-Đây là menu cũ cho `Layout.jsx`.
-
-Menu thật hiện nằm trong `App.jsx`:
-
-```js
-MENU
-MENU_GROUPS
-MENU_BY_KEY
-```
-
-Quyền thật nằm trong:
-
-```txt
-Src/lib/featureConfig.js
-```
-
-Nếu sửa `nav.js` mà không thấy gì đổi, không phải bạn bị hoa mắt. Nó không điều khiển menu chính nữa.
-
-<a id="documentation"></a>
-
-## 10. Documentation `docs/` / Bí Kíp Trong `docs/`
-
-Đây là tàng thư của repo.
-
-| File | Công dụng |
-|---|---|
-| `docs/project-structure-guide.md` | Chính tài liệu này. Giải thích cấu trúc file theo giọng tà môn nhưng có ích. |
-| `docs/latest-run-log.md` | Nhật ký lần sửa/chạy mới nhất. Sau mỗi lượt quan trọng phải cập nhật. |
-| `docs/maintenance-roadmap.md` | Ghi chú bảo trì, hướng refactor, nguyên tắc API/Gemini. |
-| `docs/max-potential-roadmap.md` | Lộ trình nâng app thành hệ thống chuyên nghiệp hơn. |
-
-Nếu sau này không nhớ lần trước đã sửa gì, mở `latest-run-log.md`.
-
-Nếu muốn biết nên phát triển app theo hướng nào, mở `max-potential-roadmap.md`.
+POS gửi `variant_id`, `quantity`, `unit_price`, `branch_id`, `channel_id`; không gửi SKU làm định danh nghiệp vụ.
 
 <a id="feature-inventory"></a>
 
-## 11. Feature Inventory / Những Chức Năng Đang Có
+## 5. Route Và Feature Inventory
 
-### Đăng nhập và phân quyền
-
-- Dùng Supabase Auth.
-- Sau login, app lấy profile từ bảng `users`.
-- Role quyết định trang nào được mở.
-- Quyền nằm trong `ROLE_FEATURES`.
-
-### Dashboard
-
-- KPI tổng quan.
-- Trung tâm điều hành.
-- Điểm sức khỏe vận hành.
-- Cảnh báo cần xử lý.
-- Sản phẩm bán chạy.
-- Đơn hàng gần đây.
-- Doanh thu 7 ngày.
-
-### Hàng hóa
-
-- Tạo sản phẩm gốc.
-- Tạo biến thể.
-- Danh mục.
-- Thuộc tính size/màu.
-- Ảnh sản phẩm.
-- Nhà cung cấp.
-- Giá nhập theo nhà cung cấp.
-
-### POS bán hàng
-
-- Chọn chi nhánh.
-- Chọn kênh bán.
-- Tìm sản phẩm.
-- Chọn sản phẩm gốc trước.
-- Chọn biến thể theo tên/thuộc tính, không bắt chọn SKU.
-- Xem ảnh sản phẩm.
-- Thêm giỏ.
-- Đổi số lượng.
-- Lưu giỏ tạm.
-- Khôi phục giỏ tạm.
-- Tạo hóa đơn.
-- Giảm giá, phí ship, hình thức thanh toán.
-
-### Kho và vận hành
-
-- Xem tồn kho.
-- Xem lịch sử kho.
-- Cảnh báo sắp hết hàng.
-- Nhập hàng.
-- Chuyển kho.
-- Kiểm kho.
-- Xuất CSV.
-
-### Khách hàng, đổi trả, kênh bán
-
-- Tạo/cập nhật khách hàng.
-- Tra cứu khách hàng.
-- Tạo phiếu đổi trả.
-- Hoàn kho.
-- Hoàn tiền.
-- Tạo chi nhánh.
-- Tạo kênh bán.
-- Giá theo kênh.
-- Phân bổ tồn theo kênh.
-
-### RBAC/nhân viên
-
-- Tạo/sửa user.
-- Quản lý role.
-- Gán quyền.
-- Thu hồi quyền.
-- Khôi phục quyền.
-- Xóa quyền truy cập.
-- Xem profile nhân viên.
-- Xem log hoạt động.
-
-### Báo cáo và tra bảng
-
-- Báo cáo doanh thu.
-- Báo cáo tồn kho.
-- Báo cáo đơn hàng.
-- Chọn table/view database.
-- Tải dữ liệu.
-- Tìm kiếm.
-- Xuất CSV.
-
-### Trợ giúp và dấu hỏi `?`
-
-- Trang trợ giúp có hướng dẫn thao tác.
-- Widget `?` là frontend mock.
-- Chưa nối Gemini API thật.
-- Không nhận API key ở browser.
-- Có auto-scroll xuống tin nhắn mới.
-
-<a id="gemini-api-rule"></a>
-
-## 12. Gemini API Rule / Cấm Kỵ API Key Frontend
-
-Không nối Gemini trực tiếp trong React frontend.
-
-Vì sao?
-
-- Frontend có thể bị xem code bundle.
-- Biến `VITE_*` sẽ lộ ra browser.
-- API key có thể bị lấy và dùng hết quota.
-
-Đường chính đạo:
-
-```txt
-React frontend
-  -> Backend endpoint hoặc Supabase Edge Function
-    -> Gemini API
-```
-
-Frontend chỉ gửi câu hỏi. Backend giữ API key, kiểm quyền, rate limit và log lỗi.
-
-<a id="file-ownership"></a>
-
-## 13. File Ownership / Muốn Sửa Gì Thì Đi Đâu
-
-| Việc muốn sửa | Nơi nên vào |
+| Nhóm | Route |
 |---|---|
-| UI đang chạy | `Src/App.jsx`, `Src/style.css` |
-| Dashboard | `function Dashboard()` trong `Src/App.jsx`, CSS `.dashboard-*` |
-| POS | `function Orders()`, `ProductPickerGrid`, `VariantChoicePanel`, `ProductPreview` |
-| Kho | `function Stock()` và các helper stock |
-| RBAC/nhân viên | `function UsersPage()` và role helpers |
-| Trang hệ thống | `function SystemPage()` |
-| Trợ giúp/chat `?` | `function HelpPage()`, `function FloatingGeminiHelp()` |
-| Menu sidebar | `MENU`, `MENU_GROUPS` trong `Src/App.jsx` |
-| Quyền truy cập | `Src/lib/featureConfig.js` |
-| Tra bảng DB | `QUERY_TABLES`, `TABLE_LABELS`, `selectTable()` |
-| Đọc DB/RPC | `Src/lib/dbService.js` và function nghiệp vụ trong `App.jsx` |
-| Supabase URL/key | `.env`, `Src/lib/supabase.js` |
-| Topbar/sidebar layout | Cuối `Src/style.css`, các block `FINAL OVERRIDE` |
-| Tài liệu/log | `docs/latest-run-log.md`, `docs/*roadmap.md` |
+| Tổng quan | `/dashboard` |
+| Hàng hóa | `/catalog/products` |
+| Vận hành | `/operations/stock`, `/purchase`, `/transfer`, `/adjustment` |
+| Kinh doanh | `/sales/pos`, `/orders`, `/customers`, `/returns`, `/channels` |
+| Quản trị | `/admin/users`, `/roles`, `/system` |
+| Công cụ | `/reports`, `/query`, `/help` |
 
-<a id="non-runtime-files"></a>
+Mọi route dùng deep-link thật qua React Router. Danh sách module dùng table chuẩn; từng dòng mở detail. POS chọn sản phẩm rồi mới chọn biến thể. Global search mở bằng `Ctrl/Cmd + K`.
 
-## 14. Non-Runtime Files / Những Nơi Đừng Vội Sửa
+<a id="design-system"></a>
 
-Nếu muốn sửa app hiện tại, đừng ưu tiên mấy file này:
+## 6. Design System Và Layout
 
+- `Src/styles/tokens.css`: màu, typography, border, shadow, light/dark token.
+- `Src/styles/app.css`: shell, table, modal, dashboard, POS, help và responsive.
+- Lucide là hệ icon duy nhất.
+- Card tối đa `8px`.
+- Runtime mới không dùng `FINAL OVERRIDE` và không dùng `!important`.
+- Desktop: sidebar fixed, main offset ổn định, topbar sticky.
+- Mobile: sidebar drawer, action rút gọn, không overflow ngang.
+
+Nếu layout lại chồng, kiểm tra `--sidebar-open`, `--sidebar-closed`, `.app-main`, `.topbar` và media query trước khi triệu hồi thêm tà thuật CSS.
+
+<a id="security"></a>
+
+## 7. Database, RLS, RBAC Và Edge Functions
+
+Repo database nằm cạnh UI tại `../Silkroad_database`.
+
+- `sql/11_create_permissions.sql`: permission và RLS nghiệp vụ gốc.
+- `sql/12_optimize_database.sql`: index, view, dashboard RPC và keyset pagination.
+- `sql/13_production_security.sql`: `AuthUserID`, bỏ `PasswordHash`, audit log, RLS bổ sung và secure RPC.
+- `supabase/functions/admin-invite-user`: invite nhân viên.
+- `supabase/functions/admin-update-user-status`: khóa/mở tài khoản.
+- `supabase/functions/import-catalog`: contract import catalog.
+- `supabase/functions/gemini-chat`: disabled mặc định.
+
+`anon` không có quyền nghiệp vụ. `authenticated` chỉ đọc dữ liệu qua RLS và gọi RPC được cấp quyền. Các Edge Function dùng service role ở backend, không bao giờ đưa service-role key ra frontend.
+
+<a id="legacy"></a>
+
+## 8. Legacy / Tàn Bản Cũ
+
+Các file sau vẫn tồn tại để tra cứu nhưng không phải runtime:
+
+- `Src/main.jsx`
+- `Src/App.jsx`
+- `Src/style.css`
 - `Src/main.js`
 - `Src/index.css`
 - `Src/components/Layout.jsx`
 - `Src/data/nav.js`
 - `Src/pages/*.jsx`
-- `Src/banner.png`
-- `Src/login-bg.png`
 
-Chúng không phải vô nghĩa, nhưng hiện không phải chính mạch.
+Muốn biết file nào đang chạy, nhìn `index.html`. Cổng hiện tại gọi `/Src/main.tsx`.
 
-<a id="technical-debt"></a>
+<a id="file-ownership"></a>
 
-## 15. Technical Debt / Vì Sao Cấu Trúc Bị Lệch
+## 9. File Ownership / Muốn Sửa Gì Thì Đi Đâu
 
-Tình hình đại khái:
+| Muốn sửa | Đi vào |
+|---|---|
+| Auth và route | `Src/app/App.tsx` |
+| Sidebar/topbar/avatar/dark mode | `Src/components/AppShell.tsx` |
+| Tìm kiếm toàn hệ thống | `Src/components/CommandPalette.tsx` |
+| Bảng dữ liệu chuẩn | `Src/components/DataTable.tsx` |
+| Dashboard/POS/Hệ thống/Trợ giúp | `Src/features/` |
+| Đọc dữ liệu và secure RPC | `Src/core/dataService.ts` |
+| Route/menu/icon | `Src/lib/navigation.tsx` |
+| Màu và dark mode | `Src/styles/tokens.css` |
+| Layout/component CSS | `Src/styles/app.css` |
+| RLS/RPC/audit | `../Silkroad_database/sql/13_production_security.sql` |
+| Edge Function quản trị | `../Silkroad_database/supabase/functions/` |
 
-1. Ban đầu định chia `pages/`, `components/`, `data/`.
-2. Cần chạy demo nhanh.
-3. Logic được đưa thẳng vào `App.jsx`.
-4. CSS gặp layout chồng chéo, thêm override cuối file.
-5. App có thêm POS, RBAC, search, avatar, dark mode, chat.
-6. File chính càng ngày càng nặng.
-7. Người đời sau mở repo và sinh nghi vấn trong tâm.
+<a id="maintenance"></a>
 
-Đây không phải tuyệt lộ. Chỉ là cần dọn dần.
+## 10. Workflow Bảo Trì Và Production Gate
 
-<a id="refactor-roadmap"></a>
+Sau mỗi lượt sửa quan trọng:
 
-## 16. Refactor Roadmap / Lộ Trình Quy Chính Về Chính Đạo
-
-Mục tiêu sau này:
-
-```txt
-Src/
-  main.jsx
-  App.jsx
-  lib/
-    supabase.js
-    dbService.js
-    featureConfig.js
-  components/
-    layout/
-      Sidebar.jsx
-      Topbar.jsx
-      AccountMenu.jsx
-      NotificationMenu.jsx
-    common/
-      Card.jsx
-      Field.jsx
-      DataTable.jsx
-      Modal.jsx
-  pages/
-    Dashboard.jsx
-    Products.jsx
-    Orders.jsx
-    Stock.jsx
-    Users.jsx
-    Reports.jsx
-    System.jsx
-    Help.jsx
-  features/
-    pos/
-      ProductPickerGrid.jsx
-      VariantChoicePanel.jsx
-      ProductPreview.jsx
-      CartTable.jsx
-      posHelpers.js
-  styles/
-    base.css
-    layout.css
-    sidebar.css
-    topbar.css
-    dashboard.css
-    pos.css
-    dark.css
+```bash
+npm run typecheck
+npm test
+npm run build
+npm audit --omit=dev
 ```
 
-Thứ tự nên làm:
+Sau đó kiểm tra trực quan desktop/mobile, light/dark, overflow ngang và cập nhật `docs/latest-run-log.md` bằng tiếng Việt.
 
-1. Tách component dùng chung: `Card`, `Field`, `DataTable`, `Modal`.
-2. Tách layout: `Sidebar`, `Topbar`, `AccountMenu`, `NotificationMenu`.
-3. Tách POS: product picker, variant panel, cart table, helpers.
-4. Tách Dashboard và System page.
-5. Tách CSS theo module.
-6. Khi mọi thứ chạy ổn, mới xóa file cũ/prototype.
+Quy tắc trọng yếu:
 
-Đừng xóa hàng loạt khi chưa tách xong. Đó không phải refactor, đó là tự phong ấn đường lui.
+- Không sửa `node_modules`.
+- Không ghi dữ liệu nhạy cảm trực tiếp từ frontend.
+- Không thêm nút chỉ để trang trí.
+- Không đưa API secret vào biến `VITE_*`.
+- Migration SQL phải chạy trên staging trước production.
+
+<a id="gemini"></a>
+
+## 11. Gemini API Rule
+
+UI trợ lý nằm ở `Src/features/HelpPage.tsx`. Frontend hiện chỉ mock phản hồi. Gemini thật phải đi qua `gemini-chat` Edge Function, có auth, permission, rate limit, timeout và audit. Khi chưa có secret/phê duyệt, function phải tiếp tục trả `503 disabled`.
 
 <a id="tldr"></a>
 
-## 17. TL;DR / Kết Luận Cho Đệ Tử Mới Nhập Môn
+## 12. TL;DR / Kết Luận Cho Đệ Tử Mới Nhập Môn
 
-Nếu chỉ nhớ một đoạn, nhớ đoạn này:
-
-- App thật chạy qua `Src/App.jsx`.
-- CSS thật nằm ở `Src/style.css`.
-- `Src/lib/` là phần sạch, nên giữ.
-- `Src/pages/`, `Src/components/Layout.jsx`, `Src/data/nav.js` là dấu tích cấu trúc cũ.
-- Muốn sửa lỗi đang thấy trên màn hình, ưu tiên `App.jsx` và cuối `style.css`.
-- Muốn app dễ bảo trì, refactor từng phần nhỏ.
-- Sau mỗi lượt sửa/chạy kiểm tra quan trọng, cập nhật `docs/latest-run-log.md`.
-
-Repo này không phải không cứu được. Nó chỉ là một môn phái từng luyện nhiều công pháp cùng lúc. Việc của chúng ta là ghi lại bí kíp, tách lại chiêu thức, rồi từng bước đưa nó về chính đạo.
+- App thật chạy qua `Src/main.tsx`, không phải `Src/main.jsx`.
+- `Src/app`, `components`, `features`, `core`, `lib`, `styles` là chính mạch mới.
+- `App.jsx/style.css` cũ là tàn bản legacy.
+- Data nhạy cảm đi qua RPC/Edge Function; RLS/RBAC giữ cổng.
+- Sửa xong phải chạy production gate và ghi `docs/latest-run-log.md`.

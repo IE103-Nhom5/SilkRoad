@@ -1,3 +1,8 @@
 dist/
 .vite-cache/
 vite-dev.log
+vite-dev-error.log
+node_modules/
+coverage/
+playwright-report/
+test-results/

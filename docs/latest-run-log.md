@@ -2,6 +2,113 @@
 
 File này dùng để ghi lại lần chạy/sửa gần nhất của dự án. Từ bây giờ, sau mỗi lượt sửa hoặc chạy kiểm tra quan trọng, cần cập nhật lại file này bằng tiếng Việt để dễ theo dõi.
 
+## 2026-06-13 - Production foundation TypeScript, secure data layer và layout mới
+
+### Mục tiêu
+
+- Thay runtime `App.jsx/style.css` khổng lồ bằng kiến trúc production có thể bảo trì.
+- Sửa dứt điểm sidebar/topbar chồng layout, overflow ngang và dark mode chìm chữ.
+- Chuẩn hóa route, bảng dữ liệu, POS, global search, auth, RLS/RBAC, audit và secure RPC.
+
+### Runtime frontend mới
+
+- Chuyển entrypoint sang `Src/main.tsx`.
+- Thêm React Router, TanStack Query, TanStack Table, React Hook Form, Zod, Recharts và TypeScript.
+- Tách runtime thành:
+  - `Src/app`
+  - `Src/components`
+  - `Src/core`
+  - `Src/data`
+  - `Src/features`
+  - `Src/lib`
+  - `Src/styles`
+- `Src/App.jsx` và `Src/style.css` cũ vẫn được giữ để tra cứu nhưng không còn chạy.
+- Thêm route thật cho dashboard, hàng hóa, vận hành, POS/đơn/CRM, RBAC, báo cáo, query và trợ giúp.
+
+### Layout và design system
+
+- Sidebar desktop open/collapsed dùng kích thước ổn định, không nở theo hover và không đè main.
+- Mobile dùng drawer; topbar sticky; action rút gọn; không overflow ngang.
+- Global search trở thành command palette, tìm theo chức năng, sản phẩm, đơn hàng, khách hàng và nhân viên.
+- Chuẩn hóa icon Lucide một màu theo ngữ cảnh.
+- Dark mode dùng token riêng; QA trực tiếp xác nhận chữ/icon rõ.
+- Runtime CSS mới không còn `FINAL OVERRIDE` và không còn `!important`.
+
+### Nghiệp vụ và module
+
+- Dashboard có KPI, biểu đồ doanh thu, cảnh báo và đơn gần đây.
+- Mọi module danh sách dùng bảng chuẩn có search, sort, chọn cột, phân trang, CSV và row detail.
+- POS bắt buộc chọn chi nhánh, kênh bán, sản phẩm gốc rồi mới chọn biến thể.
+- Modal biến thể phân biệt bằng tên size/màu và barcode; biến thể hết hàng bị khóa.
+- Giỏ hàng kiểm giới hạn tồn và gửi `variant_id`, `quantity`, `unit_price` vào RPC; không dùng SKU làm định danh.
+- Help/Gemini giữ frontend-only và tự cuộn xuống tin nhắn mới bằng `requestAnimationFrame`.
+- Import catalog có giao diện chọn file và contract Edge Function; phần mapping/validation Excel production vẫn cần triển khai tiếp trên backend.
+
+### Bảo mật và database
+
+- Thêm `sql/13_production_security.sql` ở repo `Silkroad_database`.
+- Thêm `USERS.AuthUserID`, liên kết `auth.users` khi schema auth tồn tại và bỏ `PasswordHash` khỏi profile công khai.
+- Ánh xạ user dựa trên `auth.uid()` với fallback JWT subject cho local SQL CI.
+- Thêm `AUDIT_LOG`, RLS cho bảng nghiệp vụ/catalog/reference và view `security_invoker`.
+- Thu hồi quyền bảng/RPC nhạy cảm khỏi `anon`, `PUBLIC` và direct write của `authenticated`.
+- Thêm secure RPC transaction:
+  - `fn_create_order_app`
+  - `fn_create_purchase_order_app`
+  - `fn_create_transfer_app`
+  - `fn_create_adjustment_app`
+  - `fn_create_return_app`
+- Thêm Edge Function contract:
+  - `admin-invite-user`
+  - `admin-update-user-status`
+  - `import-catalog`
+  - `gemini-chat` giữ disabled mặc định
+- Edge Function quản trị/import ghi audit log.
+
+### Tài liệu
+
+- Viết lại `README.md` theo runtime production mới.
+- Viết lại `docs/project-structure-guide.md`, giữ giọng kiếm hiệp ban đầu nhưng cập nhật đúng workflow TypeScript/RLS/RPC hiện tại.
+- Cập nhật README repo database với migration 13 và lệnh deploy Edge Function.
+
+### Kiểm tra đã chạy
+
+```bash
+npm run typecheck
+npm test -- --run
+npm run build
+npm audit --omit=dev --json
+```
+
+Kết quả:
+
+- TypeScript pass.
+- 3 test file, 7 test pass.
+- Vite production build pass.
+- Production dependency audit: 0 lỗ hổng.
+- Rà static: runtime mới có 0 direct write và 0 `!important/FINAL OVERRIDE`.
+- Browser QA:
+  - Desktop dashboard không overflow ngang.
+  - Mobile POS không overflow ngang.
+  - Dark mode rõ chữ/icon.
+  - Workflow chọn chi nhánh → kênh → sản phẩm → biến thể → giỏ hàng hoạt động.
+  - Command palette tìm được dữ liệu theo nhóm.
+
+### Giới hạn còn lại trước khi deploy production
+
+- Chưa chạy migration SQL thật vì máy hiện tại không có `psql` trong PATH.
+- Cần chạy `sql/run_all.sql` trên Supabase staging, kiểm RLS chéo vai trò và transaction rollback.
+- Cần deploy Edge Functions và cấu hình secret trên Supabase.
+- `import-catalog` mới là contract an toàn; mapping/validation file Excel thật cần hoàn thiện ở backend.
+- Gemini thật vẫn chủ động disabled, chưa nối API key.
+
+### File chính thay đổi
+
+- `Src/main.tsx`, `Src/app/*`, `Src/components/*`, `Src/core/*`, `Src/features/*`, `Src/lib/*`, `Src/styles/*`
+- `README.md`, `docs/project-structure-guide.md`, `docs/latest-run-log.md`
+- `../Silkroad_database/sql/13_production_security.sql`
+- `../Silkroad_database/sql/run_all.sql`
+- `../Silkroad_database/supabase/functions/*`
+
 ## 2026-06-03 - Rà cursor và tối ưu SQL cũ
 
 ### Yêu cầu từ người dùng

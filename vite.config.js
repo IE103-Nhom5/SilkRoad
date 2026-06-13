@@ -9,12 +9,17 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
-          if (id.includes("react")) return "react";
           if (id.includes("@supabase")) return "supabase";
-          if (id.includes("lucide-react") || id.includes("lucide")) return "icons";
+          if (id.includes("recharts") || id.includes("d3-")) return "charts";
+          if (id.includes("@tanstack")) return "tanstack";
+          if (id.includes("react-hook-form") || id.includes("@hookform") || id.includes("zod")) return "forms";
+          if (id.includes("react-router")) return "router";
+          if (id.includes("lucide-react")) return "icons";
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return "react";
           return "vendor";
         },
       },
     },
+    chunkSizeWarningLimit: 600,
   },
 });
