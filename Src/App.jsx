@@ -2002,6 +2002,28 @@ export default function App() {
     await receivePurchaseOrderLocally(purchaseorderid);
   }
 
+  async function insertWarehouseDraft(table, payload, fallbackStatus = "pending") {
+    const result = await supabase.from(table).insert([payload]);
+    if (!result.error) return payload.status;
+
+    const message = String(result.error?.message || result.error?.details || "").toLowerCase();
+    const statusRejected =
+      message.includes("invalid input value for enum") ||
+      message.includes("violates check constraint") ||
+      message.includes("invalid status");
+
+    if (!statusRejected) throw result.error;
+
+    const fallbackPayload = {
+      ...payload,
+      status: fallbackStatus,
+      note: [payload.note, "DB không nhận status draft nên hệ thống lưu ở trạng thái chờ xử lý."].filter(Boolean).join(" | "),
+    };
+    const fallback = await supabase.from(table).insert([fallbackPayload]);
+    if (fallback.error) throw fallback.error;
+    return fallbackStatus;
+  }
+
   async function confirmPurchaseOrder() {
     if (!guard("purchase")) return;
     if (!purchaseForm.purchaseorderid.trim()) return show("Vui lòng nhập mã phiếu nhập");
@@ -2011,6 +2033,10 @@ export default function App() {
     show("Đã xác nhận phiếu nhập và cập nhật tồn kho");
     setPurchaseForm({ ...purchaseForm, purchaseorderid: "" });
     await selectTable("purchase_order");
+  }
+
+  async function createPurchaseDraft() {
+    return createPurchaseOrder();
   }
 
   async function createPurchaseOrder() {
@@ -2244,6 +2270,10 @@ export default function App() {
     await receiveTransferLocally(transferid, context);
   }
 
+  async function createTransferDraft() {
+    return transferStock();
+  }
+
   // Internal stock movement between branches with transfer documents and
   // stock_history audit rows.
   async function transferStock() {
@@ -2364,6 +2394,10 @@ export default function App() {
     if (!rpc.error) return;
     if (!shouldUseLocalFallback(rpc.error)) throw rpc.error;
     await completeStockAdjustmentLocally(adjustmentid);
+  }
+
+  async function createAdjustmentDraft() {
+    return adjustStock();
   }
 
   // Stock count adjustment: records adjustment documents first, then lets the
@@ -3903,6 +3937,16 @@ export default function App() {
 
   const searchSuggestions = buildSearchSuggestions(globalSearch, options, can);
   const visibleRows = rows.filter((row) => rowMatchesGlobalSearch(row, globalSearch));
+  const warehouseDraftAction =
+    page === "purchase"
+      ? () => run(createPurchaseOrder)
+      : page === "transfer"
+        ? () => run(transferStock)
+        : page === "adjustment"
+          ? () => run(adjustStock)
+          : page === "stock"
+            ? () => goToPage("adjustment")
+            : null;
 
   if (!session) {
     return <Login login={login} setLogin={setLogin} signIn={signIn} signUp={signUp} resetPassword={resetPassword} toast={toast} />;
@@ -4153,6 +4197,7 @@ export default function App() {
                 searchSummary={searchSummary}
                 goToPage={goToPage}
                 exportRows={exportRows}
+                createWarehouseDraft={warehouseDraftAction}
               />
             )}
             {page === "dashboard" && <Dashboard run={run} dashboardData={dashboardData} rows={visibleRows} goToPage={goToPage} notifications={notifications} can={can} />}
@@ -4193,6 +4238,7 @@ export default function App() {
                 run={run}
                 purchaseForm={purchaseForm}
                 setPurchaseForm={setPurchaseForm}
+                createPurchaseDraft={createPurchaseDraft}
                 createPurchaseOrder={createPurchaseOrder}
                 confirmPurchaseOrder={confirmPurchaseOrder}
                 receiveStockManual={receiveStockManual}
@@ -4211,11 +4257,12 @@ export default function App() {
                 stockFilter={stockFilter}
                 setStockFilter={setStockFilter}
                 exportRows={exportRows}
+                goToPage={goToPage}
                 rows={visibleRows}
               />
             )}
-            {page === "transfer" && <Transfer options={options} run={run} transferForm={transferForm} setTransferForm={setTransferForm} transferStock={transferStock} selectTable={selectTable} rows={visibleRows} />}
-            {page === "adjustment" && <Adjustment options={options} run={run} adjustForm={adjustForm} setAdjustForm={setAdjustForm} adjustStock={adjustStock} selectTable={selectTable} rows={visibleRows} />}
+            {page === "transfer" && <Transfer options={options} run={run} transferForm={transferForm} setTransferForm={setTransferForm} createTransferDraft={createTransferDraft} transferStock={transferStock} selectTable={selectTable} rows={visibleRows} />}
+            {page === "adjustment" && <Adjustment options={options} run={run} adjustForm={adjustForm} setAdjustForm={setAdjustForm} createAdjustmentDraft={createAdjustmentDraft} adjustStock={adjustStock} selectTable={selectTable} rows={visibleRows} />}
             {page === "orders" && (
               <Orders
                 options={options}
@@ -4781,7 +4828,7 @@ function Modal({ title, children, onClose }) {
 
 // Shared page header for non-dashboard screens. It gives sparse pages a
 // consistent professional shell without changing each page's business logic.
-function PageSurface({ page, options, rows, cart, heldCarts, notifications, searchSummary, goToPage, exportRows }) {
+function PageSurface({ page, options, rows, cart, heldCarts, notifications, searchSummary, goToPage, exportRows, createWarehouseDraft }) {
   const metaMap = {
     products: { title: "Hàng hóa", kicker: "Product Studio", text: "Quản lý sản phẩm gốc, biến thể, ảnh, danh mục và nguồn nhập.", tone: "emerald" },
     purchase: { title: "Nhập hàng", kicker: "Procurement", text: "Tạo phiếu nhập, nhận hàng, cập nhật tồn và theo dõi nhà cung cấp.", tone: "gold" },
@@ -4835,6 +4882,13 @@ function PageSurface({ page, options, rows, cart, heldCarts, notifications, sear
   };
   const stats = statMap[page] || [["Dòng dữ liệu", rows.length], ["Cảnh báo", notifications.length]];
   const navItems = navMap[page] || [["Tổng quan", "dashboard"], ["Tra bảng", "query"]];
+  const warehouseDraftLabels = {
+    stock: "Tạo phiếu kiểm kho",
+    purchase: "Tạo phiếu nhập & cập nhật tồn",
+    transfer: "Tạo phiếu chuyển & cập nhật tồn",
+    adjustment: "Tạo phiếu kiểm & cập nhật tồn",
+  };
+  const warehouseDraftLabel = warehouseDraftLabels[page];
 
   return (
     <section className={`page-surface page-surface-${meta.tone}`}>
@@ -4857,6 +4911,11 @@ function PageSurface({ page, options, rows, cart, heldCarts, notifications, sear
             {label}
           </button>
         ))}
+        {warehouseDraftLabel && createWarehouseDraft && (
+          <button type="button" className="primary" onClick={createWarehouseDraft}>
+            <Plus size={16} /> {warehouseDraftLabel}
+          </button>
+        )}
         <button type="button" onClick={() => exportRows(page)}>Xuất CSV</button>
       </div>
     </section>
@@ -5747,7 +5806,7 @@ function Purchase(p) {
           </Field>
         </div>
         <ActionRow>
-          <button onClick={() => p.run(p.createPurchaseOrder)}>Tạo phiếu nhập kho & nhận hàng</button>
+          <button className="primary" onClick={() => p.run(p.createPurchaseOrder)}>Tạo phiếu nhập & cập nhật tồn</button>
           <button onClick={() => p.run(p.receiveStockManual)}>Nhập kho nhanh không lập phiếu</button>
           <button onClick={() => p.run(p.confirmPurchaseOrder)}>Xác nhận/nhận hàng từ mã phiếu nhập</button>
           <button onClick={() => p.run(() => p.selectTable("purchase_order"))}>Xem danh sách phiếu nhập</button>
@@ -5759,7 +5818,7 @@ function Purchase(p) {
 }
 
 // Page: stock lookup, low-stock warnings and stock history views.
-function Stock({ options, run, loadStockFriendly, loadStockHistoryFriendly, selectTable, loadLowStock, stockFilter, setStockFilter, exportRows, rows }) {
+function Stock({ options, run, loadStockFriendly, loadStockHistoryFriendly, selectTable, loadLowStock, stockFilter, setStockFilter, exportRows, goToPage, rows }) {
   return (
     <>
       <Card title="Kho hàng">
@@ -5795,6 +5854,7 @@ function Stock({ options, run, loadStockFriendly, loadStockHistoryFriendly, sele
           <button onClick={() => run(loadLowStock)}>
             <AlertTriangle /> Cảnh báo sắp hết hàng
           </button>
+          <button onClick={() => goToPage("adjustment")}>Tạo phiếu kiểm kho</button>
           <button onClick={() => exportRows("stock")}>Xuất CSV</button>
         </ActionRow>
       </Card>
@@ -5849,7 +5909,7 @@ function Transfer(p) {
       </div>
       <p className="muted">Thao tác này tạo phiếu chuyển kho, ghi xuất kho tại chi nhánh gửi, ghi nhập kho tại chi nhánh nhận và lưu lịch sử tồn kho.</p>
       <ActionRow>
-        <button onClick={() => p.run(p.transferStock)}>Tạo phiếu chuyển kho & cập nhật tồn</button>
+        <button className="primary" onClick={() => p.run(p.transferStock)}>Tạo phiếu chuyển & cập nhật tồn</button>
         <button onClick={() => p.run(() => p.selectTable("transfer_order", 200, "transfer"))}>Xem phiếu chuyển kho</button>
         <button onClick={() => p.run(() => p.selectTable("stock_history", 300, "transfer"))}>Xem lịch sử xuất/nhập kho</button>
       </ActionRow>
@@ -5898,7 +5958,7 @@ function Adjustment(p) {
       </div>
       <p className="muted">Thao tác này tạo phiếu kiểm kho, lấy số lượng thực tế làm tồn mới và ghi một dòng adjustment trong lịch sử tồn kho.</p>
       <ActionRow>
-        <button onClick={() => p.run(p.adjustStock)}>Tạo phiếu kiểm kho & cập nhật tồn</button>
+        <button className="primary" onClick={() => p.run(p.adjustStock)}>Tạo phiếu kiểm & cập nhật tồn</button>
         <button onClick={() => p.run(() => p.selectTable("stock_adjustment", 200, "adjustment"))}>Xem phiếu kiểm kho</button>
         <button onClick={() => p.run(() => p.selectTable("stock_history", 300, "adjustment"))}>Xem lịch sử kiểm kho</button>
       </ActionRow>
