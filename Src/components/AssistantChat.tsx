@@ -47,7 +47,11 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
       }
       setMessages((current) => [...current, { role: "assistant", text: String(data?.answer || "Gemini không trả về nội dung.") }]);
     } catch (error) {
-      setMessages((current) => [...current, { role: "assistant", text: `Không thể gọi Gemini: ${error instanceof Error ? error.message : String(error)}` }]);
+      const reason = error instanceof Error ? error.message : String(error);
+      setMessages((current) => [...current, {
+        role: "assistant",
+        text: `[Chế độ demo] Edge Function gemini-chat chưa sẵn sàng (${reason}). ${demoAnswer(question)}`,
+      }]);
     } finally {
       setSending(false);
     }
@@ -65,4 +69,12 @@ export function AssistantChat({ compact = false }: { compact?: boolean }) {
       </div>
     </div>
   );
+}
+
+function demoAnswer(question: string) {
+  const text = question.toLowerCase();
+  if (text.includes("bán") || text.includes("hóa đơn")) return "Mở Bán hàng, chọn chi nhánh và kênh bán, chọn sản phẩm gốc rồi biến thể còn tồn, sau đó mở Thanh toán để tạo hóa đơn qua RPC.";
+  if (text.includes("nhập") || text.includes("kho")) return "Mở Vận hành > Nhập hàng hoặc Tồn kho. Các thao tác ghi dữ liệu production phải đi qua RPC và được kiểm quyền.";
+  if (text.includes("quyền") || text.includes("nhân viên")) return "Mở Quản trị > Nhân viên hoặc Vai trò để xem hồ sơ và ma trận quyền. Tài khoản mới mặc định nhận role sales_staff.";
+  return "Đây là phản hồi demo cục bộ. Khi Edge Function gemini-chat hoạt động, trợ lý sẽ trả lời theo ngữ cảnh trang và dữ liệu được cấp quyền.";
 }

@@ -1,3 +1,4 @@
+// LEGACY RUNTIME: production routes and features live under Src/app and Src/features.
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import { callProcedureCandidates, isProcedureUnavailable, readFirstAvailableTable, readRows } from "./lib/dbService";

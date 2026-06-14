@@ -12,6 +12,8 @@ export function DashboardPage() {
   if (query.isLoading) return <LoadingState />;
   if (query.isError) return <ErrorState message={query.error.message} onRetry={() => query.refetch()} />;
   const data = query.data!;
+  const lowStock = data.stock.filter((row) => Number(row.availablequantity ?? row.quantity ?? 0) <= Number(row.minstocklevel ?? -1)).length;
+  const pendingOrders = data.orders.filter((row) => ["new", "pending", "processing"].includes(String(row.orderstatus || "").toLowerCase())).length;
 
   return (
     <>
@@ -47,12 +49,15 @@ export function DashboardPage() {
         </Panel>
         <Panel title="Ưu tiên xử lý" description="Cảnh báo theo mức độ ảnh hưởng">
           <div className="priority-list">
-            <button onClick={() => navigate("/operations/stock")}><AlertTriangle /><span><b>5 biến thể hết tồn</b><small>Cần bổ sung hoặc điều chuyển ngay</small></span><Badge tone="danger">Cao</Badge></button>
-            <button onClick={() => navigate("/operations/purchase")}><Boxes /><span><b>2 phiếu nhập chờ nhận</b><small>Đã đến ngày dự kiến</small></span><Badge tone="warning">Vừa</Badge></button>
-            <button onClick={() => navigate("/sales/returns")}><ArrowRight /><span><b>1 phiếu đổi trả</b><small>Chờ quản lý phê duyệt</small></span><Badge tone="info">Mới</Badge></button>
+            <button onClick={() => navigate("/operations/stock")}><AlertTriangle /><span><b>{lowStock} dòng tồn thấp</b><small>{lowStock ? "Cần bổ sung hoặc điều chuyển" : "Kho đang trong ngưỡng an toàn"}</small></span><Badge tone={lowStock ? "danger" : "positive"}>{lowStock ? "Cao" : "Ổn"}</Badge></button>
+            <button onClick={() => navigate("/sales/orders")}><Boxes /><span><b>{pendingOrders} đơn đang xử lý</b><small>Theo dõi thanh toán và giao hàng</small></span><Badge tone={pendingOrders ? "warning" : "positive"}>{pendingOrders ? "Theo dõi" : "Ổn"}</Badge></button>
+            <button onClick={() => navigate("/catalog/products")}><ArrowRight /><span><b>{data.topProducts.length} sản phẩm nổi bật</b><small>Dữ liệu khả dụng từ danh mục</small></span><Badge tone="info">Xem</Badge></button>
           </div>
         </Panel>
       </div>
+      <Panel title="Sản phẩm nổi bật" description="Fallback an toàn từ danh mục khi chưa có báo cáo bán chạy">
+        <DataTable rows={data.topProducts} name="san-pham-noi-bat" />
+      </Panel>
       <Panel title="Đơn hàng gần đây" description="Nhấn một dòng để xem toàn bộ dữ liệu">
         <DataTable rows={data.orders} name="don-hang-gan-day" />
       </Panel>

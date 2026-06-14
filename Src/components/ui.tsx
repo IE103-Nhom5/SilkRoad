@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, LoaderCircle, X } from "lucide-react";
+import { AlertTriangle, Inbox, X } from "lucide-react";
 
 export function PageHeader({
   eyebrow,
@@ -59,10 +59,10 @@ export function Button({
   );
 }
 
-export function EmptyState({ title = "Chưa có dữ liệu", description = "Dữ liệu sẽ xuất hiện tại đây sau khi được tạo.", action }: { title?: string; description?: string; action?: ReactNode }) {
+export function EmptyState({ title = "Chưa có bản ghi phù hợp", description = "Thử đổi bộ lọc, làm mới dữ liệu hoặc tạo bản ghi đầu tiên.", action }: { title?: string; description?: string; action?: ReactNode }) {
   return (
     <div className="state state-empty">
-      <CheckCircle2 />
+      <Inbox />
       <h3>{title}</h3>
       <p>{description}</p>
       {action}
@@ -83,9 +83,14 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 
 export function LoadingState() {
   return (
-    <div className="state state-loading">
-      <LoaderCircle className="spin" />
-      <p>Đang tải dữ liệu...</p>
+    <div className="loading-skeleton" aria-label="Đang tải dữ liệu">
+      <div className="skeleton skeleton-title" />
+      <div className="skeleton-grid">
+        <div className="skeleton skeleton-card" />
+        <div className="skeleton skeleton-card" />
+        <div className="skeleton skeleton-card" />
+      </div>
+      <div className="skeleton skeleton-table" />
     </div>
   );
 }

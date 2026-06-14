@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, Barcode, Boxes, CreditCard, Minus, Plus, ReceiptText, Search, ShoppingCart, Trash2, UserRound, WalletCards } from "lucide-react";
 import { Badge, Button, ErrorState, LoadingState, Modal, PageHeader, Panel } from "../components/ui";
+import { useToast } from "../components/ToastProvider";
 import { canIncreaseQuantity, cartTotal } from "../lib/cart";
 import { money, normalize } from "../lib/format";
 import { readProductVariants, readResource, runSecureAction, type Row } from "../core/dataService";
@@ -20,6 +21,7 @@ const paymentMethods: { value: PaymentMethod; label: string }[] = [
 ];
 
 export function PosPage() {
+  const { pushToast } = useToast();
   const queryClient = useQueryClient();
   const products = useQuery({ queryKey: ["resource", "pos"], queryFn: () => readResource("pos") });
   const branches = useQuery({ queryKey: ["resource", "branches"], queryFn: () => readResource("branches") });
@@ -70,7 +72,13 @@ export function PosPage() {
       shipping_name: selectedCustomer?.fullname || "",
       shipping_phone: selectedCustomer?.phonenumber || "",
       note,
-      lines: cart.map((line) => ({ variant_id: line.variantid, quantity: line.quantity, unit_price: Number(line.sellingprice || 0) })),
+      lines: cart.map((line) => ({
+        variant_id: line.variantid,
+        quantity: line.quantity,
+        unit_price: Number(line.sellingprice || 0),
+        cost_price: Number(line.costprice || 0),
+        available_quantity: Number(line.availablequantity || 0),
+      })),
     }),
     onSuccess: (id) => {
       setLastOrderId(String(id));
@@ -81,7 +89,9 @@ export function PosPage() {
       setNote("");
       queryClient.invalidateQueries({ queryKey: ["resource", "orders"] });
       queryClient.invalidateQueries({ queryKey: ["resource", "pos"] });
+      pushToast(`Đã tạo hóa đơn ${String(id)}.`, "success");
     },
+    onError: (error) => pushToast(error.message, "error"),
   });
 
   const visible = useMemo(() => (products.data || []).filter((row) => {
@@ -91,6 +101,10 @@ export function PosPage() {
   }), [products.data, search, inventoryFilter]);
 
   function addVariant(row: Row) {
+    if (Number(row.availablequantity || 0) < 1) {
+      pushToast("Biến thể này không còn tồn khả dụng.", "warning");
+      return;
+    }
     const id = String(row.variantid);
     setCart((current) => {
       const found = current.find((line) => String(line.variantid) === id);
@@ -105,9 +119,10 @@ export function PosPage() {
   }
 
   function holdCart() {
-    if (!cart.length) return;
+    if (!cart.length) return pushToast("Giỏ hàng đang trống.", "warning");
     persistHeld([{ id: `HOLD-${Date.now().toString().slice(-6)}`, createdAt: new Date().toISOString(), cart, branchId, channelId, customerId }, ...heldCarts]);
     setCart([]);
+    pushToast("Đã lưu đơn tạm trên thiết bị.", "success");
   }
 
   function restoreCart(held: HeldCart) {
@@ -117,6 +132,7 @@ export function PosPage() {
     setCustomerId(held.customerId);
     persistHeld(heldCarts.filter((item) => item.id !== held.id));
     setHeldOpen(false);
+    pushToast(`Đã khôi phục ${held.id}.`, "info");
   }
 
   if (products.isLoading) return <LoadingState />;

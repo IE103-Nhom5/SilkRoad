@@ -2,13 +2,17 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, LockKeyhole, Mail, PlayCircle } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, Mail, PlayCircle, UserRound } from "lucide-react";
 import logo from "../assets/silkroad-logo.png";
 import bg from "../assets/login-bg.png";
 import frame from "../assets/login-frame.png";
 import benefits from "../assets/login-benefits.png";
 
-const schema = z.object({ email: z.string().email("Email không hợp lệ"), password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự") });
+const schema = z.object({
+  fullName: z.string().max(100, "Họ tên tối đa 100 ký tự").optional(),
+  email: z.string().email("Email không hợp lệ"),
+  password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
+});
 export type LoginInput = z.infer<typeof schema>;
 
 export function LoginPage({
@@ -31,13 +35,22 @@ export function LoginPage({
   const rememberedEmail = localStorage.getItem("silkroad-remember-email") || "";
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(Boolean(rememberedEmail));
-  const form = useForm<LoginInput>({ resolver: zodResolver(schema), defaultValues: { email: rememberedEmail, password: "" } });
+  const [registerMode, setRegisterMode] = useState(false);
+  const form = useForm<LoginInput>({ resolver: zodResolver(schema), defaultValues: { fullName: "", email: rememberedEmail, password: "" } });
 
   useEffect(() => {
     if (!remember) localStorage.removeItem("silkroad-remember-email");
   }, [remember]);
 
   async function submit(input: LoginInput) {
+    if (registerMode) {
+      if (!input.fullName?.trim() || input.fullName.trim().length < 2) {
+        form.setError("fullName", { message: "Nhập họ tên tối thiểu 2 ký tự" });
+        return;
+      }
+      await onSignUp(input);
+      return;
+    }
     if (remember) localStorage.setItem("silkroad-remember-email", input.email);
     await onSubmit(input);
   }
@@ -49,9 +62,20 @@ export function LoginPage({
 
       <section className="heritage-login-frame">
         <img src={frame} alt="" aria-hidden="true" />
-        <form className="heritage-login-form" onSubmit={form.handleSubmit(submit)}>
+        <form className={`heritage-login-form ${registerMode ? "is-register" : ""}`} onSubmit={form.handleSubmit(submit)}>
           <h1>LOGIN</h1>
           <div className="heritage-divider"><span /><b>◇</b><span /></div>
+
+          {registerMode && (
+            <label>
+              Họ tên
+              <div className="heritage-input">
+                <UserRound />
+                <input {...form.register("fullName")} autoComplete="name" placeholder="Nguyễn Văn A" />
+              </div>
+              <small>{form.formState.errors.fullName?.message}</small>
+            </label>
+          )}
 
           <label>
             Email
@@ -83,9 +107,11 @@ export function LoginPage({
           {notice && <p className="heritage-login-message">{notice}</p>}
 
           <button className="heritage-login-submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "ĐANG XỬ LÝ..." : "ĐĂNG NHẬP"}
+            {form.formState.isSubmitting ? "ĐANG XỬ LÝ..." : registerMode ? "TẠO TÀI KHOẢN" : "ĐĂNG NHẬP"}
           </button>
-          <button className="heritage-login-register" type="button" onClick={form.handleSubmit(onSignUp)}>Đăng ký tài khoản</button>
+          <button className="heritage-login-register" type="button" onClick={() => { setRegisterMode(!registerMode); form.clearErrors(); }}>
+            {registerMode ? "Quay lại đăng nhập" : "Đăng ký tài khoản"}
+          </button>
           {demoAvailable && <button className="heritage-login-demo" type="button" onClick={onDemo}><PlayCircle /> Vào hệ thống bằng dữ liệu demo</button>}
         </form>
       </section>

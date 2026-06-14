@@ -1,12 +1,7 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App.jsx';
-import './style.css';
-
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App.jsx';
-import './style.css';
-
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+/*
+ * Legacy stylesheet placeholder.
+ *
+ * Runtime production imports Src/styles/tokens.css and Src/styles/app.css
+ * from Src/main.tsx. Keep this file CSS-only so accidental imports cannot
+ * break the Vite build.
+ */
