@@ -2050,9 +2050,10 @@ export default function App() {
 
     await confirmPurchaseOrderById(purchaseorderid);
 
-    show("Đã tạo phiếu nhập, nhận hàng và cập nhật tồn kho");
+    show("Đã tạo phiếu nhập kho, nhận hàng và cập nhật tồn kho");
     setPurchaseForm({ ...purchaseForm, purchaseorderid, productid: "", variantid: "", quantity: 1, unitcost: 0, note: "" });
-    await loadStockFriendly();
+    await loadOptions();
+    await selectTable("purchase_order", 200, "purchase");
   }
 
   async function receiveStockManual() {
@@ -2306,8 +2307,9 @@ export default function App() {
     await shipTransferOrderById(transferId, context);
     await receiveTransferOrderById(transferId, context);
 
-    show("Chuyển kho thành công");
-    await loadStockFriendly();
+    show("Đã tạo phiếu chuyển kho, xuất kho khỏi chi nhánh gửi và nhập kho vào chi nhánh nhận");
+    await loadOptions();
+    await selectTable("transfer_order", 200, "transfer");
   }
 
   async function completeStockAdjustmentLocally(adjustmentid) {
@@ -2406,8 +2408,9 @@ export default function App() {
 
     await completeStockAdjustmentById(adjustmentId);
 
-    show("Kiểm kho xong, đã cập nhật tồn");
-    await loadStockFriendly();
+    show("Đã tạo phiếu kiểm kho và cập nhật tồn kho thực tế");
+    await loadOptions();
+    await selectTable("stock_adjustment", 200, "adjustment");
   }
 
   // POS cart: validates same-branch sales and available stock before adding.
@@ -4211,8 +4214,8 @@ export default function App() {
                 rows={visibleRows}
               />
             )}
-            {page === "transfer" && <Transfer options={options} run={run} transferForm={transferForm} setTransferForm={setTransferForm} transferStock={transferStock} />}
-            {page === "adjustment" && <Adjustment options={options} run={run} adjustForm={adjustForm} setAdjustForm={setAdjustForm} adjustStock={adjustStock} />}
+            {page === "transfer" && <Transfer options={options} run={run} transferForm={transferForm} setTransferForm={setTransferForm} transferStock={transferStock} selectTable={selectTable} rows={visibleRows} />}
+            {page === "adjustment" && <Adjustment options={options} run={run} adjustForm={adjustForm} setAdjustForm={setAdjustForm} adjustStock={adjustStock} selectTable={selectTable} rows={visibleRows} />}
             {page === "orders" && (
               <Orders
                 options={options}
@@ -5686,7 +5689,7 @@ function Products(p) {
 function Purchase(p) {
   return (
     <>
-      <Card title="Nhập kho thủ công">
+      <Card title="Tạo phiếu nhập kho">
         <div className="sales-form-grid">
           <Field label="Nhà cung cấp">
             <select value={p.purchaseForm.supplierid} onChange={(e) => p.setPurchaseForm({ ...p.purchaseForm, supplierid: e.target.value })}>
@@ -5744,10 +5747,10 @@ function Purchase(p) {
           </Field>
         </div>
         <ActionRow>
-          <button onClick={() => p.run(p.createPurchaseOrder)}>Tạo phiếu nhập chuẩn</button>
-          <button onClick={() => p.run(p.receiveStockManual)}>Nhập kho ngay</button>
-          <button onClick={() => p.run(p.confirmPurchaseOrder)}>Xác nhận phiếu nhập có sẵn</button>
-          <button onClick={() => p.run(() => p.selectTable("purchase_order"))}>Tải phiếu nhập</button>
+          <button onClick={() => p.run(p.createPurchaseOrder)}>Tạo phiếu nhập kho & nhận hàng</button>
+          <button onClick={() => p.run(p.receiveStockManual)}>Nhập kho nhanh không lập phiếu</button>
+          <button onClick={() => p.run(p.confirmPurchaseOrder)}>Xác nhận/nhận hàng từ mã phiếu nhập</button>
+          <button onClick={() => p.run(() => p.selectTable("purchase_order"))}>Xem danh sách phiếu nhập</button>
         </ActionRow>
       </Card>
       <DataTable rows={p.rows} />
@@ -5803,7 +5806,8 @@ function Stock({ options, run, loadStockFriendly, loadStockHistoryFriendly, sele
 // Page: transfer stock between branches with product-first variant picking.
 function Transfer(p) {
   return (
-    <Card title="Chuyển kho">
+    <>
+      <Card title="Tạo phiếu chuyển kho">
       <div className="sales-form-grid">
         <Field label="Chi nhánh gửi">
           <select value={p.transferForm.frombranchid} onChange={(e) => p.setTransferForm({ ...p.transferForm, frombranchid: e.target.value })}>
@@ -5843,15 +5847,23 @@ function Transfer(p) {
           <input type="number" min="1" value={p.transferForm.quantity} onChange={(e) => p.setTransferForm({ ...p.transferForm, quantity: e.target.value })} />
         </Field>
       </div>
-      <button onClick={() => p.run(p.transferStock)}>Xác nhận chuyển kho</button>
+      <p className="muted">Thao tác này tạo phiếu chuyển kho, ghi xuất kho tại chi nhánh gửi, ghi nhập kho tại chi nhánh nhận và lưu lịch sử tồn kho.</p>
+      <ActionRow>
+        <button onClick={() => p.run(p.transferStock)}>Tạo phiếu chuyển kho & cập nhật tồn</button>
+        <button onClick={() => p.run(() => p.selectTable("transfer_order", 200, "transfer"))}>Xem phiếu chuyển kho</button>
+        <button onClick={() => p.run(() => p.selectTable("stock_history", 300, "transfer"))}>Xem lịch sử xuất/nhập kho</button>
+      </ActionRow>
     </Card>
+    <DataTable rows={p.rows} />
+    </>
   );
 }
 
 // Page: stock count adjustment for one branch and one variant.
 function Adjustment(p) {
   return (
-    <Card title="Kiểm kho">
+    <>
+      <Card title="Tạo phiếu kiểm kho">
       <div className="sales-form-grid">
         <Field label="Chi nhánh kiểm kho">
           <select value={p.adjustForm.branchid} onChange={(e) => p.setAdjustForm({ ...p.adjustForm, branchid: e.target.value })}>
@@ -5884,8 +5896,15 @@ function Adjustment(p) {
           <input value={p.adjustForm.note} placeholder="Ví dụ: Lệch tồn sau kiểm kê" onChange={(e) => p.setAdjustForm({ ...p.adjustForm, note: e.target.value })} />
         </Field>
       </div>
-      <button onClick={() => p.run(p.adjustStock)}>Hoàn tất kiểm kho</button>
+      <p className="muted">Thao tác này tạo phiếu kiểm kho, lấy số lượng thực tế làm tồn mới và ghi một dòng adjustment trong lịch sử tồn kho.</p>
+      <ActionRow>
+        <button onClick={() => p.run(p.adjustStock)}>Tạo phiếu kiểm kho & cập nhật tồn</button>
+        <button onClick={() => p.run(() => p.selectTable("stock_adjustment", 200, "adjustment"))}>Xem phiếu kiểm kho</button>
+        <button onClick={() => p.run(() => p.selectTable("stock_history", 300, "adjustment"))}>Xem lịch sử kiểm kho</button>
+      </ActionRow>
     </Card>
+    <DataTable rows={p.rows} />
+    </>
   );
 }
 
