@@ -1350,6 +1350,24 @@ export default function App() {
     }
   }
 
+  // Shared RPC fallback guard: keep database procedures as the primary path,
+  // but use the local app fallback when Supabase/PostgREST cannot expose or
+  // execute the routine during demo/local environments.
+  function shouldUseLocalFallback(error) {
+    const message = String(error?.message || error?.details || error?.hint || "").toLowerCase();
+    const code = String(error?.code || "").toLowerCase();
+
+    return (
+      isProcedureUnavailable(error) ||
+      code === "42501" ||
+      code === "pgrst202" ||
+      message.includes("permission denied") ||
+      message.includes("could not find the function") ||
+      message.includes("schema cache") ||
+      (message.includes("function") && message.includes("not found"))
+    );
+  }
+
   // Permission checks use role names from the profile and the local feature map.
   function roleName(p = profile) {
     return first(p?.role, ["rolename", "role_name"], first(p, ["rolename", "role_name"], "sales_staff"));
@@ -1951,7 +1969,7 @@ export default function App() {
       { name: "sp_confirm_purchase_order", params: { p_purchase_order_id: purchaseorderid } },
     ]);
     if (!rpc.error) return;
-    if (!isProcedureUnavailable(rpc.error)) throw rpc.error;
+    if (!shouldUseLocalFallback(rpc.error)) throw rpc.error;
     await receivePurchaseOrderLocally(purchaseorderid);
   }
 
@@ -2182,7 +2200,7 @@ export default function App() {
       { name: "sp_ship_transfer_order", params: { p_transfer_id: transferid } },
     ]);
     if (!rpc.error) return;
-    if (!isProcedureUnavailable(rpc.error)) throw rpc.error;
+    if (!shouldUseLocalFallback(rpc.error)) throw rpc.error;
     await shipTransferLocally(transferid, context);
   }
 
@@ -2192,7 +2210,7 @@ export default function App() {
       { name: "sp_receive_transfer_order", params: { p_transfer_id: transferid } },
     ]);
     if (!rpc.error) return;
-    if (!isProcedureUnavailable(rpc.error)) throw rpc.error;
+    if (!shouldUseLocalFallback(rpc.error)) throw rpc.error;
     await receiveTransferLocally(transferid, context);
   }
 
@@ -2313,7 +2331,7 @@ export default function App() {
       { name: "sp_complete_stock_adjustment", params: { p_adjustment_id: adjustmentid } },
     ]);
     if (!rpc.error) return;
-    if (!isProcedureUnavailable(rpc.error)) throw rpc.error;
+    if (!shouldUseLocalFallback(rpc.error)) throw rpc.error;
     await completeStockAdjustmentLocally(adjustmentid);
   }
 
@@ -2876,7 +2894,7 @@ export default function App() {
       { name: "sp_complete_return_order", params: { p_return_id: returnid } },
     ]);
     if (!rpc.error) return;
-    if (!isProcedureUnavailable(rpc.error)) throw rpc.error;
+    if (!shouldUseLocalFallback(rpc.error)) throw rpc.error;
     await completeReturnOrderLocally(returnid);
   }
 
@@ -2970,15 +2988,29 @@ export default function App() {
   }
 
   function shouldFallbackOrderConfirm(error) {
-    const message = String(error?.message || "").toLowerCase();
-    return isProcedureUnavailable(error) || message.includes("inventory allocation not found");
+    const message = String(error?.message || error?.details || error?.hint || "").toLowerCase();
+    return shouldUseLocalFallback(error) || message.includes("inventory allocation not found");
   }
 
   async function confirmOrderLocally(orderid, stockChecks, channelid) {
-    for (const { item } of stockChecks) {
+    for (const { item, stock: old, allocation } of stockChecks) {
+      if (!old) {
+        throw new Error("Không tìm thấy tồn kho để trừ khi xác nhận đơn hàng");
+      }
+
+      const quantity = Number(item.quantity || 0);
       const beforeQuantity = stockQuantityOf(old);
-      const nextQuantity = beforeQuantity - item.quantity;
+      const nextQuantity = beforeQuantity - quantity;
       const now = new Date().toISOString();
+
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        throw new Error("Số lượng bán không hợp lệ");
+      }
+
+      if (nextQuantity < 0) {
+        throw new Error("Không đủ tồn kho để xác nhận đơn hàng");
+      }
+
       const { error: stockError } = await supabase
         .from("stock")
         .update({ quantity: nextQuantity, lastupdated: now })
@@ -2990,7 +3022,7 @@ export default function App() {
         const allocationUpdate = await supabase
           .from("inventory_allocation")
           .update({
-            soldquantity: Number(first(allocation, ["soldquantity", "sold_quantity"], 0)) + item.quantity,
+            soldquantity: Number(first(allocation, ["soldquantity", "sold_quantity"], 0)) + quantity,
             updatedat: now,
           })
           .eq("branchid", item.branchid)
@@ -3007,7 +3039,7 @@ export default function App() {
           transactiontype: "sales",
           referencetype: "ORDERS",
           referenceid: orderid,
-          quantitychange: -item.quantity,
+          quantitychange: -quantity,
           quantitybefore: beforeQuantity,
           quantityafter: nextQuantity,
           performedby: profile?.userid || null,
