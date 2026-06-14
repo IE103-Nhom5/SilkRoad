@@ -1,6 +1,7 @@
 import { demoData } from "../data/demo";
 import { validateSecureAction } from "../lib/businessRules";
 import { isSupabaseConfigured, supabase } from "../lib/client";
+import { databaseContract } from "./databaseContract";
 
 export type Row = Record<string, unknown>;
 export type Metric = { label: unknown; value: unknown; detail: unknown; tone: string };
@@ -20,28 +21,28 @@ export type OperationalControlData = {
 };
 
 const resourceTables: Record<string, string[]> = {
-  products: ["vw_product_search_catalog", "product"],
-  variants: ["vw_pos_variant_stock_catalog", "product_variant"],
-  catalogVariants: ["vw_product_variant_catalog", "product_variant"],
-  stock: ["vw_stock_by_branch", "stock"],
-  stockHistory: ["stock_history"],
-  allocations: ["inventory_allocation"],
-  purchase: ["purchase_order"],
-  transfer: ["transfer_order"],
-  adjustment: ["stock_adjustment"],
-  pos: ["vw_product_search_catalog", "product"],
-  orders: ["vw_order_summary", "orders"],
-  orderDetails: ["order_detail"],
-  payments: ["payment"],
-  customers: ["customer"],
-  returns: ["return_order"],
-  channels: ["sales_channel"],
-  channelPrices: ["channel_price"],
-  branches: ["branch"],
-  users: ["users"],
-  roles: ["role"],
-  reports: ["vw_revenue_by_channel"],
-  query: ["vw_product_search_catalog", "product"],
+  products: [databaseContract.views.productSearch, databaseContract.tables.product],
+  variants: [databaseContract.views.posVariantStock, databaseContract.tables.productVariant],
+  catalogVariants: [databaseContract.views.productVariantCatalog, databaseContract.tables.productVariant],
+  stock: [databaseContract.views.stockByBranch, databaseContract.tables.stock],
+  stockHistory: [databaseContract.tables.stockHistory],
+  allocations: [databaseContract.tables.inventoryAllocation],
+  purchase: [databaseContract.tables.purchaseOrder],
+  transfer: [databaseContract.tables.transferOrder],
+  adjustment: [databaseContract.tables.stockAdjustment],
+  pos: [databaseContract.views.productSearch, databaseContract.tables.product],
+  orders: [databaseContract.views.orderSummary, databaseContract.tables.orders],
+  orderDetails: [databaseContract.tables.orderDetail],
+  payments: [databaseContract.tables.payment],
+  customers: [databaseContract.tables.customer],
+  returns: [databaseContract.tables.returnOrder],
+  channels: [databaseContract.tables.salesChannel],
+  channelPrices: [databaseContract.tables.channelPrice],
+  branches: [databaseContract.tables.branch],
+  users: [databaseContract.tables.users],
+  roles: [databaseContract.tables.role],
+  reports: [databaseContract.views.revenueByChannel],
+  query: [databaseContract.views.productSearch, databaseContract.tables.product],
 };
 
 const fieldAliases: Record<string, string[]> = {
@@ -105,7 +106,7 @@ export async function readProductVariants(productId: string, branchId?: string, 
     });
   }
   let query = supabase
-    .from("vw_pos_variant_stock_catalog")
+    .from(databaseContract.views.posVariantStock)
     .select("*")
     .eq("productid", productId)
     .order("availablequantity", { ascending: false });
@@ -113,7 +114,7 @@ export async function readProductVariants(productId: string, branchId?: string, 
   const [result, allocationResult] = await Promise.all([
     query,
     branchId && channelId
-      ? supabase.from("inventory_allocation").select("*").eq("branchid", branchId).eq("channelid", channelId)
+      ? supabase.from(databaseContract.tables.inventoryAllocation).select("*").eq("branchid", branchId).eq("channelid", channelId)
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (result.error) throw new Error(result.error.message);

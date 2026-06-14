@@ -7,6 +7,7 @@ import { canIncreaseQuantity, cartTotal } from "../lib/cart";
 import { money, normalize } from "../lib/format";
 import { createIdempotencyKey } from "../lib/idempotency";
 import { readProductVariants, readResource, runSecureAction, type Row } from "../core/dataService";
+import { databaseContract } from "../core/databaseContract";
 
 type CartLine = Row & { quantity: number };
 type InventoryFilter = "all" | "available" | "unavailable";
@@ -64,7 +65,7 @@ export function PosPage() {
   const channelType = String(selectedChannel?.channeltype || "").toLowerCase();
 
   const createOrder = useMutation({
-    mutationFn: () => runSecureAction("fn_create_order_app", {
+    mutationFn: () => runSecureAction(databaseContract.rpc.createOrder, {
       branch_id: branchId,
       channel_id: channelId,
       customer_id: customerId || "",

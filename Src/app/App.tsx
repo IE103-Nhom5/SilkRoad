@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { AppShell, type AppProfile } from "../components/AppShell";
 import { useToast } from "../components/ToastProvider";
+import { databaseContract } from "../core/databaseContract";
 import { DashboardPage } from "../features/DashboardPage";
 import { HelpPage } from "../features/HelpPage";
 import { LoginPage, type LoginInput } from "../features/LoginPage";
@@ -35,9 +36,9 @@ export function App() {
     let active = true;
     async function loadProfile() {
       const select = "fullname,email,role(rolename)";
-      const byAuth = await supabase!.from("users").select(select).eq("authuserid", session!.user.id).maybeSingle();
+      const byAuth = await supabase!.from(databaseContract.tables.users).select(select).eq("authuserid", session!.user.id).maybeSingle();
       const fallback = !byAuth.data && session!.user.email
-        ? await supabase!.from("users").select(select).eq("email", session!.user.email).maybeSingle()
+        ? await supabase!.from(databaseContract.tables.users).select(select).eq("email", session!.user.email).maybeSingle()
         : null;
       const data = byAuth.data || fallback?.data;
       const error = byAuth.error && fallback?.error ? fallback.error : null;
