@@ -345,8 +345,9 @@ export function ModulePage({ route }: { route: AppRoute }) {
 
       {actionOpen && warehouseKind && (
         <Modal title={warehouseTitle(warehouseKind)} onClose={() => setActionOpen(false)}>
-          <div className={`sr-warehouse-modal sr-warehouse-modal-${warehouseKind}`}>
-            <div className="sr-warehouse-intro">
+          <div className={`sr-module-page sr-module-warehouse sr-module-warehouse-${warehouseKind} sr-warehouse-modal-scope`}>
+            <div className={`sr-warehouse-modal sr-warehouse-modal-${warehouseKind}`}>
+              <div className="sr-warehouse-intro">
               <span className="sr-warehouse-intro-icon">
                 {warehouseKind === "purchase" && <PackagePlus size={20} />}
                 {warehouseKind === "transfer" && <Truck size={20} />}
@@ -448,10 +449,11 @@ export function ModulePage({ route }: { route: AppRoute }) {
             {warehouseKind !== "transfer" && <div className="sr-warehouse-hint-row modal-actions">{variantAvailableHint()}</div>}
 
             <div className="sr-warehouse-modal-actions modal-actions">
-            <Button onClick={() => setActionOpen(false)}>Hủy</Button>
-            <Button variant="primary" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
-              {mutation.isPending ? "Đang cập nhật..." : warehouseButtonLabel(warehouseKind)}
+              <Button onClick={() => setActionOpen(false)}>Hủy</Button>
+              <Button variant="primary" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+                {mutation.isPending ? "Đang cập nhật..." : warehouseButtonLabel(warehouseKind)}
               </Button>
+            </div>
             </div>
           </div>
         </Modal>
