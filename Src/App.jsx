@@ -9,6 +9,7 @@ import loginFrameImg from "./assets/login-frame.png";
 import loginBenefitsImg from "./assets/login-benefits.png";
 import logoImg from "./assets/silkroad-logo.png";
 
+
 const LOGO_SRC = logoImg;
 const LOGIN_FRAME_SRC = loginFrameImg;
 const LOGIN_BENEFITS_SRC = loginBenefitsImg;
