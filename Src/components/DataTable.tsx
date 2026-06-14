@@ -21,15 +21,45 @@ function display(value: unknown) {
   return String(value);
 }
 
+function statusLabel(value: unknown) {
+  const labels: Record<string, string> = {
+    active: "Đang bán",
+    inactive: "Tạm ngưng",
+    pending: "Chờ duyệt",
+    pending_approval: "Chờ duyệt",
+    approved: "Đã duyệt",
+    received: "Đã nhận",
+    in_transit: "Đang chuyển",
+    completed: "Hoàn tất",
+    cancelled: "Đã hủy",
+    low_stock: "Tồn thấp",
+    unallocated: "Chưa phân bổ",
+    failed: "Lỗi",
+    paid: "Đã thanh toán",
+    unpaid: "Chưa thanh toán",
+  };
+  return labels[String(value || "").toLowerCase()] || display(value);
+}
+
 function tone(value: unknown): "default" | "positive" | "warning" | "danger" | "info" {
   const text = normalize(value);
   if (["active", "paid", "success", "received", "completed", "delivered", "ổn định", "tot"].some((item) => text.includes(item))) return "positive";
-  if (["pending", "processing", "counting", "in_transit", "sap het"].some((item) => text.includes(item))) return "warning";
+  if (["pending", "processing", "counting", "in_transit", "sap het", "unallocated", "chua phan bo"].some((item) => text.includes(item))) return "warning";
   if (["failed", "locked", "cancelled", "inactive", "het"].some((item) => text.includes(item))) return "danger";
   return "default";
 }
 
-export function DataTable({ rows, name = "du-lieu" }: { rows: Row[]; name?: string }) {
+export function DataTable({
+  rows,
+  name = "du-lieu",
+  emptyTitle,
+  emptyDescription,
+}: {
+  rows: Row[];
+  name?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
+}) {
   const [query, setQuery] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [detail, setDetail] = useState<Row | null>(null);
@@ -45,7 +75,7 @@ export function DataTable({ rows, name = "du-lieu" }: { rows: Row[]; name?: stri
         cell: (info) => {
           const value = info.getValue();
           const keyText = normalize(key);
-          if (keyText.includes("status") || keyText.includes("trang thai")) return <Badge tone={tone(value)}>{display(value)}</Badge>;
+          if (keyText.includes("status") || keyText.includes("trang thai") || keyText.includes("severity")) return <Badge tone={tone(value)}>{statusLabel(value)}</Badge>;
           if (keyText.includes("amount") || keyText.includes("price") || keyText.includes("revenue") || keyText.includes("totalspent")) {
             return <b>{Number(value || 0).toLocaleString("vi-VN")} đ</b>;
           }
@@ -69,7 +99,7 @@ export function DataTable({ rows, name = "du-lieu" }: { rows: Row[]; name?: stri
     initialState: { pagination: { pageSize: 10 } },
   });
 
-  if (!rows.length) return <EmptyState />;
+  if (!rows.length) return <EmptyState title={emptyTitle} description={emptyDescription} />;
 
   return (
     <>

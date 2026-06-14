@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Boxes, ShoppingBag, TrendingUp } from "lucide-react";
+import { AlertTriangle, Boxes, Layers3, ShoppingBag, TrendingUp } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { DataTable } from "../components/DataTable";
@@ -51,15 +51,23 @@ export function DashboardPage() {
           <div className="priority-list">
             <button onClick={() => navigate("/operations/stock")}><AlertTriangle /><span><b>{lowStock} dòng tồn thấp</b><small>{lowStock ? "Cần bổ sung hoặc điều chuyển" : "Kho đang trong ngưỡng an toàn"}</small></span><Badge tone={lowStock ? "danger" : "positive"}>{lowStock ? "Cao" : "Ổn"}</Badge></button>
             <button onClick={() => navigate("/sales/orders")}><Boxes /><span><b>{pendingOrders} đơn đang xử lý</b><small>Theo dõi thanh toán và giao hàng</small></span><Badge tone={pendingOrders ? "warning" : "positive"}>{pendingOrders ? "Theo dõi" : "Ổn"}</Badge></button>
-            <button onClick={() => navigate("/catalog/products")}><ArrowRight /><span><b>{data.topProducts.length} sản phẩm nổi bật</b><small>Dữ liệu khả dụng từ danh mục</small></span><Badge tone="info">Xem</Badge></button>
+            <button onClick={() => navigate("/sales/channels")}><Layers3 /><span><b>{data.unallocatedCount} SKU chưa phân bổ kênh</b><small>Phân bổ cho POS, website hoặc marketplace</small></span><Badge tone={data.unallocatedCount ? "warning" : "positive"}>{data.unallocatedCount ? "Cần làm" : "Ổn"}</Badge></button>
           </div>
         </Panel>
       </div>
-      <Panel title="Sản phẩm nổi bật" description="Fallback an toàn từ danh mục khi chưa có báo cáo bán chạy">
-        <DataTable rows={data.topProducts} name="san-pham-noi-bat" />
+      <div className="dashboard-grid dashboard-data-grid">
+        <Panel title="Doanh thu theo kênh" description="So sánh hiệu quả POS, website và marketplace">
+          <DataTable rows={data.channelRevenue} name="doanh-thu-theo-kenh" emptyTitle="Chưa có doanh thu theo kênh" emptyDescription="Doanh thu sẽ xuất hiện sau khi đơn hàng được ghi nhận." />
+        </Panel>
+        <Panel title="Tồn kho theo chi nhánh" description="Tồn thực, đã giữ và khả dụng">
+          <DataTable rows={data.branchStock} name="ton-kho-theo-chi-nhanh" emptyTitle="Chưa có tồn kho" emptyDescription="Hãy tạo phiếu nhập hàng cho chi nhánh đầu tiên." />
+        </Panel>
+      </div>
+      <Panel title="Sản phẩm bán chạy" description="Xếp hạng theo số lượng bán từ chi tiết đơn hàng khả dụng">
+        <DataTable rows={data.topProducts} name="san-pham-ban-chay" emptyTitle="Chưa có dữ liệu bán chạy" emptyDescription="Sản phẩm sẽ được xếp hạng sau khi phát sinh đơn hàng." />
       </Panel>
       <Panel title="Đơn hàng gần đây" description="Nhấn một dòng để xem toàn bộ dữ liệu">
-        <DataTable rows={data.orders} name="don-hang-gan-day" />
+        <DataTable rows={data.orders} name="don-hang-gan-day" emptyTitle="Chưa có đơn hàng" emptyDescription="Mở POS để tạo đơn hàng đầu tiên." />
       </Panel>
     </>
   );

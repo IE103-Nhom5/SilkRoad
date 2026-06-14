@@ -15,9 +15,13 @@ export const demoData: Record<string, Record<string, unknown>[]> = {
     { variantid: "v-003-black-xl", productid: "p-003", productname: "Áo Blazer nam dệt Jacquard", variantname: "Size XL · Màu BLACK", sku: "SR-BLZ-BLK-XL", barcode: "893000000008", sellingprice: 1250000, availablequantity: 3 },
   ],
   stock: [
-    { branchname: "Chi nhánh Quận 1", productname: "Áo dệt kim tay ngắn nữ", variant: "Size M · Màu RED", quantity: 36, reservedquantity: 4, availablequantity: 32, minstocklevel: 8, status: "Ổn định" },
-    { branchname: "Chi nhánh Quận 1", productname: "Áo Blazer nam dệt Jacquard", variant: "Size L · Màu NAVY", quantity: 7, reservedquantity: 2, availablequantity: 5, minstocklevel: 8, status: "Sắp hết" },
-    { branchname: "Kho trung tâm", productname: "Áo khoác Denim nam", variant: "Size XL · Màu BLUE", quantity: 54, reservedquantity: 6, availablequantity: 48, minstocklevel: 12, status: "Ổn định" },
+    { branchid: "branch-q1", variantid: "v-001-red-m", branchname: "Chi nhánh Quận 1", productname: "Áo dệt kim tay ngắn nữ", variant: "Size M · Màu RED", quantity: 36, reservedquantity: 4, availablequantity: 32, minstocklevel: 8, status: "Ổn định" },
+    { branchid: "branch-q1", variantid: "v-003-navy-l", branchname: "Chi nhánh Quận 1", productname: "Áo Blazer nam dệt Jacquard", variant: "Size L · Màu NAVY", quantity: 7, reservedquantity: 2, availablequantity: 5, minstocklevel: 8, status: "Sắp hết" },
+    { branchid: "branch-central", variantid: "v-002-blue-xl", branchname: "Kho trung tâm", productname: "Áo khoác Denim nam", variant: "Size XL · Màu BLUE", quantity: 54, reservedquantity: 6, availablequantity: 48, minstocklevel: 12, status: "Ổn định" },
+  ],
+  allocations: [
+    { branchid: "branch-q1", variantid: "v-001-red-m", channelid: "channel-pos-q1", allocatedquantity: 36, soldquantity: 4, availableforchannel: 32, status: "Đã phân bổ" },
+    { branchid: "branch-central", variantid: "v-002-blue-xl", channelid: "channel-website", allocatedquantity: 30, soldquantity: 8, availableforchannel: 22, status: "Đã phân bổ" },
   ],
   purchase: [
     { purchaseorderid: "PO-2026-012", supplier: "SilkRoad Textile", branch: "Kho trung tâm", status: "pending", totalamount: 42800000, createdat: "2026-06-13T08:30:00" },
@@ -35,6 +39,14 @@ export const demoData: Record<string, Record<string, unknown>[]> = {
     { orderid: "ORD-260613-1042", customer: "Nguyễn An", branch: "Chi nhánh Quận 1", channel: "POS", orderstatus: "confirmed", paymentstatus: "paid", finalamount: 1737000, orderdate: "2026-06-13T10:42:00" },
     { orderid: "ORD-260613-1038", customer: "Khách lẻ", branch: "Chi nhánh Quận 1", channel: "POS", orderstatus: "delivered", paymentstatus: "paid", finalamount: 799000, orderdate: "2026-06-13T10:08:00" },
     { orderid: "ORD-260612-0991", customer: "Trần Minh", branch: "Online", channel: "Website", orderstatus: "processing", paymentstatus: "unpaid", finalamount: 1250000, orderdate: "2026-06-12T18:24:00" },
+  ],
+  orderDetails: [
+    { orderid: "ORD-260613-1042", variantid: "v-001-red-m", quantity: 3, unitprice: 579000 },
+    { orderid: "ORD-260613-1038", variantid: "v-002-blue-xl", quantity: 1, unitprice: 799000 },
+  ],
+  payments: [
+    { paymentid: "PAY-001", orderid: "ORD-260613-1042", method: "cash", amount: 1737000, status: "success" },
+    { paymentid: "PAY-002", orderid: "ORD-260612-0991", method: "card", amount: 1250000, status: "pending" },
   ],
   customers: [
     { customerid: "CUS-001", fullname: "Nguyễn An", phonenumber: "0900000001", loyaltypoints: 420, totalspent: 12780000, status: "active" },
@@ -63,11 +75,11 @@ export const demoData: Record<string, Record<string, unknown>[]> = {
     { rolename: "sales_staff", users: 8, permissions: 19, description: "Bán hàng và CRM" },
   ],
   reports: [
-    { metric: "Doanh thu hôm nay", value: "20.748.000 đ", trend: "+12,8%", status: "Tốt" },
-    { metric: "Giá trị đơn trung bình", value: "846.000 đ", trend: "+4,1%", status: "Tốt" },
-    { metric: "Tỷ lệ đổi trả", value: "2,4%", trend: "-0,8%", status: "Tốt" },
+    { channelname: "POS", totalorders: 18, totalrevenue: 14860000, averageordervalue: 825556, status: "Đang bán" },
+    { channelname: "Website", totalorders: 6, totalrevenue: 5888000, averageordervalue: 981333, status: "Đang bán" },
   ],
 };
 
 demoData.pos = demoData.products;
 demoData.query = demoData.products;
+demoData.catalogVariants = demoData.variants;

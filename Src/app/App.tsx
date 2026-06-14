@@ -129,7 +129,7 @@ export function App() {
         {routes.filter((route) => !["/dashboard", "/sales/pos", "/admin/system", "/help"].includes(route.path)).map((route) => <Route key={route.path} path={route.path} element={<ModulePage route={route} />} />)}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-      <footer className="app-footer"><span>SilkRoad Management · Production foundation</span><span>© 2026 SilkRoad</span></footer>
+      <footer className="app-footer"><span>SilkRoad · Quản lý hàng hóa đa kênh</span><span>© 2026 SilkRoad</span></footer>
     </AppShell>
   );
 }

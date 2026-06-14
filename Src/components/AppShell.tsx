@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Bell, ChevronDown, CircleHelp, Command, LogOut, Menu, Moon, Search, Sun, UserCircle, X } from "lucide-react";
+import { Activity, Bell, ChevronDown, CircleHelp, Command, LogOut, Menu, Moon, Search, Sun, UserCircle, X } from "lucide-react";
 import logo from "../assets/silkroad-logo.png";
 import bg from "../assets/silkroad-bg.png";
 import { groupedRoutes, routeByPath } from "../lib/navigation";
@@ -109,20 +109,20 @@ export function AppShell({
                 <div className="dropdown-menu account-menu">
                   <header><b>{profile.name}</b><span>{profile.email}</span></header>
                   <button onClick={() => navigate("/admin/users")}><UserCircle /> Hồ sơ tài khoản</button>
-                  <button onClick={() => navigate("/admin/system")}><CircleHelp /> Cài đặt hệ thống</button>
+                  <button onClick={() => navigate("/admin/system")}><Activity /> Kiểm soát vận hành</button>
                   <button className="danger-text" onClick={() => setLogoutOpen(true)}><LogOut /> Đăng xuất</button>
                 </div>
               )}
             </div>
           </div>
         </header>
-        {demo && <div className="demo-banner">Chế độ demo chỉ-đọc · Thêm biến môi trường Supabase để dùng dữ liệu thật.</div>}
+        {demo && <div className="demo-banner">Chế độ dữ liệu minh họa · Các thao tác xác nhận không làm thay đổi tồn kho.</div>}
         <main className="content">{children}</main>
       </div>
       <button className="help-fab" onClick={() => setHelpOpen(!helpOpen)} aria-label="Mở trợ lý SilkRoad"><CircleHelp /></button>
       {helpOpen && (
         <section className="help-popup" aria-label="Trợ lý SilkRoad">
-          <header><div><b>Trợ lý SilkRoad</b><span>Gemini · hiểu trang đang mở</span></div><button className="icon-button" onClick={() => setHelpOpen(false)} aria-label="Đóng trợ lý"><X /></button></header>
+          <header><div><b>Trợ lý SilkRoad</b><span>Hướng dẫn nghiệp vụ theo trang đang mở</span></div><button className="icon-button" onClick={() => setHelpOpen(false)} aria-label="Đóng trợ lý"><X /></button></header>
           <AssistantChat compact />
           <button className="help-popup-link" onClick={() => { setHelpOpen(false); navigate("/help"); }}>Mở trung tâm trợ giúp</button>
         </section>

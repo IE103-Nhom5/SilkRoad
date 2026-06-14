@@ -5,6 +5,7 @@ import { Badge, Button, ErrorState, LoadingState, Modal, PageHeader, Panel } fro
 import { useToast } from "../components/ToastProvider";
 import { canIncreaseQuantity, cartTotal } from "../lib/cart";
 import { money, normalize } from "../lib/format";
+import { createIdempotencyKey } from "../lib/idempotency";
 import { readProductVariants, readResource, runSecureAction, type Row } from "../core/dataService";
 
 type CartLine = Row & { quantity: number };
@@ -45,19 +46,22 @@ export function PosPage() {
   const [heldOpen, setHeldOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [lastOrderId, setLastOrderId] = useState("");
+  const [checkoutKey, setCheckoutKey] = useState("");
   const [heldCarts, setHeldCarts] = useState<HeldCart[]>(() => {
     try { return JSON.parse(localStorage.getItem("sr-pos-held-carts") || "[]"); } catch { return []; }
   });
 
   const variants = useQuery({
-    queryKey: ["pos-variants", selectedProduct?.productid, branchId],
-    queryFn: () => readProductVariants(String(selectedProduct?.productid), branchId),
-    enabled: Boolean(selectedProduct?.productid && branchId),
+    queryKey: ["pos-variants", selectedProduct?.productid, branchId, channelId],
+    queryFn: () => readProductVariants(String(selectedProduct?.productid), branchId, channelId),
+    enabled: Boolean(selectedProduct?.productid && branchId && channelId),
   });
   const subtotal = cartTotal(cart);
   const discount = Math.min(subtotal, discountType === "percent" ? Math.round(subtotal * Math.min(100, Math.max(0, discountValue)) / 100) : Math.max(0, discountValue));
   const total = Math.max(0, subtotal - discount + Math.max(0, shippingFee));
   const selectedCustomer = (customers.data || []).find((row) => String(row.customerid) === customerId);
+  const selectedChannel = (channels.data || []).find((row) => String(row.channelid) === channelId);
+  const channelType = String(selectedChannel?.channeltype || "").toLowerCase();
 
   const createOrder = useMutation({
     mutationFn: () => runSecureAction("fn_create_order_app", {
@@ -67,6 +71,7 @@ export function PosPage() {
       order_status: "confirmed",
       payment_status: paymentStatus,
       payment_method: paymentMethod,
+      idempotency_key: checkoutKey,
       discount_amount: discount,
       shipping_fee: Math.max(0, shippingFee),
       shipping_name: selectedCustomer?.fullname || "",
@@ -87,6 +92,7 @@ export function PosPage() {
       setDiscountValue(0);
       setShippingFee(0);
       setNote("");
+      setCheckoutKey("");
       queryClient.invalidateQueries({ queryKey: ["resource", "orders"] });
       queryClient.invalidateQueries({ queryKey: ["resource", "pos"] });
       pushToast(`Đã tạo hóa đơn ${String(id)}.`, "success");
@@ -101,14 +107,23 @@ export function PosPage() {
   }), [products.data, search, inventoryFilter]);
 
   function addVariant(row: Row) {
-    if (Number(row.availablequantity || 0) < 1) {
-      pushToast("Biến thể này không còn tồn khả dụng.", "warning");
+    const available = saleAvailable(row, channelType);
+    if (String(row.allocationstatus) === "unallocated" && channelType !== "pos") {
+      pushToast("Sản phẩm chưa được phân bổ tồn kho cho kênh bán này.", "warning");
       return;
     }
+    if (available < 1) {
+      pushToast(String(row.allocationstatus) === "unallocated" ? "Sản phẩm chưa được phân bổ tồn kho cho kênh bán này." : "Sản phẩm chưa có tồn kho khả dụng.", "warning");
+      return;
+    }
+    if (String(row.allocationstatus) === "unallocated" && channelType === "pos") {
+      pushToast("POS sẽ tự phân bổ đúng số lượng bán khi tạo hóa đơn.", "info");
+    }
+    const saleRow = { ...row, stockavailablequantity: row.availablequantity, availablequantity: available };
     const id = String(row.variantid);
     setCart((current) => {
       const found = current.find((line) => String(line.variantid) === id);
-      return found ? current.map((line) => line === found && canIncreaseQuantity(line) ? { ...line, quantity: line.quantity + 1 } : line) : [...current, { ...row, quantity: 1 }];
+      return found ? current.map((line) => line === found && canIncreaseQuantity(line) ? { ...line, quantity: line.quantity + 1 } : line) : [...current, { ...saleRow, quantity: 1 }];
     });
     setSelectedProduct(null);
   }
@@ -135,6 +150,33 @@ export function PosPage() {
     pushToast(`Đã khôi phục ${held.id}.`, "info");
   }
 
+  function changeSellingContext(type: "branch" | "channel", value: string) {
+    if (cart.length) {
+      setCart([]);
+      pushToast("Đã xóa giỏ hàng vì chi nhánh hoặc kênh bán thay đổi.", "warning");
+    }
+    setCheckoutOpen(false);
+    setCheckoutKey("");
+    setSelectedProduct(null);
+    if (type === "branch") setBranchId(value);
+    else setChannelId(value);
+  }
+
+  function startCheckout() {
+    if (!cart.length || !branchId || !channelId) return;
+    setCheckoutKey(createIdempotencyKey("pos"));
+    setCheckoutOpen(true);
+  }
+
+  function confirmCheckout() {
+    if (createOrder.isPending) return;
+    if (!checkoutKey) {
+      pushToast("Phiên thanh toán chưa sẵn sàng. Hãy đóng và mở lại thanh toán.", "warning");
+      return;
+    }
+    createOrder.mutate();
+  }
+
   if (products.isLoading) return <LoadingState />;
   if (products.isError) return <ErrorState message={products.error.message} onRetry={() => products.refetch()} />;
 
@@ -150,8 +192,8 @@ export function PosPage() {
       <div className="pos-layout">
         <Panel title="Danh mục bán hàng" description={`${visible.length} sản phẩm phù hợp`}>
           <div className="pos-context">
-            <label><span>Chi nhánh bán</span><select value={branchId} onChange={(event) => setBranchId(event.target.value)}><option value="">Chọn chi nhánh</option>{(branches.data || []).map((row) => <option key={String(row.branchid)} value={String(row.branchid)}>{String(row.branchname)}</option>)}</select></label>
-            <label><span>Kênh bán</span><select value={channelId} onChange={(event) => setChannelId(event.target.value)}><option value="">Chọn kênh bán</option>{(channels.data || []).map((row) => <option key={String(row.channelid)} value={String(row.channelid)}>{String(row.channelname)}</option>)}</select></label>
+            <label><span>Chi nhánh bán</span><select value={branchId} onChange={(event) => changeSellingContext("branch", event.target.value)}><option value="">Chọn chi nhánh</option>{(branches.data || []).map((row) => <option key={String(row.branchid)} value={String(row.branchid)}>{String(row.branchname)}</option>)}</select></label>
+            <label><span>Kênh bán</span><select value={channelId} onChange={(event) => changeSellingContext("channel", event.target.value)}><option value="">Chọn kênh bán</option>{(channels.data || []).map((row) => <option key={String(row.channelid)} value={String(row.channelid)}>{String(row.channelname)}</option>)}</select></label>
           </div>
           {!branchId && <p className="security-note">Chọn chi nhánh trước. Khi mở sản phẩm, tồn khả dụng của từng biến thể sẽ được kiểm tra đúng theo chi nhánh.</p>}
           <div className="pos-toolbar">
@@ -189,12 +231,12 @@ export function PosPage() {
           </div>
           <div className="cart-summary"><span>Tạm tính <b>{money(subtotal)}</b></span><span>Giảm giá <b>-{money(discount)}</b></span><span>Phí giao hàng <b>{money(shippingFee)}</b></span></div>
           <div className="cart-total"><span>Tổng thanh toán</span><strong>{money(total)}</strong></div>
-          <div className="cart-actions"><Button icon={<Archive size={17} />} disabled={!cart.length} onClick={holdCart}>Giữ đơn</Button><Button variant="primary" icon={<WalletCards size={17} />} disabled={!cart.length || !branchId || !channelId} onClick={() => setCheckoutOpen(true)}>Thanh toán</Button></div>
-          <div className="cart-foot"><Badge tone="info">RPC bảo mật</Badge><span>Không ghi tồn trực tiếp từ trình duyệt.</span></div>
+          <div className="cart-actions"><Button icon={<Archive size={17} />} disabled={!cart.length} onClick={holdCart}>Giữ đơn</Button><Button variant="primary" icon={<WalletCards size={17} />} disabled={!cart.length || !branchId || !channelId} onClick={startCheckout}>Thanh toán</Button></div>
+          <div className="cart-foot"><Badge tone="info">Kiểm tồn khi xác nhận</Badge><span>Giỏ hàng có thể thay đổi nếu người khác vừa bán cùng SKU.</span></div>
         </Panel>
       </div>
 
-      {selectedProduct && <VariantModal product={selectedProduct} variants={variants.data || []} loading={variants.isLoading} error={variants.error?.message} onRetry={() => variants.refetch()} onAdd={addVariant} onClose={() => setSelectedProduct(null)} />}
+      {selectedProduct && <VariantModal product={selectedProduct} variants={variants.data || []} channelType={channelType} loading={variants.isLoading} error={variants.error?.message} onRetry={() => variants.refetch()} onAdd={addVariant} onClose={() => setSelectedProduct(null)} />}
       {checkoutOpen && (
         <Modal title="Xác nhận thanh toán" onClose={() => setCheckoutOpen(false)}>
           <div className="checkout-grid">
@@ -207,7 +249,7 @@ export function PosPage() {
           <label className="checkout-note">Ghi chú hóa đơn<textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Ghi chú nội bộ hoặc thông tin giao hàng..." /></label>
           <div className="checkout-total"><span>Khách hàng<b>{String(selectedCustomer?.fullname || "Khách lẻ")}</b></span><span>Tổng cần thu<strong>{money(total)}</strong></span></div>
           {createOrder.isError && <p className="form-error">{createOrder.error.message}</p>}
-          <div className="modal-actions"><Button onClick={() => setCheckoutOpen(false)}>Quay lại</Button><Button variant="primary" disabled={createOrder.isPending} onClick={() => createOrder.mutate()}>{createOrder.isPending ? "Đang tạo hóa đơn..." : "Xác nhận và tạo hóa đơn"}</Button></div>
+          <div className="modal-actions"><Button onClick={() => setCheckoutOpen(false)}>Quay lại</Button><Button variant="primary" disabled={createOrder.isPending || !checkoutKey} onClick={confirmCheckout}>{createOrder.isPending ? "Đang khóa tồn và tạo hóa đơn..." : "Xác nhận và tạo hóa đơn"}</Button></div>
         </Modal>
       )}
       {heldOpen && <HeldCartsModal rows={heldCarts} onRestore={restoreCart} onDelete={(id) => persistHeld(heldCarts.filter((item) => item.id !== id))} onClose={() => setHeldOpen(false)} />}
@@ -216,9 +258,9 @@ export function PosPage() {
   );
 }
 
-function VariantModal({ product, variants, loading, error, onRetry, onAdd, onClose }: { product: Row; variants: Row[]; loading: boolean; error?: string; onRetry: () => void; onAdd: (row: Row) => void; onClose: () => void }) {
-  const available = variants.filter((row) => Number(row.availablequantity || 0) > 0).length;
-  return <Modal title="Chọn biến thể bán" onClose={onClose}><div className="variant-product-summary"><div className="product-placeholder">SR</div><div><span>Sản phẩm gốc</span><h3>{String(product.productname)}</h3><p>{available}/{variants.length} biến thể khả dụng tại chi nhánh đã chọn.</p></div></div>{loading && <LoadingState />}{error && <ErrorState message={error} onRetry={onRetry} />}{!loading && !error && <div className="variant-picker">{variants.map((variant) => { const stock = Number(variant.availablequantity || 0); return <button key={String(variant.variantid)} disabled={stock < 1} onClick={() => onAdd(variant)}><Boxes /><span><b>{String(variant.variantname || "Biến thể mặc định")}</b><small><Barcode /> {String(variant.barcode || "Chưa có barcode")}</small></span><strong>{money(variant.sellingprice)}</strong><Badge tone={stock > 0 ? "positive" : "danger"}>{stock > 0 ? `Khả dụng ${stock}` : "Không khả dụng"}</Badge></button>; })}{!variants.length && <p className="security-note">Sản phẩm này chưa có biến thể tại chi nhánh đã chọn.</p>}</div>}</Modal>;
+function VariantModal({ product, variants, channelType, loading, error, onRetry, onAdd, onClose }: { product: Row; variants: Row[]; channelType: string; loading: boolean; error?: string; onRetry: () => void; onAdd: (row: Row) => void; onClose: () => void }) {
+  const available = variants.filter((row) => saleAvailable(row, channelType) > 0).length;
+  return <Modal title="Chọn biến thể bán" onClose={onClose}><div className="variant-product-summary"><div className="product-placeholder">SR</div><div><span>Sản phẩm gốc</span><h3>{String(product.productname)}</h3><p>{available}/{variants.length} biến thể khả dụng tại chi nhánh và kênh đã chọn.</p></div></div>{loading && <LoadingState />}{error && <ErrorState message={error} onRetry={onRetry} />}{!loading && !error && <div className="variant-picker">{variants.map((variant) => { const stock = saleAvailable(variant, channelType); const unallocated = String(variant.allocationstatus) === "unallocated"; const canSell = stock > 0 && (!unallocated || channelType === "pos"); return <button key={String(variant.variantid)} disabled={!canSell} onClick={() => onAdd(variant)}><Boxes /><span><b>{String(variant.variantname || "Biến thể mặc định")}</b><small><Barcode /> {String(variant.barcode || "Chưa có barcode")}</small></span><strong>{money(variant.sellingprice)}</strong><Badge tone={unallocated ? "warning" : stock > 0 ? "positive" : "danger"}>{unallocated ? channelType === "pos" ? "POS tự phân bổ" : "Chưa phân bổ" : stock > 0 ? `Khả dụng ${stock}` : "Không khả dụng"}</Badge></button>; })}{!variants.length && <p className="security-note">Sản phẩm này chưa có tồn kho tại chi nhánh đã chọn. Hãy tạo phiếu nhập hàng.</p>}</div>}</Modal>;
 }
 
 function HeldCartsModal({ rows, onRestore, onDelete, onClose }: { rows: HeldCart[]; onRestore: (row: HeldCart) => void; onDelete: (id: string) => void; onClose: () => void }) {
@@ -227,4 +269,11 @@ function HeldCartsModal({ rows, onRestore, onDelete, onClose }: { rows: HeldCart
 
 function OrdersModal({ rows, loading, onClose }: { rows: Row[]; loading: boolean; onClose: () => void }) {
   return <Modal title="Đơn hàng gần đây" onClose={onClose}>{loading ? <LoadingState /> : <div className="recent-orders">{rows.map((row) => <article key={String(row.orderid)}><ReceiptText /><div><b>{String(row.orderid)}</b><span>{String(row.customer || "Khách lẻ")} · {String(row.channel || "")}</span></div><Badge tone={String(row.paymentstatus) === "paid" ? "positive" : "warning"}>{String(row.paymentstatus || "Chưa rõ")}</Badge><strong>{money(row.finalamount)}</strong></article>)}{!rows.length && <div className="cart-empty"><ReceiptText /><b>Chưa có đơn hàng</b></div>}</div>}</Modal>;
+}
+
+function saleAvailable(row: Row, channelType: string) {
+  const stockAvailable = Number(row.availablequantity || 0);
+  if (String(row.allocationstatus) === "unallocated") return channelType === "pos" ? stockAvailable : 0;
+  const channelAvailable = Number(row.channelavailablequantity ?? stockAvailable);
+  return Math.max(0, Math.min(stockAvailable, channelAvailable));
 }

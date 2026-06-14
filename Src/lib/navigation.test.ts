@@ -7,7 +7,9 @@ describe("route registry", () => {
     expect(routes.every((route) => route.path.startsWith("/"))).toBe(true);
   });
 
-  it("contains every production group", () => {
-    expect(new Set(routes.map((route) => route.group))).toEqual(new Set(["Tổng quan", "Hàng hóa", "Vận hành", "Kinh doanh", "Quản trị", "Công cụ"]));
+  it("keeps the main sidebar focused on retail operations", () => {
+    const mainGroups = routes.filter((route) => route.showInNav !== false).map((route) => route.group);
+    expect(new Set(mainGroups)).toEqual(new Set(["Tổng quan", "Hàng hóa", "Kho vận", "Bán hàng", "Kênh bán", "Báo cáo", "Quản trị người dùng", "Trợ giúp"]));
+    expect(routes.find((route) => route.path === "/query")?.showInNav).toBe(false);
   });
 });

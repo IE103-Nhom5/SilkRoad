@@ -8,9 +8,9 @@ export function HelpPage() {
       <PageHeader eyebrow="Trợ giúp" title="Trung tâm hỗ trợ SilkRoad" description="Quy trình vận hành, câu hỏi thường gặp và trợ lý được bảo vệ qua backend." />
       <div className="help-layout">
         <div className="help-guides">
-          <Panel title="Quy trình cốt lõi"><div className="guide-grid"><Guide icon={<BookOpen />} title="Bán hàng" text="Chọn sản phẩm, biến thể, kiểm tồn rồi xác nhận thanh toán." /><Guide icon={<ShieldCheck />} title="Phân quyền" text="Invite nhân viên, gán vai trò và kiểm audit log." /><Guide icon={<Bot />} title="Gemini an toàn" text="Frontend gọi Edge Function; API key không xuất hiện trên trình duyệt." /></div></Panel>
+          <Panel title="Quy trình cốt lõi"><div className="guide-grid"><Guide icon={<BookOpen />} title="Bán hàng" text="Chọn sản phẩm, biến thể, kiểm tồn rồi xác nhận thanh toán." /><Guide icon={<ShieldCheck />} title="Phân quyền" text="Gán vai trò, chi nhánh và kiểm nhật ký thao tác." /><Guide icon={<Bot />} title="Trợ lý nghiệp vụ" text="Hỏi nhanh về bán hàng, nhập kho, chuyển kho và phân bổ kênh." /></div></Panel>
         </div>
-        <Panel title="Trợ lý SilkRoad" description="Gemini qua Supabase Edge Function · API key không lộ trên trình duyệt" className="assistant-panel">
+        <Panel title="Trợ lý SilkRoad" description="Hướng dẫn thao tác theo ngữ cảnh đang mở" className="assistant-panel">
           <AssistantChat />
         </Panel>
       </div>

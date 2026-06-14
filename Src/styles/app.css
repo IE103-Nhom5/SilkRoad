@@ -100,6 +100,7 @@
 .metric-card small { color: var(--text-soft); }
 .metric-warning { border-color: var(--danger); background: linear-gradient(150deg, var(--surface), var(--danger-soft)); }
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, .8fr); gap: 22px; }
+.dashboard-data-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .chart-panel { min-height: 370px; }
 .chart-empty { display: grid; height: 280px; place-items: center; align-content: center; color: var(--muted); }
 .priority-list { display: grid; gap: 9px; }
@@ -258,6 +259,13 @@
 .status-card > svg { color: var(--accent); }
 .status-card > div { display: flex; flex-direction: column; gap: 3px; }
 .status-card span, .status-card small { color: var(--text-soft); }
+.operational-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
+.operational-card { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px; padding: 17px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-soft); }
+.operational-card > svg { color: var(--accent); }
+.operational-card > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.operational-card span, .operational-card small { color: var(--text-soft); }
+.operational-card strong { font-size: 28px; }
+.operational-card .badge { grid-column: 1 / -1; }
 .checklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .checklist div { display: flex; align-items: center; gap: 9px; padding: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; }
 .checklist svg { color: var(--accent); }
@@ -355,8 +363,8 @@
 .toast-info { border-left-color: var(--gold); }
 
 @media (max-width: 1180px) {
-  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dashboard-grid, .pos-layout, .help-layout { grid-template-columns: 1fr; }
+  .metric-grid, .operational-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-grid, .dashboard-data-grid, .pos-layout, .help-layout { grid-template-columns: 1fr; }
   .cart-panel { position: static; }
   .global-search { max-width: 360px; flex-basis: 360px; }
 }
@@ -396,7 +404,7 @@
   .topbar-title { display: none; }
   .topbar-actions { margin-left: auto; }
   .topbar-actions .dropdown:first-child { display: none; }
-  .metric-grid { grid-template-columns: 1fr; }
+  .metric-grid, .operational-grid { grid-template-columns: 1fr; }
   .skeleton-grid { grid-template-columns: 1fr; }
   .metric-card { min-height: 118px; }
   .page-actions .button { flex: 1 1 calc(50% - 8px); }
