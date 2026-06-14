@@ -253,6 +253,14 @@ export function ModulePage({ route }: { route: AppRoute }) {
   });
 
   const pageRows = useMemo(() => rows, [rows]);
+  const modulePageClass = [
+    "sr-module-page",
+    `sr-module-${route.resource}`,
+    warehouseKind ? "sr-module-warehouse" : "",
+    warehouseKind ? `sr-module-warehouse-${warehouseKind}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   if (query.isLoading) return <LoadingState />;
   if (query.isError) return <ErrorState message={query.error.message} onRetry={() => query.refetch()} />;
@@ -279,7 +287,7 @@ export function ModulePage({ route }: { route: AppRoute }) {
   }
 
   return (
-    <>
+    <div className={modulePageClass}>
       <PageHeader
         eyebrow={route.group}
         title={route.label}
@@ -298,7 +306,7 @@ export function ModulePage({ route }: { route: AppRoute }) {
         }
       />
 
-      <div className="kpi-grid compact">
+      <div className="sr-module-kpi-grid kpi-grid compact">
         <Panel>
           <span>Tổng bản ghi</span>
           <strong>{pageRows.length}</strong>
@@ -313,8 +321,9 @@ export function ModulePage({ route }: { route: AppRoute }) {
         </Panel>
       </div>
 
-      <Panel
-        title={route.label}
+      <div className="sr-module-table-panel">
+        <Panel
+          title={route.label}
         description={
           warehouseKind
             ? "Nút tạo trên trang này tạo chứng từ thật, cập nhật stock và ghi stock_history thông qua RPC nghiệp vụ."
@@ -322,18 +331,34 @@ export function ModulePage({ route }: { route: AppRoute }) {
         }
         actions={warehouseKind ? <Badge tone="positive">Thao tác ghi DB thật</Badge> : undefined}
       >
-        <DataTable rows={pageRows} name={route.resource} emptyTitle={emptyTitle} emptyDescription={emptyDescription} />
-      </Panel>
+          <DataTable rows={pageRows} name={route.resource} emptyTitle={emptyTitle} emptyDescription={emptyDescription} />
+        </Panel>
+      </div>
 
       {route.resource === "channels" && (
-        <Panel title="Phân bổ tồn theo kênh" description="Đối chiếu số lượng phân bổ và đã bán theo từng kênh.">
-          {allocationQuery.isLoading ? <LoadingState /> : <DataTable rows={allocationQuery.data || []} name="phan-bo-ton" />}
-        </Panel>
+        <div className="sr-module-table-panel sr-module-allocation-panel">
+          <Panel title="Phân bổ tồn theo kênh" description="Đối chiếu số lượng phân bổ và đã bán theo từng kênh.">
+            {allocationQuery.isLoading ? <LoadingState /> : <DataTable rows={allocationQuery.data || []} name="phan-bo-ton" />}
+          </Panel>
+        </div>
       )}
 
       {actionOpen && warehouseKind && (
         <Modal title={warehouseTitle(warehouseKind)} onClose={() => setActionOpen(false)}>
-          <div className="form-grid">
+          <div className={`sr-warehouse-modal sr-warehouse-modal-${warehouseKind}`}>
+            <div className="sr-warehouse-intro">
+              <span className="sr-warehouse-intro-icon">
+                {warehouseKind === "purchase" && <PackagePlus size={20} />}
+                {warehouseKind === "transfer" && <Truck size={20} />}
+                {warehouseKind === "adjustment" && <ClipboardCheck size={20} />}
+              </span>
+              <div>
+                <b>{warehouseButtonLabel(warehouseKind)}</b>
+                <small>Tạo chứng từ thật, cập nhật stock và ghi stock_history để demo được ngay.</small>
+              </div>
+            </div>
+
+            <div className="sr-warehouse-form-grid form-grid">
             {warehouseKind === "purchase" && (
               <label>
                 Nhà cung cấp
@@ -414,26 +439,28 @@ export function ModulePage({ route }: { route: AppRoute }) {
             </label>
           </div>
 
-          <div className="security-note">
+            <div className="sr-warehouse-security-note security-note">
             {warehouseKind === "purchase" && "Khi xác nhận: tạo purchase_order, tạo dòng chi tiết, cộng stock và ghi stock_history = purchase."}
             {warehouseKind === "transfer" && "Khi xác nhận: tạo transfer_order, trừ kho gửi, cộng kho nhận và ghi stock_history = transfer_out/transfer_in."}
             {warehouseKind === "adjustment" && "Khi xác nhận: tạo stock_adjustment, cập nhật stock theo số lượng thực tế và ghi stock_history = adjustment."}
           </div>
 
-          {warehouseKind !== "transfer" && <div className="modal-actions">{variantAvailableHint()}</div>}
+            {warehouseKind !== "transfer" && <div className="sr-warehouse-hint-row modal-actions">{variantAvailableHint()}</div>}
 
-          <div className="modal-actions">
+            <div className="sr-warehouse-modal-actions modal-actions">
             <Button onClick={() => setActionOpen(false)}>Hủy</Button>
             <Button variant="primary" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
               {mutation.isPending ? "Đang cập nhật..." : warehouseButtonLabel(warehouseKind)}
-            </Button>
+              </Button>
+            </div>
           </div>
         </Modal>
       )}
 
       {guideOpen && (
         <Modal title={`Quy trình ${route.label.toLowerCase()}`} onClose={() => setGuideOpen(false)}>
-          <ol className="workflow-list">
+          <div className="sr-module-guide-modal">
+            <ol className="sr-module-workflow-list workflow-list">
             {(guideByResource[route.resource] || ["Tạo dữ liệu", "Kiểm tra thông tin", "Xác nhận hoàn tất"]).map((item, index) => (
               <li key={item}>
                 <span>{index + 1}</span>
@@ -443,27 +470,30 @@ export function ModulePage({ route }: { route: AppRoute }) {
                 </div>
               </li>
             ))}
-          </ol>
-          <p className="security-note">Khi xác nhận nghiệp vụ kho vận, hệ thống cập nhật chứng từ, tồn kho hiện tại và lịch sử biến động tồn.</p>
+            </ol>
+            <p className="sr-warehouse-security-note security-note">Khi xác nhận nghiệp vụ kho vận, hệ thống cập nhật chứng từ, tồn kho hiện tại và lịch sử biến động tồn.</p>
+          </div>
         </Modal>
       )}
 
       {importOpen && (
         <Modal title="Import danh mục từ Excel" onClose={() => { setImportOpen(false); setImportMessage(""); }}>
-          <div className="import-box" onClick={() => { setImportMessage(""); fileRef.current?.click(); }}>
+          <div className="sr-module-import-modal">
+            <div className="sr-module-import-box import-box" onClick={() => { setImportMessage(""); fileRef.current?.click(); }}>
             <FileSpreadsheet />
             <b>{selectedFile?.name || "Chọn file Excel hoặc CSV"}</b>
             <span>Hệ thống sẽ xem trước, kiểm tra lỗi từng dòng rồi mới ghi vào danh mục hàng hóa.</span>
             <input ref={fileRef} hidden type="file" accept=".xlsx,.xls,.csv" onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} />
-          </div>
-          {selectedFile && <div className="import-preview"><Badge tone="positive">Đã chọn</Badge><span>{selectedFile.name}</span><b>{Math.ceil(selectedFile.size / 1024)} KB</b></div>}
-          {importMessage && <p className="import-message">{importMessage}</p>}
-          <div className="modal-actions">
+            </div>
+            {selectedFile && <div className="sr-module-import-preview import-preview"><Badge tone="positive">Đã chọn</Badge><span>{selectedFile.name}</span><b>{Math.ceil(selectedFile.size / 1024)} KB</b></div>}
+            {importMessage && <p className="sr-module-import-message import-message">{importMessage}</p>}
+            <div className="sr-module-import-actions modal-actions">
             <Button onClick={() => setImportOpen(false)}>Hủy</Button>
-            <Button variant="primary" disabled={!selectedFile} onClick={checkAndImport}>Kiểm tra file</Button>
+              <Button variant="primary" disabled={!selectedFile} onClick={checkAndImport}>Kiểm tra file</Button>
+            </div>
           </div>
         </Modal>
       )}
-    </>
+    </div>
   );
 }
