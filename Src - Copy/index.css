@@ -1,0 +1,7 @@
+/*
+ * Legacy stylesheet placeholder.
+ *
+ * Runtime production imports Src/styles/tokens.css and Src/styles/app.css
+ * from Src/main.tsx. Keep this file CSS-only so accidental imports cannot
+ * break the Vite build.
+ */
