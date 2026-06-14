@@ -3900,6 +3900,8 @@ export default function App() {
 
   const searchSuggestions = buildSearchSuggestions(globalSearch, options, can);
   const visibleRows = rows.filter((row) => rowMatchesGlobalSearch(row, globalSearch));
+  // Kho vận: nút tạo phải thực hiện chứng từ thật + cập nhật stock + ghi stock_history.
+  // Không mở modal/bản nháp ở các trang stock, purchase, transfer, adjustment.
   const warehouseStockUpdateAction =
     page === "purchase"
       ? () => run(createPurchaseOrder)
@@ -4201,7 +4203,7 @@ export default function App() {
                 run={run}
                 purchaseForm={purchaseForm}
                 setPurchaseForm={setPurchaseForm}
-                               createPurchaseOrder={createPurchaseOrder}
+                createPurchaseOrder={createPurchaseOrder}
                 confirmPurchaseOrder={confirmPurchaseOrder}
                 receiveStockManual={receiveStockManual}
                 selectTable={selectTable}
