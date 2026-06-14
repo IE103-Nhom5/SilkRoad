@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
 import { AppShell, type AppProfile } from "../components/AppShell";
@@ -12,13 +12,15 @@ import { PosPage } from "../features/PosPage";
 import { SystemPage } from "../features/SystemPage";
 import { routes } from "../lib/navigation";
 import { isSupabaseConfigured, supabase } from "../lib/client";
+import { canAccess, normalizePermissions, PermissionProvider, type PermissionProfile } from "../core/permissions";
 
-const demoProfile: AppProfile = { name: "Quản trị SilkRoad", email: "demo@silkroad.vn", role: "admin · demo" };
+const demoProfile: AppProfile = { name: "Quản trị SilkRoad", email: "demo@silkroad.vn", role: "admin", status: "active", permissions: [] };
 
 export function App() {
   const { pushToast } = useToast();
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<AppProfile>(demoProfile);
+  const [profileReady, setProfileReady] = useState(!isSupabaseConfigured);
   const [authReady, setAuthReady] = useState(!isSupabaseConfigured);
   const [loginError, setLoginError] = useState("");
   const [loginNotice, setLoginNotice] = useState("");
@@ -35,7 +37,8 @@ export function App() {
     if (!supabase || !session?.user) return;
     let active = true;
     async function loadProfile() {
-      const select = "fullname,email,role(rolename)";
+      setProfileReady(false);
+      const select = "fullname,email,status,role(rolename,permissions)";
       const byAuth = await supabase!.from(databaseContract.tables.users).select(select).eq("authuserid", session!.user.id).maybeSingle();
       const fallback = !byAuth.data && session!.user.email
         ? await supabase!.from(databaseContract.tables.users).select(select).eq("email", session!.user.email).maybeSingle()
@@ -46,15 +49,21 @@ export function App() {
       if (!data) {
         if (error) pushToast(`Không tải được hồ sơ: ${error.message}`, "warning");
         else pushToast("Tài khoản đã đăng nhập nhưng chưa có hồ sơ ứng dụng. Hãy kiểm tra migration tạo profile.", "warning");
+        setProfile({ name: String(session!.user.email || "Tài khoản SilkRoad"), email: String(session!.user.email || ""), role: "authenticated", status: "inactive", permissions: [] });
+        setProfileReady(true);
         return;
       }
-      const relation = data.role as unknown as { rolename?: string } | { rolename?: string }[] | null;
+      const relation = data.role as unknown as { rolename?: string; permissions?: unknown } | { rolename?: string; permissions?: unknown }[] | null;
       const roleName = Array.isArray(relation) ? relation[0]?.rolename : relation?.rolename;
+      const permissions = Array.isArray(relation) ? relation[0]?.permissions : relation?.permissions;
       setProfile({
         name: String(data.fullname || session!.user.email || "Tài khoản SilkRoad"),
         email: String(data.email || session!.user.email || ""),
         role: String(roleName || "authenticated"),
+        status: String(data.status || "inactive"),
+        permissions: normalizePermissions(permissions),
       });
+      setProfileReady(true);
     }
     loadProfile();
     return () => { active = false; };
@@ -119,20 +128,28 @@ export function App() {
   if (!session && !demoSession) {
     return <LoginPage error={loginError} notice={loginNotice} onSubmit={signIn} onSignUp={signUp} onResetPassword={resetPassword} demoAvailable={!isSupabaseConfigured} onDemo={() => { sessionStorage.setItem("sr-demo-session", "active"); setDemoSession(true); }} />;
   }
+  if (session && !profileReady) return <div className="boot-screen">Đang tải quyền truy cập...</div>;
 
   return (
-    <AppShell profile={profile} demo={!isSupabaseConfigured} onSignOut={async () => { sessionStorage.removeItem("sr-demo-session"); setDemoSession(false); await supabase?.auth.signOut(); }}>
-      <Routes>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/sales/pos" element={<PosPage />} />
-        <Route path="/admin/system" element={<SystemPage />} />
-        <Route path="/help" element={<HelpPage />} />
-        {routes.filter((route) => !["/dashboard", "/sales/pos", "/admin/system", "/help"].includes(route.path)).map((route) => <Route key={route.path} path={route.path} element={<ModulePage route={route} />} />)}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-      <footer className="app-footer"><span>SilkRoad · Quản lý hàng hóa đa kênh</span><span>© 2026 SilkRoad</span></footer>
-    </AppShell>
+    <PermissionProvider profile={profile}>
+      <AppShell profile={profile} demo={!isSupabaseConfigured} onSignOut={async () => { sessionStorage.removeItem("sr-demo-session"); setDemoSession(false); await supabase?.auth.signOut(); }}>
+        <Routes>
+          <Route path="/dashboard" element={<Guard profile={profile} feature="dashboard"><DashboardPage /></Guard>} />
+          <Route path="/sales/pos" element={<Guard profile={profile} feature="pos"><PosPage /></Guard>} />
+          <Route path="/admin/system" element={<Guard profile={profile} feature="system"><SystemPage /></Guard>} />
+          <Route path="/help" element={<Guard profile={profile} feature="help"><HelpPage /></Guard>} />
+          {routes.filter((route) => !["/dashboard", "/sales/pos", "/admin/system", "/help"].includes(route.path)).map((route) => <Route key={route.path} path={route.path} element={<Guard profile={profile} feature={route.resource}><ModulePage route={route} /></Guard>} />)}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+        <footer className="app-footer"><span>SilkRoad · Quản lý hàng hóa đa kênh</span><span>© 2026 SilkRoad</span></footer>
+      </AppShell>
+    </PermissionProvider>
   );
+}
+
+function Guard({ profile, feature, children }: { profile: PermissionProfile; feature: string; children: ReactNode }) {
+  if (canAccess(profile, feature)) return children;
+  return <section className="access-denied"><h1>Không có quyền truy cập</h1><p>Tài khoản hiện tại chưa được cấp quyền cho chức năng này hoặc đã bị khóa.</p></section>;
 }
 
 function authErrorMessage(message: string) {

@@ -5,10 +5,12 @@ import { useNavigate } from "react-router-dom";
 import { DataTable } from "../components/DataTable";
 import { Badge, Button, ErrorState, LoadingState, PageHeader, Panel } from "../components/ui";
 import { readDashboard } from "../core/dataService";
+import { usePermissions } from "../core/permissions";
 
 export function DashboardPage() {
   const query = useQuery({ queryKey: ["dashboard"], queryFn: readDashboard });
   const navigate = useNavigate();
+  const { canAccess } = usePermissions();
   if (query.isLoading) return <LoadingState />;
   if (query.isError) return <ErrorState message={query.error.message} onRetry={() => query.refetch()} />;
   const data = query.data!;
@@ -21,7 +23,7 @@ export function DashboardPage() {
         eyebrow="Trung tâm điều hành"
         title="Tổng quan hôm nay"
         description="Theo dõi doanh thu, tồn kho và các việc cần xử lý trên toàn hệ thống."
-        actions={<Button variant="primary" icon={<ShoppingBag size={18} />} onClick={() => navigate("/sales/pos")}>Mở bán hàng</Button>}
+        actions={canAccess("pos") ? <Button variant="primary" icon={<ShoppingBag size={18} />} onClick={() => navigate("/sales/pos")}>Mở bán hàng</Button> : undefined}
       />
       <div className="metric-grid">
         {data.metrics.map((metric: { label: unknown; value: unknown; detail: unknown; tone: string }) => (
@@ -49,9 +51,9 @@ export function DashboardPage() {
         </Panel>
         <Panel title="Ưu tiên xử lý" description="Cảnh báo theo mức độ ảnh hưởng">
           <div className="priority-list">
-            <button onClick={() => navigate("/operations/stock")}><AlertTriangle /><span><b>{lowStock} dòng tồn thấp</b><small>{lowStock ? "Cần bổ sung hoặc điều chuyển" : "Kho đang trong ngưỡng an toàn"}</small></span><Badge tone={lowStock ? "danger" : "positive"}>{lowStock ? "Cao" : "Ổn"}</Badge></button>
-            <button onClick={() => navigate("/sales/orders")}><Boxes /><span><b>{pendingOrders} đơn đang xử lý</b><small>Theo dõi thanh toán và giao hàng</small></span><Badge tone={pendingOrders ? "warning" : "positive"}>{pendingOrders ? "Theo dõi" : "Ổn"}</Badge></button>
-            <button onClick={() => navigate("/sales/channels")}><Layers3 /><span><b>{data.unallocatedCount} SKU chưa phân bổ kênh</b><small>Phân bổ cho POS, website hoặc marketplace</small></span><Badge tone={data.unallocatedCount ? "warning" : "positive"}>{data.unallocatedCount ? "Cần làm" : "Ổn"}</Badge></button>
+            {canAccess("stock") && <button onClick={() => navigate("/operations/stock")}><AlertTriangle /><span><b>{lowStock} dòng tồn thấp</b><small>{lowStock ? "Cần bổ sung hoặc điều chuyển" : "Kho đang trong ngưỡng an toàn"}</small></span><Badge tone={lowStock ? "danger" : "positive"}>{lowStock ? "Cao" : "Ổn"}</Badge></button>}
+            {canAccess("orders") && <button onClick={() => navigate("/sales/orders")}><Boxes /><span><b>{pendingOrders} đơn đang xử lý</b><small>Theo dõi thanh toán và giao hàng</small></span><Badge tone={pendingOrders ? "warning" : "positive"}>{pendingOrders ? "Theo dõi" : "Ổn"}</Badge></button>}
+            {canAccess("channels") && <button onClick={() => navigate("/sales/channels")}><Layers3 /><span><b>{data.unallocatedCount} SKU chưa phân bổ kênh</b><small>Phân bổ cho POS, website hoặc marketplace</small></span><Badge tone={data.unallocatedCount ? "warning" : "positive"}>{data.unallocatedCount ? "Cần làm" : "Ổn"}</Badge></button>}
           </div>
         </Panel>
       </div>

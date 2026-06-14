@@ -8,6 +8,7 @@ import { money, normalize } from "../lib/format";
 import { createIdempotencyKey } from "../lib/idempotency";
 import { readProductVariants, readResource, runSecureAction, type Row } from "../core/dataService";
 import { databaseContract } from "../core/databaseContract";
+import { usePermissions } from "../core/permissions";
 
 type CartLine = Row & { quantity: number };
 type InventoryFilter = "all" | "available" | "unavailable";
@@ -24,6 +25,7 @@ const paymentMethods: { value: PaymentMethod; label: string }[] = [
 
 export function PosPage() {
   const { pushToast } = useToast();
+  const { hasPermission } = usePermissions();
   const queryClient = useQueryClient();
   const products = useQuery({ queryKey: ["resource", "pos"], queryFn: () => readResource("pos") });
   const branches = useQuery({ queryKey: ["resource", "branches"], queryFn: () => readResource("branches") });
@@ -164,6 +166,7 @@ export function PosPage() {
   }
 
   function startCheckout() {
+    if (!hasPermission("order.create")) return pushToast("Bạn chưa có quyền tạo đơn hàng.", "warning");
     if (!cart.length || !branchId || !channelId) return;
     setCheckoutKey(createIdempotencyKey("pos"));
     setCheckoutOpen(true);
@@ -232,7 +235,7 @@ export function PosPage() {
           </div>
           <div className="cart-summary"><span>Tạm tính <b>{money(subtotal)}</b></span><span>Giảm giá <b>-{money(discount)}</b></span><span>Phí giao hàng <b>{money(shippingFee)}</b></span></div>
           <div className="cart-total"><span>Tổng thanh toán</span><strong>{money(total)}</strong></div>
-          <div className="cart-actions"><Button icon={<Archive size={17} />} disabled={!cart.length} onClick={holdCart}>Giữ đơn</Button><Button variant="primary" icon={<WalletCards size={17} />} disabled={!cart.length || !branchId || !channelId} onClick={startCheckout}>Thanh toán</Button></div>
+          <div className="cart-actions"><Button icon={<Archive size={17} />} disabled={!cart.length} onClick={holdCart}>Giữ đơn</Button><Button variant="primary" icon={<WalletCards size={17} />} disabled={!cart.length || !branchId || !channelId || !hasPermission("order.create")} onClick={startCheckout}>Thanh toán</Button></div>
           <div className="cart-foot"><Badge tone="info">Kiểm tồn khi xác nhận</Badge><span>Giỏ hàng có thể thay đổi nếu người khác vừa bán cùng SKU.</span></div>
         </Panel>
       </div>

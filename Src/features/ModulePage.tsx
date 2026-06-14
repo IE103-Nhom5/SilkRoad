@@ -22,7 +22,8 @@ import { useToast } from "../components/ToastProvider";
 import type { AppRoute } from "../lib/navigation";
 import { isSupabaseConfigured } from "../lib/client";
 import { databaseContract } from "../core/databaseContract";
-import { readResource, runSecureAction, type Row } from "../core/dataService";
+import { readResource, runSecureAction, runSecureCommand, type Row } from "../core/dataService";
+import { usePermissions } from "../core/permissions";
 
 const guideByResource: Record<string, string[]> = {
   products: ["Tạo sản phẩm gốc trước", "Thêm biến thể theo size và màu", "Kiểm tra ảnh và tồn khả dụng"],
@@ -142,7 +143,8 @@ function buildPayload(kind: WarehouseKind, form: WarehouseForm): Row {
         {
           variant_id: form.variantId,
           quantity: number(form.quantity, 1),
-          unit_cost: Math.max(0, number(form.unitCost, 0)),
+          unit_price: Math.max(0, number(form.unitCost, 0)),
+          received_quantity: number(form.quantity, 1),
         },
       ],
     };
@@ -209,6 +211,7 @@ function rpcByKind(kind: WarehouseKind) {
 
 export function ModulePage({ route }: { route: AppRoute }) {
   const { pushToast } = useToast();
+  const { canAccess, canRunWarehouseAction, hasPermission } = usePermissions();
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["resource", route.resource], queryFn: () => readResource(route.resource) });
   const allocationQuery = useQuery({ queryKey: ["resource", "allocations"], queryFn: () => readResource("allocations"), enabled: route.resource === "channels" });
@@ -235,7 +238,18 @@ export function ModulePage({ route }: { route: AppRoute }) {
       if (!warehouseKind) throw new Error("Trang này không có nghiệp vụ cập nhật tồn kho.");
       const errors = validateWarehouseForm(warehouseKind, form);
       if (errors.length) throw new Error(errors.join(" "));
-      return runSecureAction(rpcByKind(warehouseKind), buildPayload(warehouseKind, form));
+      if (!canRunWarehouseAction(warehouseKind)) throw new Error("Bạn chưa có đủ quyền tạo và xác nhận nghiệp vụ kho vận này.");
+      const id = await runSecureAction(rpcByKind(warehouseKind), buildPayload(warehouseKind, form));
+      const documentId = String(id);
+      if (warehouseKind === "purchase") {
+        await runSecureCommand(databaseContract.rpc.confirmPurchaseOrder, { p_purchase_order_id: documentId });
+      } else if (warehouseKind === "transfer") {
+        await runSecureCommand(databaseContract.rpc.shipTransfer, { p_transfer_id: documentId });
+        await runSecureCommand(databaseContract.rpc.receiveTransfer, { p_transfer_id: documentId });
+      } else {
+        await runSecureCommand(databaseContract.rpc.completeAdjustment, { p_adjustment_id: documentId });
+      }
+      return documentId;
     },
     onSuccess: (result) => {
       const id = typeof result === "string" ? result : result ? JSON.stringify(result) : "hoàn tất";
@@ -276,6 +290,10 @@ export function ModulePage({ route }: { route: AppRoute }) {
 
   function openWarehouseAction() {
     if (!warehouseKind) return;
+    if (!canRunWarehouseAction(warehouseKind)) {
+      pushToast("Bạn chưa có đủ quyền tạo và xác nhận nghiệp vụ kho vận này.", "warning");
+      return;
+    }
     setActionOpen(true);
   }
 
@@ -294,11 +312,11 @@ export function ModulePage({ route }: { route: AppRoute }) {
         description={route.description}
         actions={
           <>
-            {supportsImport && <Button icon={<FileSpreadsheet size={18} />} onClick={() => setImportOpen(true)}>Import Excel</Button>}
+            {supportsImport && hasPermission("import.run") && <Button icon={<FileSpreadsheet size={18} />} onClick={() => setImportOpen(true)}>Import Excel</Button>}
             <Button icon={<RefreshCcw size={18} />} onClick={() => query.refetch()}>Làm mới</Button>
             <Button icon={<BookOpen size={18} />} onClick={() => setGuideOpen(true)}>Quy trình</Button>
-            {warehouseKind && (
-              <Button variant="primary" icon={warehouseKind === "purchase" ? <PackagePlus size={18} /> : warehouseKind === "transfer" ? <Truck size={18} /> : <ClipboardCheck size={18} />} onClick={openWarehouseAction}>
+            {warehouseKind && canAccess(route.resource) && (
+              <Button variant="primary" disabled={!canRunWarehouseAction(warehouseKind)} icon={warehouseKind === "purchase" ? <PackagePlus size={18} /> : warehouseKind === "transfer" ? <Truck size={18} /> : <ClipboardCheck size={18} />} onClick={openWarehouseAction}>
                 {warehouseButtonLabel(warehouseKind)}
               </Button>
             )}
@@ -367,6 +385,7 @@ export function ModulePage({ route }: { route: AppRoute }) {
                   <option value="">Chọn nhà cung cấp</option>
                   {(suppliers.data || []).map((row) => <option key={String(row.supplierid)} value={String(row.supplierid)}>{displaySupplier(row)}</option>)}
                 </select>
+                {!suppliers.isLoading && !(suppliers.data || []).length && <small className="sr-warehouse-field-warning">Chưa có nhà cung cấp. Hãy tạo nhà cung cấp trước khi nhập hàng.</small>}
               </label>
             )}
 
@@ -450,7 +469,7 @@ export function ModulePage({ route }: { route: AppRoute }) {
 
             <div className="sr-warehouse-modal-actions modal-actions">
               <Button onClick={() => setActionOpen(false)}>Hủy</Button>
-              <Button variant="primary" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+              <Button variant="primary" disabled={mutation.isPending || !canRunWarehouseAction(warehouseKind) || (warehouseKind === "purchase" && !(suppliers.data || []).length)} onClick={() => mutation.mutate()}>
                 {mutation.isPending ? "Đang cập nhật..." : warehouseButtonLabel(warehouseKind)}
               </Button>
             </div>

@@ -173,6 +173,30 @@
 .import-box svg { width: 42px; height: 42px; color: var(--accent); }
 .import-preview { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; }
 .import-preview b { margin-left: auto; }
+.access-denied { display: grid; min-height: 55vh; place-items: center; align-content: center; gap: 8px; color: var(--text-soft); text-align: center; }
+.access-denied h1, .access-denied p { margin: 0; }
+
+/* Scoped warehouse module surfaces. */
+.sr-module-page { min-width: 0; }
+.sr-module-kpi-grid { margin-bottom: 22px; }
+.sr-module-table-panel { min-width: 0; }
+.sr-warehouse-modal-scope { width: min(780px, 100%); }
+.sr-warehouse-modal { display: grid; gap: 16px; }
+.sr-warehouse-intro { display: flex; align-items: center; gap: 12px; padding: 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; }
+.sr-warehouse-intro-icon { display: grid; width: 42px; min-width: 42px; height: 42px; place-items: center; color: var(--accent-strong); background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 7px; }
+.sr-warehouse-intro > div { display: grid; gap: 3px; }
+.sr-warehouse-intro small { color: var(--text-soft); }
+.sr-warehouse-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.sr-warehouse-form-grid label { display: grid; align-content: start; gap: 6px; color: var(--text-soft); font-size: 12px; font-weight: 800; }
+.sr-warehouse-form-grid label:has(textarea) { grid-column: 1 / -1; }
+.sr-warehouse-form-grid input, .sr-warehouse-form-grid select, .sr-warehouse-form-grid textarea { width: 100%; min-width: 0; padding: 11px 12px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 7px; outline: 0; }
+.sr-warehouse-form-grid input:focus, .sr-warehouse-form-grid select:focus, .sr-warehouse-form-grid textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sr-warehouse-form-grid textarea { min-height: 92px; resize: vertical; }
+.sr-warehouse-field-warning { color: var(--warning); font-size: 11px; font-weight: 750; }
+.sr-warehouse-security-note { margin: 0; }
+.sr-warehouse-hint-row { min-height: 28px; margin-top: 0; justify-content: flex-start; }
+.sr-warehouse-modal-actions { margin-top: 0; padding-top: 14px; border-top: 1px solid var(--border); }
+.sr-module-guide-modal, .sr-module-import-modal { min-width: 0; }
 .pos-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(340px, .7fr); gap: 22px; align-items: start; }
 .pos-context { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
 .pos-context label { display: grid; gap: 5px; color: var(--text-soft); font-size: 12px; font-weight: 750; }
@@ -445,4 +469,7 @@
   .heritage-login-form.is-register { inset: auto; }
   .heritage-login-benefits { display: none; }
   .toast-viewport { top: 72px; right: 10px; width: calc(100vw - 20px); }
+  .sr-warehouse-form-grid { grid-template-columns: 1fr; }
+  .sr-warehouse-form-grid label:has(textarea) { grid-column: auto; }
+  .sr-warehouse-modal-actions .button { flex: 1; }
 }

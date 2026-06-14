@@ -4,11 +4,12 @@ import { Activity, Bell, ChevronDown, CircleHelp, Command, LogOut, Menu, Moon, S
 import logo from "../assets/silkroad-logo.png";
 import bg from "../assets/silkroad-bg.png";
 import { groupedRoutes, routeByPath } from "../lib/navigation";
+import { usePermissions } from "../core/permissions";
 import { CommandPalette } from "./CommandPalette";
 import { AssistantChat } from "./AssistantChat";
 import { Button, Modal } from "./ui";
 
-export type AppProfile = { name: string; email: string; role: string };
+export type AppProfile = { name: string; email: string; role: string; status: string; permissions: string[] };
 
 export function AppShell({
   children,
@@ -32,7 +33,11 @@ export function AppShell({
   const sidebarNavRef = useRef<HTMLElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const { canAccess } = usePermissions();
   const current = routeByPath[location.pathname] || routeByPath["/dashboard"];
+  const visibleGroups = groupedRoutes
+    .map(([group, items]) => [group, items.filter((item) => canAccess(item.resource))] as const)
+    .filter(([, items]) => items.length);
 
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
@@ -69,7 +74,7 @@ export function AppShell({
           <span>{profile.role}</span>
         </div>
         <nav ref={sidebarNavRef}>
-          {groupedRoutes.map(([group, items]) => (
+          {visibleGroups.map(([group, items]) => (
             <section key={group}>
               <span className="nav-group-label">{group}</span>
               {items.map((item) => {
@@ -108,8 +113,8 @@ export function AppShell({
               {accountOpen && (
                 <div className="dropdown-menu account-menu">
                   <header><b>{profile.name}</b><span>{profile.email}</span></header>
-                  <button onClick={() => navigate("/admin/users")}><UserCircle /> Hồ sơ tài khoản</button>
-                  <button onClick={() => navigate("/admin/system")}><Activity /> Kiểm soát vận hành</button>
+                  {canAccess("users") && <button onClick={() => navigate("/admin/users")}><UserCircle /> Hồ sơ tài khoản</button>}
+                  {canAccess("system") && <button onClick={() => navigate("/admin/system")}><Activity /> Kiểm soát vận hành</button>}
                   <button className="danger-text" onClick={() => setLogoutOpen(true)}><LogOut /> Đăng xuất</button>
                 </div>
               )}

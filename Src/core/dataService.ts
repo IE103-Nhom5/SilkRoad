@@ -39,6 +39,7 @@ const resourceTables: Record<string, string[]> = {
   channels: [databaseContract.tables.salesChannel],
   channelPrices: [databaseContract.tables.channelPrice],
   branches: [databaseContract.tables.branch],
+  suppliers: [databaseContract.tables.supplier],
   users: [databaseContract.tables.users],
   roles: [databaseContract.tables.role],
   reports: [databaseContract.views.revenueByChannel],
@@ -182,6 +183,13 @@ export async function runSecureAction(name: string, payload: Row) {
   const validationErrors = validateSecureAction(name, payload);
   if (validationErrors.length) throw new Error(validationErrors.join(" "));
   const { data, error } = await supabase.rpc(name, { p_payload: payload });
+  if (error) throw new Error(friendlyActionError(error.message));
+  return data;
+}
+
+export async function runSecureCommand(name: string, args: Row) {
+  if (!supabase || !isSupabaseConfigured) throw new Error("Chế độ demo chỉ cho phép xem dữ liệu.");
+  const { data, error } = await supabase.rpc(name, args);
   if (error) throw new Error(friendlyActionError(error.message));
   return data;
 }

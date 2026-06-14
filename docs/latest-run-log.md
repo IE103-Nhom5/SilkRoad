@@ -1,5 +1,26 @@
 # Nhật ký chạy mới nhất
 
+## Ngày 14/06/2026 23:47 - Làm lại permission layer và nối nghiệp vụ kho vận thật
+
+- Commit trước khi sửa: `a69b51ceac9faa7efa01436c7eddba8cbf2601a6`.
+- Runtime đã xác nhận: `index.html -> Src/main.tsx -> Src/app/App.tsx`; không sửa `Src/App.jsx` legacy.
+- Thêm `Src/core/permissions.tsx`: user khác `active` bị chặn; active admin full access; user thường kiểm tra cả feature key UI và DB permission.
+- Normalize permission hỗ trợ `text[]`, JSON array string, PostgreSQL array string và `null`.
+- Menu, route guard, dashboard quick actions, POS và ModulePage đã dùng permission helper trung tâm.
+- App chờ tải profile thật trước khi render shell, tránh nháy menu admin trong lúc chờ quyền.
+- ModulePage gọi RPC thật để nhập hàng, chuyển kho và kiểm kho; form nhập hàng đọc `supplier` thật và gửi `supplierid`.
+- Search toàn repo không còn các dấu vết draft legacy bị loại bỏ.
+
+| Lệnh | Exit code | Kết quả |
+| --- | ---: | --- |
+| `npm run typecheck` | 0 | Pass |
+| `npm test -- --run` | 0 | Pass, 7 test files / 18 tests |
+| `npm run build` | 0 | Pass, 2.413 modules |
+| `git diff --check` | 0 | Pass, chỉ có cảnh báo LF/CRLF |
+| Browser local `http://127.0.0.1:4175/dashboard` | 0 | App mở đúng màn hình đăng nhập; không tự dùng/tạo mật khẩu để vào admin |
+
+- Admin full access và ba flow kho vận đã được kiểm tra thật bằng transaction Supabase local ở repo database.
+
 ## Ngày 14/06/2026 - Đồng bộ frontend với database SilkRoad
 
 ### Trạng thái
