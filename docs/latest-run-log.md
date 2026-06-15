@@ -89,3 +89,15 @@ Các tên trên đã được tìm thấy tĩnh trong migration của repo datab
 - `sql/10_test_queries.sql` chưa được chạy trên database thật.
 - Cursor chưa được gọi trên database thật.
 - Cần cài và chạy Docker Desktop, sau đó chạy lại toàn bộ gate database trước khi kết luận hoàn tất.
+
+## 2026-06-15 - Đồng bộ nhà cung cấp Supabase web
+
+- Không cần sửa frontend: runtime đã đọc bảng `supplier`, hiển thị `suppliername` và gửi `supplierid` đúng contract.
+- Đã push migration quyền admin và migration 8 nhà cung cấp lên Supabase web.
+- Đã kiểm tra trực tiếp `/operations/purchase`: modal tạo phiếu nhập hiển thị 12 nhà cung cấp, gồm đủ 8 nhà cung cấp mới.
+- Không gửi form và không tạo chứng từ nhập hàng trong lúc kiểm tra.
+
+| Lệnh | Exit code | Kết quả |
+| --- | ---: | --- |
+| `npm run build` | 0 | Pass, 2.413 modules transformed |
+| `git diff --check` | 0 | Pass |

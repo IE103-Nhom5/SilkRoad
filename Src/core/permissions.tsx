@@ -6,6 +6,8 @@ export type PermissionProfile = {
   permissions: string[];
 };
 
+export const ADMIN_PERMISSION = "*";
+
 const featurePermissions: Record<string, string[]> = {
   dashboard: ["dashboard.view"],
   products: ["product.view", "product.create", "product.update", "product_variant.view"],
@@ -46,13 +48,14 @@ export function normalizePermissions(value: unknown): string[] {
 }
 
 export function isActiveAdmin(profile: PermissionProfile) {
-  return normalize(profile.status) === "active" && normalize(profile.role).split(/[.\s·]+/)[0] === "admin";
+  return normalize(profile.status) === "active" && isAdminRole(profile.role);
 }
 
 export function hasPermission(profile: PermissionProfile, permission: string) {
   if (normalize(profile.status) !== "active") return false;
   if (isActiveAdmin(profile)) return true;
-  return normalizePermissions(profile.permissions).some((value) => normalize(value) === normalize(permission));
+  const permissions = normalizePermissions(profile.permissions);
+  return permissions.some((value) => value === ADMIN_PERMISSION || normalize(value) === normalize(permission));
 }
 
 export function canAccess(profile: PermissionProfile, feature: string) {
@@ -60,7 +63,7 @@ export function canAccess(profile: PermissionProfile, feature: string) {
   if (isActiveAdmin(profile)) return true;
   const permissions = normalizePermissions(profile.permissions);
   const normalizedFeature = normalize(feature);
-  if (permissions.some((value) => normalize(value) === normalizedFeature)) return true;
+  if (permissions.some((value) => value === ADMIN_PERMISSION || normalize(value) === normalizedFeature)) return true;
   const required = featurePermissions[normalizedFeature] || [normalizedFeature];
   return required.length === 0 || required.some((permission) => hasPermission(profile, permission));
 }
@@ -79,7 +82,10 @@ const demoPermissionProfile: PermissionProfile = { role: "admin", status: "activ
 const PermissionContext = createContext<PermissionProfile>(demoPermissionProfile);
 
 export function PermissionProvider({ profile, children }: { profile: PermissionProfile; children: ReactNode }) {
-  return <PermissionContext.Provider value={profile}>{children}</PermissionContext.Provider>;
+  const effectiveProfile = isActiveAdmin(profile)
+    ? { ...profile, role: "admin", permissions: [ADMIN_PERMISSION] }
+    : { ...profile, permissions: normalizePermissions(profile.permissions) };
+  return <PermissionContext.Provider value={effectiveProfile}>{children}</PermissionContext.Provider>;
 }
 
 export function usePermissions() {
@@ -99,4 +105,9 @@ function unique(values: string[]) {
 
 function normalize(value: string) {
   return value.trim().toLowerCase();
+}
+
+function isAdminRole(value: string) {
+  const role = normalize(value).replace(/[\s.-]+/g, "_");
+  return role === "admin" || role === "administrator" || role === "system_admin" || role === "super_admin";
 }

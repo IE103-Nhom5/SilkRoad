@@ -12,7 +12,7 @@ import { PosPage } from "../features/PosPage";
 import { SystemPage } from "../features/SystemPage";
 import { routes } from "../lib/navigation";
 import { isSupabaseConfigured, supabase } from "../lib/client";
-import { canAccess, normalizePermissions, PermissionProvider, type PermissionProfile } from "../core/permissions";
+import { ADMIN_PERMISSION, canAccess, isActiveAdmin, normalizePermissions, PermissionProvider, type PermissionProfile } from "../core/permissions";
 
 const demoProfile: AppProfile = { name: "Quản trị SilkRoad", email: "demo@silkroad.vn", role: "admin", status: "active", permissions: [] };
 
@@ -38,7 +38,7 @@ export function App() {
     let active = true;
     async function loadProfile() {
       setProfileReady(false);
-      const select = "fullname,email,status,role(rolename,permissions)";
+      const select = "fullname,email,status,roleid,role(rolename,permissions)";
       const byAuth = await supabase!.from(databaseContract.tables.users).select(select).eq("authuserid", session!.user.id).maybeSingle();
       const fallback = !byAuth.data && session!.user.email
         ? await supabase!.from(databaseContract.tables.users).select(select).eq("email", session!.user.email).maybeSingle()
@@ -54,15 +54,29 @@ export function App() {
         return;
       }
       const relation = data.role as unknown as { rolename?: string; permissions?: unknown } | { rolename?: string; permissions?: unknown }[] | null;
-      const roleName = Array.isArray(relation) ? relation[0]?.rolename : relation?.rolename;
-      const permissions = Array.isArray(relation) ? relation[0]?.permissions : relation?.permissions;
-      setProfile({
+      let roleName = Array.isArray(relation) ? relation[0]?.rolename : relation?.rolename;
+      let permissions = Array.isArray(relation) ? relation[0]?.permissions : relation?.permissions;
+      if (!roleName && data.roleid) {
+        const roleResult = await supabase!
+          .from(databaseContract.tables.role)
+          .select("rolename,permissions")
+          .eq("roleid", data.roleid)
+          .maybeSingle();
+        roleName = String(roleResult.data?.rolename || "");
+        permissions = roleResult.data?.permissions;
+      }
+      const nextProfile: AppProfile = {
         name: String(data.fullname || session!.user.email || "Tài khoản SilkRoad"),
         email: String(data.email || session!.user.email || ""),
-        role: String(roleName || "authenticated"),
+        role: String(roleName || session!.user.app_metadata?.role || session!.user.user_metadata?.role || "authenticated"),
         status: String(data.status || "inactive"),
         permissions: normalizePermissions(permissions),
-      });
+      };
+      if (isActiveAdmin(nextProfile)) {
+        nextProfile.role = "admin";
+        nextProfile.permissions = [ADMIN_PERMISSION];
+      }
+      setProfile(nextProfile);
       setProfileReady(true);
     }
     loadProfile();
